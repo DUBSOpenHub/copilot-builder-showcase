@@ -392,7 +392,7 @@ This repository is private during the testing phase. See [SECURITY.md](SECURITY.
 Security baseline:
 
 - GitHub Actions CI for compile + tests
-- CodeQL workflow for Python code scanning
+- CodeQL workflow prepared for Python analysis; alert upload requires code scanning to be enabled for this private repo
 - Dependabot for GitHub Actions updates
 - CODEOWNERS requiring `@DUBSOpenHub` ownership
 - Generated run bundles ignored by git
