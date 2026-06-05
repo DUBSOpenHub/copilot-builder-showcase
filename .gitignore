@@ -1,0 +1,23 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+.DS_Store
+
+# Local Copilot Builder Panel run artifacts
+.copilot_builder_panel/
+runs/
+*.bundle.tar.gz
+HASHES
+SEAL
+
+# Local/editor files
+.env
+.env.*
+.vscode/
+.idea/
+
