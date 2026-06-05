@@ -47,6 +47,33 @@ python3 copilot_builder_panel.py tui my-workshop-2026 --showtime
 
 ---
 
+## Copilot Skill Front Door
+
+This repo includes a Markdown skill wrapper that lets Copilot act as the facilitator while the Python CLI remains the tested engine.
+
+Install from a local checkout:
+
+```bash
+mkdir -p ~/.copilot/skills/copilot-builder-panel
+cp skills/copilot-builder-panel/SKILL.md ~/.copilot/skills/copilot-builder-panel/SKILL.md
+```
+
+Then invoke it in Copilot CLI:
+
+```text
+builder panel
+```
+
+The skill asks for repo URLs, writes them to a temporary submissions file, and runs the Python engine:
+
+```bash
+python3 copilot_builder_panel.py workshop --file <submissions.txt>
+```
+
+Markdown is the friendly front door; Python stays responsible for scoring, sealing, replay, export, and validation.
+
+---
+
 ## All Commands
 
 ### `workshop`
