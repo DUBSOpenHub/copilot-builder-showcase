@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-builder_panel.py — Copilot Builder Panel CLI entry point.
+builder_panel.py — Copilot Builder - Judging Panel CLI entry point.
 
 Provides the --run-dir / --bundle interface for sealed acceptance tests.
 Uses corrected artifact formats:
@@ -345,7 +345,7 @@ def cmd_init(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     if not rs_path.exists():
         rs_path.write_text(json.dumps(snapshot, indent=2), encoding="utf-8")
 
-    _impl._magic_banner("Copilot Builder Panel", "The sealed panel is waking up.")
+    _impl._magic_banner("Copilot Builder - Judging Panel", "The sealed panel is waking up.")
     _impl._success(f"Run '{run_id}' initialized at {bundle_path}")
     return 0
 
@@ -433,9 +433,9 @@ def cmd_recap(args: argparse.Namespace, _gateway=None, clock=None) -> int:
 def cmd_tui(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     if getattr(args, "bundle", None):
         ns = argparse.Namespace(run_id=str(Path(args.bundle).resolve()), showtime=getattr(args, "showtime", False))
-        _impl._magic_banner("Copilot Builder Panel Live Board", "Artifact-powered spotlight mode")
+        _impl._magic_banner("Copilot Builder - Judging Panel Live Board", "Artifact-powered spotlight mode")
         return _impl.cmd_present(ns, _gateway, clock)
-    _impl._magic_banner("Copilot Builder Panel Live Board", "Choose a sealed run to present")
+    _impl._magic_banner("Copilot Builder - Judging Panel Live Board", "Choose a sealed run to present")
     return cmd_list(args, _gateway, clock)
 
 
@@ -553,8 +553,8 @@ def cmd_judge(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     _assert_status_in(manifest, ["init", "collecting", "judging", "awarded"], "judge")
     rubric = load_rubric(bundle_path)
 
-    _impl._magic_banner("Copilot Builder Panel", "Premium judges are taking their seats.")
-    _impl._sideline("The builder panel is warming up: fresh models, sealed scores, no teardown.", "🏟️", "magenta")
+    _impl._magic_banner("Copilot Builder - Judging Panel", "Premium judges are taking their seats.")
+    _impl._sideline("The judging panel is warming up: fresh models, sealed scores, no teardown.", "🏟️", "magenta")
     print("  🧭 [1/5] Running freshness gate...", file=sys.stderr)
     try:
         gate_result = run_freshness_gate(bundle_path, rubric, _gateway, clock)
@@ -830,7 +830,7 @@ def cmd_present(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     manifest = load_manifest(bundle_path)
     verdicts = _load_verdicts(bundle_path)
 
-    _impl._magic_banner("Copilot Builder Panel", f"Run: {manifest.get('run_id', bundle_path.name)} · Mode: {manifest.get('mode', 'workshop').upper()}")
+    _impl._magic_banner("Copilot Builder - Judging Panel", f"Run: {manifest.get('run_id', bundle_path.name)} · Mode: {manifest.get('mode', 'workshop').upper()}")
     _impl._sideline("The judges are seated. Every builder gets a spotlight.", "🏟️", "magenta")
     _impl._sideline("Scores are sealed; this view is generated only from stored artifacts.", "🔒", "blue")
 
@@ -892,7 +892,7 @@ def cmd_replay(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     gate_path = bundle_path / "freshness_gate.json"
     gate = load_json(gate_path) if gate_path.exists() else None
 
-    _impl._magic_banner("Copilot Builder Panel Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
+    _impl._magic_banner("Copilot Builder - Judging Panel Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
     _impl._sideline(f"Status: {manifest.get('status', 'unknown')}", "📼", "blue")
     if gate:
         _impl._sideline(f"Model: {gate.get('selected_model', gate.get('model', 'unknown'))} ({gate.get('status', '')})", "🧠", "green")
@@ -931,7 +931,7 @@ def cmd_doctor(args: argparse.Namespace, _gateway=None, clock=None) -> int:
     issues: List[str] = []
     ok: List[str] = []
 
-    print("Copilot Builder Panel — Doctor")
+    print("Copilot Builder - Judging Panel — Doctor")
     print("=" * 50)
 
     # 1. Python version
@@ -1177,7 +1177,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="builder_panel",
         description=(
-            "Copilot Builder Panel — CLI judging for hackathons and builder programs.\n"
+            "Copilot Builder - Judging Panel — CLI judging for hackathons and builder programs.\n"
             "Commands: init, submit, judge, present, replay, resume, compare, list, "
             "award, feedback, export, validate, doctor"
         ),

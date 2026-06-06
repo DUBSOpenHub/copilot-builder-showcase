@@ -1,5 +1,5 @@
 """
-Test suite for Copilot Builder Panel
+Test suite for Copilot Builder - Judging Panel
 Tests all layers: tone safety, hash/seal, write-once, freshness gate,
 shadow score, eval engine, command flows, registry, exit codes.
 

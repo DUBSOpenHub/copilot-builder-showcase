@@ -1,4 +1,4 @@
-# Copilot Builder Panel
+# Copilot Builder - Judging Panel
 
 CLI-native judging for hackathons, builder programs, and product workshops.  
 Builders submit projects; a fictional panel scores them; standout projects earn the **Copilot Builder Award**.
@@ -61,8 +61,10 @@ cp skills/copilot-builder-panel/SKILL.md ~/.copilot/skills/copilot-builder-panel
 Then invoke it in Copilot CLI:
 
 ```text
-builder panel
+builder judging panel
 ```
+
+`builder panel` remains a supported short alias.
 
 The skill asks for repo URLs, writes them to a temporary submissions file, and runs the Python engine:
 

@@ -8,7 +8,7 @@ htmlcov/
 
 .DS_Store
 
-# Local Copilot Builder Panel run artifacts
+# Local Copilot Builder - Judging Panel run artifacts
 .copilot_builder_panel/
 runs/
 *.bundle.tar.gz
