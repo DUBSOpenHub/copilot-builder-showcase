@@ -41,7 +41,7 @@ from typing import Any, Callable, Dict, List, Optional
 # Layer 0 — Constants and defaults
 # ---------------------------------------------------------------------------
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 AWARD_NAME = "Copilot Builder Award"
 AWARD_SLATE = [
     {
@@ -1679,21 +1679,40 @@ def _write_awards_markdown(bundle_path: Path, awards_card: Dict) -> None:
 
 def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] = None) -> None:
     awards = awards_card.get("awards", [])
+    width = min(76, _terminal_width(max_width=80))
     _drumroll("Three awards. Three builder moments. The envelopes are ready.", args)
     for idx, award in enumerate(awards, 1):
         if awards:
             _sideline(f"Envelope {idx}/{len(awards)}", "✉️", "gold")
         _countdown_reveal(args)
         _showtime_pause(args, 0.6)
-        _magic_banner(
-            f"{award.get('emoji', '🏆')} {award.get('award_name', 'Award').upper()}",
-            f"Winner: {award.get('winner_builder_name', 'Unknown')}",
-        )
-        _sideline(f"Project: {award.get('project_name', 'Unknown')}", "🌟", "gold")
+
+        emoji = award.get("emoji", "🏆")
+        name = award.get("award_name", "Award").upper()
+        winner = award.get("winner_builder_name", "Unknown")
+        project = award.get("project_name", "Unknown")
         tagline = award.get("tagline", "")
+        reason = award.get("reason", "")
+        score = award.get("score")
+
+        # Bordered winner card
+        print()
+        print(_paint("╔" + "═" * width + "╗", "magenta", bold=True))
+        print(_paint("║" + f"  {emoji}  {name}".center(width) + "║", "magenta", bold=True))
+        print(_paint("╠" + "═" * width + "╣", "magenta", bold=True))
+        print(_paint("║" + f"  🌟 Winner:  {winner}".ljust(width) + "║", "gold", bold=True))
+        print(_paint("║" + f"  📦 Project: {project}".ljust(width) + "║", "cyan"))
+        if score is not None:
+            score_line = f"  📊 Score:   {float(score):.1f}/10  {_score_bar(float(score))}"
+            # Score bar contains ANSI — print raw
+            print(_paint("║  📊 Score:   ", "cyan") + _paint(f"{float(score):.1f}/10  ", "gold", bold=True) + _score_bar(float(score)) + _paint(" " * 2 + "║", "cyan"))
         if tagline:
-            print(_paint(f"   “{tagline}”", "cyan"))
-        _sideline(award.get("reason", ""), "✨", "green")
+            print(_paint("║" + f"  \"{tagline}\"".ljust(width) + "║", "cyan"))
+        if reason:
+            for line in [reason[i:i+width-4] for i in range(0, len(reason), width-4)]:
+                print(_paint("║" + f"  ✨ {line}".ljust(width) + "║", "green"))
+        print(_paint("╚" + "═" * width + "╝", "magenta", bold=True))
+        _showtime_pause(args, 0.4)
 
 
 def _share_card(awards_card: Dict, run_id: str) -> None:
@@ -2120,26 +2139,35 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
         meta = sub.get("repo_metadata", {})
         badges = []
         if meta.get("language"):
-            badges.append(str(meta["language"]))
+            badges.append(f"📝 {meta['language']}")
         if meta.get("stars") is not None:
             badges.append(f"⭐ {meta['stars']}")
+        if meta.get("contributors"):
+            badges.append(f"👥 {meta['contributors']}")
+        if meta.get("open_issues") is not None:
+            badges.append(f"📌 {meta['open_issues']} issues")
         badge_text = f" [{' · '.join(badges)}]" if badges else ""
-        project = _truncate(f"{v.get('project_name', sid)}{badge_text}", 58)
+        project = _truncate(f"{v.get('project_name', sid)}{badge_text}", 68)
+        width = min(76, _terminal_width(max_width=80))
         print()
-        print(_paint(f"┌─ 🌟 SPOTLIGHT: {project} ", "blue", bold=True) + _paint("─" * 18, "blue"))
+        print(_paint(f"┌─ 🌟 SPOTLIGHT: {project} ", "blue", bold=True) + _paint("─" * max(2, width - len(project) - 16), "blue"))
         print(_paint(f"│ Builder: {v.get('builder_name', 'Unknown')}", "cyan"))
-        if showtime and meta.get("description"):
+        if meta.get("description"):
             print(_paint(f"│ About:   {_truncate(str(meta.get('description')), 88)}", "cyan"))
+        if meta.get("recent_activity"):
+            print(_paint(f"│ Recent:  {_truncate(str(meta.get('recent_activity')), 88)}", "cyan"))
         if not showtime:
             print(_paint(f"│ Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
         for arch_v in v.get("archetype_verdicts", []):
             print(_paint(f"│ 🎙️ {arch_v['archetype_name']}", "magenta", bold=True))
             print(_paint(f"│    {_truncate(arch_v.get('bright_spot', arch_v.get('perspective', '')), 92)}", "green"))
         fb = feedback.get(v.get("submission_id"), {})
-        if showtime and fb:
-            print(_paint(f"│ ✨ Bright Spot: {_truncate(fb.get('bright_spot', ''), 86)}", "green"))
-            print(_paint(f"│ 🔜 Next Commit: {_truncate(fb.get('next_commit', ''), 86)}", "yellow"))
-        print(_paint("└" + "─" * 64, "blue"))
+        if fb:
+            if fb.get("bright_spot"):
+                print(_paint(f"│ ✨ Bright Spot: {_truncate(fb.get('bright_spot', ''), 86)}", "green"))
+            if fb.get("next_commit"):
+                print(_paint(f"│ 🔜 Next Commit: {_truncate(fb.get('next_commit', ''), 86)}", "yellow"))
+        print(_paint("└" + "─" * width, "blue"))
         _showtime_pause(args, 0.5)
 
     # Show winner if awarded
@@ -2318,8 +2346,23 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
 def cmd_tui(args: argparse.Namespace, _gateway: Optional[Any] = None,
             clock: Optional[Callable] = None) -> int:
-    """tui — lightweight Agent Pulse-style board with graceful CLI fallback."""
+    """tui — live Textual dashboard with graceful CLI fallback."""
     run_id = getattr(args, "run_id", None)
+    projector = getattr(args, "projector", False)
+
+    # Try launching the Textual dashboard
+    if run_id and sys.stdout.isatty():
+        try:
+            from builder_dashboard import BuilderDashboard
+            app = BuilderDashboard(run_id=run_id, projector=projector)
+            app.run()
+            return 0
+        except ImportError:
+            _warning("Textual not available; falling back to CLI presenter.")
+        except Exception as exc:
+            _warning(f"Dashboard error ({exc}); falling back to CLI presenter.")
+
+    # Graceful CLI fallback
     if run_id:
         _magic_banner("Copilot Builder - Judging Panel Live Board", "Artifact-powered spotlight mode")
         return cmd_present(args, _gateway, clock)
@@ -2986,6 +3029,7 @@ def build_parser() -> argparse.ArgumentParser:
                             help="Ask before each stage instead of auto-running.")
     p_workshop.add_argument("--no-suspense", action="store_true", dest="no_suspense",
                             help="Disable live countdown pauses for CI or fast demos.")
+    p_workshop.add_argument("--projector", action="store_true", help="Big-screen mode for projection.")
 
     # judge
     p_judge = sub.add_parser("judge", help="Trigger eval engine.")
@@ -2996,6 +3040,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_present = sub.add_parser("present", help="Generate presentation from stored artifacts.")
     p_present.add_argument("run_id", help="Run identifier.")
     p_present.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
+    p_present.add_argument("--projector", action="store_true", help="Big-screen mode for projection.")
 
     # replay
     p_replay = sub.add_parser("replay", help="Read-only replay of a prior bundle.")
@@ -3028,9 +3073,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_recap.add_argument("--out", help="Output Markdown file path (default: <bundle>/recap.md).")
 
     # tui
-    p_tui = sub.add_parser("tui", help="Open a lightweight Agent Pulse-style board (CLI fallback).")
+    p_tui = sub.add_parser("tui", help="Open the live Textual dashboard (falls back to CLI presenter).")
     p_tui.add_argument("run_id", nargs="?", help="Optional run identifier to present.")
     p_tui.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
+    p_tui.add_argument("--projector", action="store_true", help="Big-screen mode with larger elements for projection.")
 
     # feedback
     p_fb = sub.add_parser("feedback", help="Generate feedback proposal (human approval required).")
