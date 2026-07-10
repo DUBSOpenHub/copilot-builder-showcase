@@ -1,115 +1,175 @@
-# Hackathon Judge
+# 🏆 Hackathon Judge
 
-> **Paste the project links. Get a live judging show instead of a spreadsheet.**
+![CI](https://github.com/DUBSOpenHub/hackathon-judge/actions/workflows/ci.yml/badge.svg)
+![Version: v2.0.0](https://img.shields.io/badge/version-v2.0.0-5E5E5E.svg)
+[![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen?logo=github)](SECURITY.md)
+![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 
-Most hackathons end at the awkward part: someone opens a tab full of project
-links, judges compare notes in private, and the audience waits for a winner
-they cannot understand. The projects were the show. The judging becomes
-administration.
+> **Paste project links. Put the judging room on screen. Let every builder get a moment.**
 
-Hackathon Judge turns a list of GitHub links into a fair, screen-shareable
-event: every project gets a spotlight, scores stay sealed until the reveal, and
-the final result becomes a replayable bundle instead of a pile of screenshots.
+Hackathons end badly when the projects are exciting but the judging becomes a
+private spreadsheet. Judges compare notes off-screen, the audience waits, and
+the finalists get a result with no story behind it.
 
-The wedge is intentionally small. An organizer pastes project links. Everyone
-else gets a better ending.
+Hackathon Judge turns a list of project links into a fair, screen-shareable
+show. Every project gets a spotlight. Reviews are sealed before the reveal.
+The result is an integrity-checked bundle that can be replayed without calling
+a model again.
 
-## Run a show
+## ⚡ Install in one command
+
+For people with access to this private repository, paste this into a terminal:
 
 ```bash
-cp config/event.example.json my-event.json
+gh api -H "Accept: application/vnd.github.raw" \
+  repos/DUBSOpenHub/hackathon-judge/contents/install.sh | bash
+```
 
-python3 hackathon_judge.py workshop \
-  --event my-event.json \
-  --file submissions.txt \
-  --run-id spring-hackathon \
+It installs the `hackathon-judge` command at `~/.local/bin`. The installer
+needs Git, Python 3.11+, and an authenticated [GitHub CLI](https://cli.github.com/)
+with repository access. If `~/.local/bin` is not already on your `PATH`, the
+installer prints the exact command to add it.
+
+### Copilot CLI skill
+
+To run the facilitator experience from Copilot CLI instead, type:
+
+```text
+/skills add DUBSOpenHub/hackathon-judge
+```
+
+Then say:
+
+```text
+run hackathon judging
+```
+
+## 🎬 Run your first judging room
+
+Give it project URLs or `owner/repo` entries. This is the happy path for a
+screen-shared live event:
+
+```bash
+hackathon-judge workshop \
+  owner/project-one owner/project-two owner/project-three \
+  --run-id spring-demo-day \
   --projector \
   --yes
 ```
 
-`submissions.txt` accepts one GitHub URL or `owner/repo` entry per line.
-
-For a separate big-screen board:
+Share the terminal or launch a separate projector board:
 
 ```bash
-python3 hackathon_judge.py tui spring-hackathon --projector
+hackathon-judge tui spring-demo-day --projector
 ```
 
-## What the room sees
+At the end, preserve the evidence and let people watch it again:
+
+```bash
+hackathon-judge validate spring-demo-day
+hackathon-judge replay spring-demo-day
+```
+
+## 🧭 What happens in the room
 
 ```text
-project links -> project intake -> sealed reviews -> spotlights -> award reveal
+project links -> intake -> sealed reviews -> every-project spotlight -> awards -> replay
 ```
 
-Before awards, the audience sees project progress, metadata, and encouraging
-feedback. They do not see numeric scores, rankings, judge prompts, or
-unrevealed awards. After the reveal, an operator can inspect scores with:
+1. **Intake:** GitHub URLs become consistent project cards.
+2. **Review:** The configured event rubric evaluates projects before anyone sees
+   a ranking.
+3. **Spotlight:** The room sees project progress, metadata, and encouraging
+   feedback -- not numeric scores.
+4. **Reveal:** The operator declares awards after every project has had its
+   moment.
+5. **Replay:** A sealed bundle preserves the outcome without generating new
+   reviews.
+
+## 🎛️ Make it yours
+
+Start with the portable event pack:
 
 ```bash
-python3 hackathon_judge.py present spring-hackathon --operator
+cp ~/.local/share/hackathon-judge/config/event.example.json my-event.json
 ```
 
-## Why this exists
-
-The number of people building at hackathons keeps growing while the final
-judging experience has barely changed. Builders now arrive with working
-repositories, demos, agents, and real users. The last mile is still a
-spreadsheet and a whispered ranking.
-
-Hackathon Judge makes the last mile visible, legible, and worth watching.
-
-## Make it yours
-
-`config/event.example.json` is a portable EventSpec. Give each event its own:
-
-- Name, tagline, rubric, and neutral review lenses
-- Awards and award language
-- Score-visibility, projector, privacy, and accessibility defaults
-- Premium model policy
-
-Every run snapshots its resolved EventSpec at `config/event.json`. Changing an
-event pack later cannot rewrite a past outcome. Historic rubric-only bundles
-remain readable.
-
-## The trust model
-
-- Scoring is sealed before the reveal.
-- Audience views mask scores and rankings until awards are declared.
-- `freshness_gate.json` records the chosen model and whether a run was live or
-  deterministic simulation.
-- Replays use stored artifacts only; they never make new model calls.
-- Exported bundles contain `HASHES` and `SEAL` for integrity verification.
-- Project metadata and winner materials are internal until a human approves
-  external publication.
-
-## Commands
+It defines the event name, tagline, rubric, review lenses, awards, privacy,
+accessibility, and presentation defaults. Then run:
 
 ```bash
-# Build an event in stages
-python3 hackathon_judge.py init spring-hackathon --event my-event.json
-python3 hackathon_judge.py import-urls spring-hackathon --file submissions.txt
-python3 hackathon_judge.py judge spring-hackathon --showtime
-python3 hackathon_judge.py present spring-hackathon --projector
-python3 hackathon_judge.py award spring-hackathon --winner <submission_id> --showtime
-
-# Preserve and replay the result
-python3 hackathon_judge.py recap spring-hackathon
-python3 hackathon_judge.py export spring-hackathon
-python3 hackathon_judge.py validate spring-hackathon
-python3 hackathon_judge.py replay spring-hackathon
+hackathon-judge workshop \
+  --event my-event.json \
+  --file submissions.txt \
+  --run-id spring-demo-day \
+  --projector \
+  --yes
 ```
 
-## Develop
+`submissions.txt` contains one GitHub URL or `owner/repo` entry per line. Every
+run snapshots its resolved event configuration, so editing an event pack later
+cannot rewrite a past result. Historic rubric-only bundles remain readable.
+
+## 🔒 Fair by default
+
+| Guardrail | What it means |
+| --- | --- |
+| Sealed scores | Scores and rankings stay hidden until awards are declared. |
+| Audience-safe projector | The audience never sees unrevealed scores, ranks, prompts, or awards. |
+| Equal spotlight | Every accepted project appears before the ceremony. |
+| Provenance | Each bundle records whether reviews came from a configured live model gateway or deterministic simulation. |
+| Read-only replay | Replays read stored artifacts only; they never call a model. |
+| Tamper evidence | Exported bundles include `HASHES` and `SEAL` integrity records. |
+
+Treat run bundles as internal artifacts: they can contain project metadata and
+judge feedback. See [SECURITY.md](SECURITY.md) for reporting guidance and
+platform safeguards.
+
+## 🧰 Command reference
+
+| Command | Use it for |
+| --- | --- |
+| `hackathon-judge workshop ...` | Running the complete live flow from links to awards. |
+| `hackathon-judge import-urls <run-id> ...` | Adding a batch of GitHub projects to an existing run. |
+| `hackathon-judge judge <run-id>` | Running the sealed evaluation stage. |
+| `hackathon-judge present <run-id> --projector` | Presenting stored artifacts safely to an audience. |
+| `hackathon-judge tui <run-id> --projector` | Opening the big-screen Textual board, with a CLI fallback. |
+| `hackathon-judge award <run-id> --winner <id>` | Declaring the winner after the review and spotlight stages. |
+| `hackathon-judge export <run-id>` | Packaging an immutable result bundle. |
+| `hackathon-judge validate <run-id>` | Verifying bundle hashes and seals. |
+| `hackathon-judge replay <run-id>` | Replaying a prior event without model calls. |
+| `hackathon-judge doctor` | Checking configuration, model-gate, and bundle health. |
+
+## 🏗️ How it is built
+
+```text
+EventSpec -> intake -> evaluation -> sealed artifacts -> audience view -> awards -> export/replay
+```
+
+- `hackathon_judge.py` is the canonical CLI and bundle writer.
+- `hackathon_judge_dashboard.py` is the optional Textual projector board.
+- `bundle_reader.py` creates separate audience-safe and operator views.
+- `event_spec.py` resolves neutral event configuration and preserves legacy
+  rubric-only bundles.
+
+The core engine uses the Python standard library. Install
+[Textual](https://textual.textualize.io/) for the enhanced dashboard; the
+projector command falls back to the CLI presenter when it is unavailable.
+
+## 🧪 Develop
 
 ```bash
 python3 -m pytest -q
 python3 -m py_compile hackathon_judge.py hackathon_judge_dashboard.py event_spec.py bundle_reader.py
 ```
 
-Python 3.11+ is required. The core engine uses the standard library; Textual
-is optional for the live board.
+## 🤝 Contributing
 
-## Security
+Keep the default experience neutral and audience-safe. Do not commit run
+bundles, credentials, or confidential project metadata. The working
+invariants and canonical surfaces are in [AGENTS.md](AGENTS.md).
 
-Treat run bundles as internal artifacts. They can contain project metadata and
-judge feedback. See [SECURITY.md](SECURITY.md) for reporting guidance.
+## 💜 Credits
+
+Created with care by [@DUBSOpenHub](https://github.com/DUBSOpenHub) with the
+[GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli).
