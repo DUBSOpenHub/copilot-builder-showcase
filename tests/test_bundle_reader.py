@@ -11,6 +11,7 @@ Run with: python -m pytest tests/test_bundle_reader.py -v
 """
 
 import copy
+import json
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -23,7 +24,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import hackathon_judge as cbp
-from bundle_reader import BundleReader, REVEALED_STATUSES
+from bundle_reader import BundleReader, REVEALED_STATUSES, redact_audience_narrative
 
 FIXED_TS = "2026-06-04T22:44:37+00:00"
 fixed_clock = lambda: datetime(2026, 6, 4, 22, 44, 37, tzinfo=timezone.utc)
@@ -193,6 +194,57 @@ class TestAudienceProjection:
         # withheld pre-reveal too.
         assert view.shadow_score is None
         assert view.awards is None
+
+    def test_score_like_narrative_is_redacted_before_award(self, tmp_path):
+        bundle_path = tmp_path / "run-narrative-redaction"
+        submissions = [_make_submission("Alice Chen", "Compass", "Navigation tool.")]
+        rubric = _init_collecting_bundle(bundle_path, "run-narrative-redaction", submissions)
+        _run_full_judge(bundle_path, rubric, submissions)
+
+        verdict_path = next((bundle_path / "verdicts").glob("*.json"))
+        verdict = json.loads(verdict_path.read_text())
+        for reaction in verdict["archetype_verdicts"]:
+            reaction["perspective"] = "This is the first-place project, with nine out of ten."
+            reaction["bright_spot"] = "Top score: 9/10."
+        verdict_path.write_text(json.dumps(verdict))
+
+        feedback_path = next((bundle_path / "feedback").glob("*.json"))
+        feedback = json.loads(feedback_path.read_text())
+        feedback["bright_spot"] = "The winner earned 9/10."
+        feedback["next_commit"] = "Keep this first-place score."
+        feedback_path.write_text(json.dumps(feedback))
+
+        reader = BundleReader(bundle_path)
+        audience = reader.audience_view()
+        rendered = json.dumps(
+            {"verdicts": audience.verdicts, "feedback": audience.feedback}
+        ).lower()
+        assert "9/10" not in rendered
+        assert "leading" not in rendered
+        assert "winner" not in rendered
+        assert "ranking" not in rendered
+        assert "score of" not in rendered
+        assert "first-place" not in rendered
+        assert "nine out of ten" not in rendered
+        assert '"total_score"' not in rendered
+
+        operator = reader.operator_view()
+        assert "Top score: 9/10." in operator.verdicts[0]["archetype_verdicts"][0]["bright_spot"]
+
+    @pytest.mark.parametrize(
+        "spoiler",
+        [
+            "This was a 1st-place finish.",
+            "The sixth-place project is ready.",
+            "A place among the winners.",
+            "A perfect ten.",
+            "The panel gave this build 9 points.",
+            "This entry is number one in the room.",
+            "They earned 10 of 10.",
+        ],
+    )
+    def test_narrative_redacts_ordinal_and_plural_winner_language(self, spoiler):
+        assert redact_audience_narrative(spoiler, "safe fallback") == "safe fallback"
 
     def test_operator_projection_preserves_full_data(self, tmp_path):
         bundle_path = tmp_path / "run-5"

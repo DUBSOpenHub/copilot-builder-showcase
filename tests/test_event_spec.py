@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import copy
 import io
+import json
 import os
 import sys
 import tarfile
@@ -137,12 +138,26 @@ def test_audience_presenter_hides_scores_until_awards(tmp_path: Path):
     run_id = "safe-audience"
     bundle_path = make_bundle(tmp_path, run_id)
     submission_id = seal_submission(bundle_path)
+    verdict_path = next((bundle_path / "verdicts").glob("*.json"))
+    verdict = json.loads(verdict_path.read_text())
+    for reaction in verdict["archetype_verdicts"]:
+        reaction["bright_spot"] = "Leading the ranking at 9/10."
+    verdict_path.write_text(json.dumps(verdict))
+    feedback_path = next((bundle_path / "feedback").glob("*.json"))
+    feedback = json.loads(feedback_path.read_text())
+    feedback["bright_spot"] = "The winner scored 9/10."
+    feedback_path.write_text(json.dumps(feedback))
+
     args = argparse.Namespace(run_id=run_id, showtime=False, projector=True, operator=False)
 
     with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path)}):
         with patch.object(sys, "stdout", new_callable=io.StringIO) as output:
             assert cbp.cmd_present(args, None, fixed_clock) == 0
-    assert "Score:" not in output.getvalue()
+    audience_output = output.getvalue().lower()
+    assert "score:" not in audience_output
+    assert "9/10" not in audience_output
+    assert "leading" not in audience_output
+    assert "winner" not in audience_output
 
     award_args = argparse.Namespace(
         run_id=run_id,
@@ -158,6 +173,85 @@ def test_audience_presenter_hides_scores_until_awards(tmp_path: Path):
         with patch.object(sys, "stdout", new_callable=io.StringIO) as output:
             assert cbp.cmd_present(args, None, fixed_clock) == 0
     assert "Score:" in output.getvalue()
+
+
+def test_replay_hides_score_like_narrative_before_award(tmp_path: Path):
+    run_id = "safe-replay"
+    bundle_path = make_bundle(tmp_path, run_id)
+    seal_submission(bundle_path)
+    verdict_path = next((bundle_path / "verdicts").glob("*.json"))
+    verdict = json.loads(verdict_path.read_text())
+    for reaction in verdict["archetype_verdicts"]:
+        reaction["bright_spot"] = "This is the first-place project with nine out of ten."
+    verdict_path.write_text(json.dumps(verdict))
+    feedback_path = next((bundle_path / "feedback").glob("*.json"))
+    feedback = json.loads(feedback_path.read_text())
+    feedback["bright_spot"] = "Leading the ranking at 9/10."
+    feedback["next_commit"] = "Protect that winning score."
+    feedback_path.write_text(json.dumps(feedback))
+    args = argparse.Namespace(bundle=run_id, showtime=False)
+
+    with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path)}):
+        with patch.object(sys, "stdout", new_callable=io.StringIO) as output:
+            assert cbp.cmd_replay(args, None, fixed_clock) == 0
+
+    replay_output = output.getvalue().lower()
+    assert "9/10" not in replay_output
+    assert "first-place" not in replay_output
+    assert "nine out of ten" not in replay_output
+    assert "leading" not in replay_output
+    assert "winning score" not in replay_output
+
+
+def test_present_and_replay_hide_partial_award_artifacts(tmp_path: Path):
+    run_id = "partial-award"
+    bundle_path = make_bundle(tmp_path, run_id)
+    submission_id = seal_submission(bundle_path)
+    cbp.write_once_json(
+        bundle_path / "winner" / "card.json",
+        {
+            "winner_submission_id": submission_id,
+            "winner_builder_name": "Premature Winner",
+            "award_name": "Premature Prize",
+        },
+    )
+    cbp.write_once_json(
+        bundle_path / "winner" / "awards.json",
+        {
+            "awards": [
+                {
+                    "award_name": "Premature Prize",
+                    "winner_builder_name": "Premature Winner",
+                    "project_name": "Hidden Project",
+                }
+            ]
+        },
+    )
+
+    with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path)}):
+        with patch.object(sys, "stdout", new_callable=io.StringIO) as output:
+            assert cbp.cmd_present(
+                argparse.Namespace(
+                    run_id=run_id,
+                    showtime=False,
+                    projector=True,
+                    operator=False,
+                ),
+                None,
+                fixed_clock,
+            ) == 0
+    assert "Premature Prize" not in output.getvalue()
+    assert "Premature Winner" not in output.getvalue()
+
+    with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path)}):
+        with patch.object(sys, "stdout", new_callable=io.StringIO) as output:
+            assert cbp.cmd_replay(
+                argparse.Namespace(bundle=run_id, showtime=False),
+                None,
+                fixed_clock,
+            ) == 0
+    assert "Premature Prize" not in output.getvalue()
+    assert "Premature Winner" not in output.getvalue()
 
 
 def test_run_id_cannot_escape_runs_directory(tmp_path: Path):

@@ -22,9 +22,11 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
-import copy
-import hashlib
 import contextlib
+import copy
+from contextvars import ContextVar
+from functools import wraps
+import hashlib
 import io
 import json
 import os
@@ -33,6 +35,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -45,12 +48,13 @@ from event_spec import (
     legacy_rubric_to_event_spec,
     resolve_event_spec,
 )
+from bundle_reader import redact_audience_narrative
 
 # ---------------------------------------------------------------------------
 # Layer 0 — Constants and defaults
 # ---------------------------------------------------------------------------
 
-VERSION = "2.0.0"
+VERSION = "2.1.0"
 AWARD_SLATE = copy.deepcopy(DEFAULT_EVENT_SPEC["awards"])
 AWARD_NAME = next(
     award["name"] for award in AWARD_SLATE if award["id"] == "grand-prize"
@@ -61,6 +65,9 @@ SCHEMA_VERSION = "1.0"
 RUN_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 MAX_SUBMISSION_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MiB
+# Reserve most of the minute for reading and model work; animation itself must
+# never turn a short ceremony into a long wait.
+SHOWTIME_PAUSE_BUDGET_SECONDS = 18.0
 
 # Tone Safety — banned phrase categories (lowercase for matching)
 BANNED_TEARDOWN = [
@@ -115,6 +122,23 @@ ANSI = {
     "red": "\033[31m",
     "gold": "\033[38;5;220m",
 }
+
+class _ShowtimePacer:
+    """Caps intentional pauses without affecting evaluation runtime."""
+
+    def __init__(self, budget_seconds: float):
+        self.remaining_seconds = max(0.0, budget_seconds)
+
+    def take(self, requested_seconds: float) -> float:
+        delay = min(max(0.0, requested_seconds), self.remaining_seconds)
+        self.remaining_seconds -= delay
+        return delay
+
+
+_SHOWTIME_PACER: ContextVar[Optional[_ShowtimePacer]] = ContextVar(
+    "hackathon_judge_showtime_pacer",
+    default=None,
+)
 
 
 def _color_enabled() -> bool:
@@ -206,9 +230,12 @@ def _showtime_enabled(args: Optional[argparse.Namespace] = None) -> bool:
 
 
 def _showtime_pause(args: Optional[argparse.Namespace] = None, seconds: float = 0.7) -> None:
-    if _showtime_enabled(args):
-        import time
-        time.sleep(seconds)
+    if not _suspense_enabled(args):
+        return
+    pacer = _SHOWTIME_PACER.get()
+    delay = pacer.take(seconds) if pacer else seconds
+    if delay:
+        time.sleep(delay)
 
 
 def _suspense_enabled(args: Optional[argparse.Namespace] = None) -> bool:
@@ -217,6 +244,122 @@ def _suspense_enabled(args: Optional[argparse.Namespace] = None) -> bool:
     if getattr(args, "no_suspense", False):
         return False
     return sys.stdout.isatty() or os.environ.get("HJ_COLOR", "").lower() == "always"
+
+
+def _with_showtime_pacing(is_live: Optional[Callable[[argparse.Namespace], bool]] = None) -> Callable:
+    """Apply one animation budget to a top-level live command and its children."""
+
+    def decorate(func: Callable) -> Callable:
+        @wraps(func)
+        def wrapped(args: argparse.Namespace, *extra: Any, **kwargs: Any) -> Any:
+            if _SHOWTIME_PACER.get() is not None:
+                return func(args, *extra, **kwargs)
+            enabled = is_live(args) if is_live else _showtime_enabled(args)
+            if not enabled:
+                return func(args, *extra, **kwargs)
+            token = _SHOWTIME_PACER.set(_ShowtimePacer(SHOWTIME_PAUSE_BUDGET_SECONDS))
+            try:
+                return func(args, *extra, **kwargs)
+            finally:
+                _SHOWTIME_PACER.reset(token)
+
+        return wrapped
+
+    return decorate
+
+
+def _workshop_showtime_enabled(args: argparse.Namespace) -> bool:
+    return (
+        bool(getattr(args, "showtime", False))
+        or bool(getattr(args, "projector", False))
+        or not bool(getattr(args, "configure", False))
+    )
+
+
+def _present_showtime_enabled(args: argparse.Namespace) -> bool:
+    return _showtime_enabled(args) or bool(getattr(args, "projector", False))
+
+
+def _panel_style_for(manifest: Dict) -> str:
+    choices = manifest.get("workshop_choices", {})
+    if isinstance(choices, dict) and choices.get("panel_style") == "professional":
+        return "professional"
+    return "fun"
+
+
+def _natural_join(items: List[str]) -> str:
+    if not items:
+        return "the panel"
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return f"{', '.join(items[:-1])}, and {items[-1]}"
+
+
+def _panel_lens_names(event_spec: Dict) -> List[str]:
+    return [
+        _truncate(str(lens.get("name", "Panel lens")), 28)
+        for lens in event_spec.get("review_lenses", [])[:3]
+    ]
+
+
+def _audience_safe_commentary(value: Any, fallback: str) -> str:
+    """Return a stored reaction only when it cannot reveal a result early."""
+    return redact_audience_narrative(value, fallback)
+
+
+def _panel_opening_message(event_spec: Dict, panel_style: str) -> str:
+    lenses = _natural_join(_panel_lens_names(event_spec))
+    if panel_style == "professional":
+        return f"Panel brief: {lenses} will review every project independently. Scores stay sealed."
+    return f"Panel chatter: {lenses} are in the huddle. No spoilers, just good builds."
+
+
+def _panel_progress_message(index: int, total: int, panel_style: str) -> str:
+    if index == total:
+        return (
+            "Final review sealed. The panel has its notes; the room gets the spotlights next."
+            if panel_style == "professional"
+            else "Final review sealed. The panel has notes, the room gets spotlights. No peeking."
+        )
+    if index == 1:
+        return (
+            "First review sealed. Every project gets the same careful look."
+            if panel_style == "professional"
+            else "First review sealed. Fresh eyes, clean slate, no leaderboard."
+        )
+    return (
+        "Halfway through. The panel is still reviewing every project on its own merits."
+        if panel_style == "professional"
+        else "Halfway through. The room is cooking; the envelope stays shut."
+    )
+
+
+def _showcase_milestones(total: int) -> set[int]:
+    if total <= 0:
+        return set()
+    milestones = {1, total}
+    if total >= 4:
+        milestones.add((total + 1) // 2)
+    return milestones
+
+
+def _live_panel_take(verdict: Dict, panel_style: str, audience_locked: bool) -> tuple[str, str]:
+    """Pick one deterministic, score-safe stored reaction for a spotlight."""
+    reactions = verdict.get("archetype_verdicts", [])
+    if not reactions:
+        return "Panel", "This project gave the panel a thoughtful detail to celebrate."
+
+    seed = f"{verdict.get('submission_id', '')}:{panel_style}".encode("utf-8")
+    index = int(hashlib.sha256(seed).hexdigest(), 16) % len(reactions)
+    reaction = reactions[index]
+    lens = _truncate(str(reaction.get("archetype_name", "Panel")), 28)
+    fallback = "This project gave the panel a thoughtful detail to celebrate."
+    take = reaction.get("bright_spot") or reaction.get("perspective") or fallback
+    if audience_locked:
+        take = _audience_safe_commentary(take, fallback)
+    return lens, _truncate(str(take), 116)
 
 
 def _act_break(label: str, args: Optional[argparse.Namespace] = None) -> None:
@@ -1646,6 +1789,8 @@ def _write_awards_markdown(bundle_path: Path, awards_card: Dict) -> None:
 def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] = None) -> None:
     awards = awards_card.get("awards", [])
     width = min(76, _terminal_width(max_width=80))
+    if _showtime_enabled(args):
+        _sideline("The panel did the thinking. The room gets the cheering.", "🎙️", "magenta")
     _drumroll("Three awards. Three builder moments. The envelopes are ready.", args)
     for idx, award in enumerate(awards, 1):
         if awards:
@@ -1777,13 +1922,14 @@ def _seal_the_night(bundle_path: Path, run_id: str, showtime: bool,
     return 0
 
 
+@_with_showtime_pacing(_workshop_showtime_enabled)
 def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
                  clock: Optional[Callable] = None) -> int:
     """workshop — live facilitator flow from repo intake to award reveal."""
     configure = bool(getattr(args, "configure", False))
     manual_confirm = bool(getattr(args, "manual_confirm", False))
     projector = bool(getattr(args, "projector", False))
-    showtime = bool(getattr(args, "showtime", False)) or projector or not configure
+    showtime = _workshop_showtime_enabled(args)
     assume_yes = bool(getattr(args, "yes", False) or showtime) and not manual_confirm
 
     _magic_banner(
@@ -1925,6 +2071,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     return 0
 
 
+@_with_showtime_pacing()
 def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
               clock: Optional[Callable] = None) -> int:
     """judge — trigger eval engine; freshness gate + scoring + shadow score seal."""
@@ -1943,6 +2090,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     _assert_status_in(manifest, ["init", "collecting", "judging"], "judge")
     rubric = load_rubric(bundle_path)
     event_spec = load_event_spec(bundle_path)
+    panel_style = _panel_style_for(manifest)
 
     showtime = _showtime_enabled(args)
 
@@ -1950,6 +2098,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if showtime:
         _magic_banner(event_spec["event"]["name"], event_spec["event"]["tagline"])
         _sideline("Review lenses are ready. Scores stay sealed until the award reveal.", "🏟️", "magenta")
+        _sideline(_panel_opening_message(event_spec, panel_style), "🎙️", "magenta")
     else:
         _magic_banner(event_spec["event"]["name"], "Premium model policy, sealed scores, and fair review.")
         _sideline("The judging panel is warming up.", "🏟️", "magenta")
@@ -2007,14 +2156,17 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     else:
         _step(2, 5, f"Scoring {len(remaining)} submission(s) with the panel...", "⚖️")
     _showtime_pause(args)
+    milestones = _showcase_milestones(len(remaining))
+
     def progress(sub: Dict, scored: Dict, index: int, total: int) -> None:
-        if not showtime:
+        if not showtime or index not in milestones:
             return
         name = _truncate(str(sub.get("project_name", sub.get("submission_id", "Project"))), 38)
         print(_paint(f"   ⬢ {name}", "cyan", bold=True))
-        _showtime_pause(args, 0.25)
+        _showtime_pause(args, 0.2)
         print(_paint(f"     Review sealed  [{index}/{total}]", "green"))
-        _showtime_pause(args, 0.3)
+        _sideline(_panel_progress_message(index, total, panel_style), "🎙️", "magenta")
+        _showtime_pause(args, 0.2)
 
     try:
         new_scored = score_submissions(
@@ -2078,10 +2230,13 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     update_status(bundle_path, "sealed", clock)
     log_command(bundle_path, "judge", "ok", f"scored={len(all_scored)}", clock)
     _success(f"Judging complete. {len(all_scored)} submission(s) scored and sealed.")
+    if showtime:
+        _sideline("Quick huddle complete. Every project gets one clean spotlight next.", "🎙️", "magenta")
     _sideline("The panel has spoken. The reveal is ready.", "🏁", "gold")
     return 0
 
 
+@_with_showtime_pacing(_present_showtime_enabled)
 def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                 clock: Optional[Callable] = None) -> int:
     """present — generate presentation from stored artifacts only; no live calls."""
@@ -2096,8 +2251,10 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
     submissions = _load_submissions(bundle_path)
     sub_map = {s["submission_id"]: s for s in submissions}
     feedback = {f.get("submission_id"): f for f in _load_feedback(bundle_path)}
-    showtime = _showtime_enabled(args)
+    showtime = _present_showtime_enabled(args)
     event_spec = load_event_spec(bundle_path)
+    panel_style = _panel_style_for(manifest)
+    audience_locked = manifest.get("status") not in {"awarded", "exported"}
     show_scores = bool(getattr(args, "operator", False)) and manifest.get("status") in {
         "awarded",
         "exported",
@@ -2109,6 +2266,12 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
     )
     _sideline("The judges are seated. Every project gets a spotlight.", "🏟️", "magenta")
     _sideline("Scores remain hidden until the award reveal.", "🔒", "blue")
+    if showtime:
+        _sideline(
+            "One fast panel take per project, then the envelopes.",
+            "🎙️",
+            "magenta" if panel_style == "fun" else "cyan",
+        )
     _showtime_pause(args)
 
     # Load and display verdicts (NOT shadow scores)
@@ -2117,7 +2280,8 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
         print("[INFO] No verdicts found. Run 'judge' first.")
         return 0
 
-    for v in verdicts:
+    spotlight_milestones = _showcase_milestones(len(verdicts))
+    for spotlight_index, v in enumerate(verdicts, 1):
         score = float(v.get("total_score", 0))
         sid = v.get("submission_id")
         sub = sub_map.get(sid, {})
@@ -2143,21 +2307,49 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
             print(_paint(f"│ Recent:  {_truncate(str(meta.get('recent_activity')), 88)}", "cyan"))
         if show_scores:
             print(_paint(f"│ Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
-        for arch_v in v.get("archetype_verdicts", []):
-            print(_paint(f"│ 🎙️ {arch_v['archetype_name']}", "magenta", bold=True))
-            print(_paint(f"│    {_truncate(arch_v.get('bright_spot', arch_v.get('perspective', '')), 92)}", "green"))
+        if showtime:
+            lens, take = _live_panel_take(v, panel_style, audience_locked)
+            if panel_style == "professional":
+                line = f"│ 🎙️ {lens}: {take}"
+                print(_paint(_truncate(line, width), "cyan"))
+            else:
+                line = f"│ 🎙️ {lens} leans in: “{take}”"
+                print(_paint(_truncate(line, width), "magenta"))
+        else:
+            for arch_v in v.get("archetype_verdicts", []):
+                reaction = arch_v.get("bright_spot", arch_v.get("perspective", ""))
+                if audience_locked:
+                    reaction = _audience_safe_commentary(
+                        reaction,
+                        "The panel found a thoughtful detail worth celebrating.",
+                    )
+                print(_paint(f"│ 🎙️ {arch_v['archetype_name']}", "magenta", bold=True))
+                print(_paint(f"│    {_truncate(reaction, 92)}", "green"))
         fb = feedback.get(v.get("submission_id"), {})
         if fb:
             if fb.get("bright_spot"):
-                print(_paint(f"│ ✨ Bright Spot: {_truncate(fb.get('bright_spot', ''), 86)}", "green"))
-            if fb.get("next_commit"):
-                print(_paint(f"│ 🔜 Next Commit: {_truncate(fb.get('next_commit', ''), 86)}", "yellow"))
+                bright_spot = fb.get("bright_spot", "")
+                if audience_locked:
+                    bright_spot = _audience_safe_commentary(
+                        bright_spot,
+                        "This project brought a thoughtful moment to the room.",
+                    )
+                print(_paint(f"│ ✨ Bright Spot: {_truncate(bright_spot, 86)}", "green"))
+            if fb.get("next_commit") and not showtime:
+                next_commit = fb.get("next_commit", "")
+                if audience_locked:
+                    next_commit = _audience_safe_commentary(
+                        next_commit,
+                        "A helpful next step will be shared after the reveal.",
+                    )
+                print(_paint(f"│ 🔜 Next Commit: {_truncate(next_commit, 86)}", "yellow"))
         print(_paint("└" + "─" * width, "blue"))
-        _showtime_pause(args, 0.5)
+        if spotlight_index in spotlight_milestones:
+            _showtime_pause(args, 0.35)
 
     # Show winner if awarded
     awards_card = _load_awards(bundle_path)
-    if awards_card:
+    if not audience_locked and awards_card:
         print()
         _print_award_ceremony(awards_card, args)
     else:
@@ -2166,6 +2358,7 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
     return 0
 
 
+@_with_showtime_pacing()
 def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
               clock: Optional[Callable] = None) -> int:
     """award — declare winners; write award cards; append registry entry."""
@@ -2644,7 +2837,13 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
             else:
                 print(_paint("  Score:   sealed until the award reveal", "gold", bold=True))
             for arch_v in v.get("archetype_verdicts", []):
-                print(_paint(f"    🎙️ {arch_v['archetype_name']}: {arch_v.get('bright_spot', '')[:100]}", "green"))
+                reaction = arch_v.get("bright_spot", "")
+                if not scores_revealed:
+                    reaction = _audience_safe_commentary(
+                        reaction,
+                        "The panel found a thoughtful detail worth celebrating.",
+                    )
+                print(_paint(f"    🎙️ {arch_v['archetype_name']}: {reaction[:100]}", "green"))
     else:
         print("\n  No verdicts found in bundle.")
 
@@ -2652,15 +2851,26 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
         print(_paint("\n✨ Next-Commit Nudges", "cyan", bold=True))
         for fc in feedback:
             print(_paint(f"\n  Builder: {fc.get('builder_name', fc['submission_id'])}", "cyan"))
-            print(_paint(f"  ✨ {fc.get('bright_spot', '')}", "green"))
-            print(_paint(f"  ➜ {fc.get('next_commit', '')}", "yellow"))
+            bright_spot = fc.get("bright_spot", "")
+            next_commit = fc.get("next_commit", "")
+            if not scores_revealed:
+                bright_spot = _audience_safe_commentary(
+                    bright_spot,
+                    "This project brought a thoughtful moment to the room.",
+                )
+                next_commit = _audience_safe_commentary(
+                    next_commit,
+                    "A helpful next step will be shared after the reveal.",
+                )
+            print(_paint(f"  ✨ {bright_spot}", "green"))
+            print(_paint(f"  ➜ {next_commit}", "yellow"))
 
     winner_path = bundle_path / "winner" / "card.json"
     awards_card = _load_awards(bundle_path)
-    if awards_card:
+    if scores_revealed and awards_card:
         print()
         _print_award_ceremony(awards_card, args)
-    elif winner_path.exists():
+    elif scores_revealed and winner_path.exists():
         winner = load_json(winner_path)
         print()
         _magic_banner(

@@ -1,20 +1,18 @@
 # 🏆 Hackathon Judge
 
 ![CI](https://github.com/DUBSOpenHub/hackathon-judge/actions/workflows/ci.yml/badge.svg)
-![Version: v2.0.0](https://img.shields.io/badge/version-v2.0.0-5E5E5E.svg)
+![Version: v2.1.0](https://img.shields.io/badge/version-v2.1.0-5E5E5E.svg)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen?logo=github)](SECURITY.md)
 ![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 
 > **Paste project links. Put the judging room on screen. Let every builder get a moment.**
 
-Hackathons end badly when the projects are exciting but the judging becomes a
-private spreadsheet. Judges compare notes off-screen, the audience waits, and
-the finalists get a result with no story behind it.
+A room full of people built something. The ending should feel like a show.
 
-Hackathon Judge turns a list of project links into a fair, screen-shareable
-show. Every project gets a spotlight. Reviews are sealed before the reveal.
-The result is an integrity-checked bundle that can be replayed without calling
-a model again.
+Hackathon Judge turns a list of project links into the final act: every build
+gets a spotlight, the panel keeps the energy up without leaking scores, and
+the awards land with a proper reveal. Send the links. Start the show. Keep the
+replay.
 
 ## ⚡ Install in one command
 
@@ -85,6 +83,10 @@ project links -> intake -> sealed reviews -> every-project spotlight -> awards -
    moment.
 5. **Replay:** A sealed bundle preserves the outcome without generating new
    reviews.
+
+Showtime keeps the ceremony brisk: a few panel beats, one quick reaction per
+spotlight, then the reveal. Intentional animation pauses are capped below a
+minute; review time itself scales with the number of submitted projects.
 
 ## 🎛️ Make it yours
 

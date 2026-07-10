@@ -367,6 +367,7 @@ class SpotlightCard(Static):
         sub = self._data
         meta = sub.get("repo_metadata", {})
         lines = Text()
+        revealed = bool(self._verdict) and "total_score" in self._verdict
 
         # Project name
         lines.append(f"🌟 {sub.get('project_name', 'Unknown')}\n", style="bold bright_white")
@@ -392,19 +393,26 @@ class SpotlightCard(Static):
         # (audience_view() withholds total_score until then).
         if self._verdict:
             lines.append("\n")
-            if "total_score" in self._verdict:
+            if revealed:
                 lines.append("   Score: ", style="bold")
                 lines.append_text(_score_bar_rich(float(self._verdict.get("total_score", 0))))
                 lines.append("\n")
-            for av in self._verdict.get("archetype_verdicts", []):
-                lines.append(f"   🎙️ {av.get('archetype_name', '')}: ", style="bright_magenta")
+            reactions = self._verdict.get("archetype_verdicts", [])
+            # Before awards, show one concise, score-safe panel take rather
+            # than a wall of judge notes. The audience projection has already
+            # removed score-like prose.
+            if not revealed:
+                reactions = reactions[:1]
+            for av in reactions:
+                label = av.get("archetype_name", "") if revealed else "Panel take"
+                lines.append(f"   🎙️ {label}: ", style="bright_magenta")
                 lines.append(f"{av.get('bright_spot', av.get('perspective', ''))[:80]}\n", style="green")
 
         # Feedback
         if self._fb:
             if self._fb.get("bright_spot"):
                 lines.append(f"\n   ✨ {self._fb['bright_spot'][:90]}\n", style="green")
-            if self._fb.get("next_commit"):
+            if self._fb.get("next_commit") and revealed:
                 lines.append(f"   🔜 {self._fb['next_commit'][:90]}\n", style="yellow")
 
         border = ACCENT if self._verdict else MUTED

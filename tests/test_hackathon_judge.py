@@ -6,6 +6,7 @@ shadow score, eval engine, command flows, registry, exit codes.
 Run with: python -m pytest tests/test_hackathon_judge.py -v
 """
 
+import argparse
 import copy
 import hashlib
 import json
@@ -181,6 +182,103 @@ class TestToneSafety:
     def test_assert_tone_passes_silently(self):
         tone_result = {"passed": True, "banned_phrases": [], "missing_required": []}
         cbp.assert_tone(tone_result)  # should not raise
+
+
+class TestShowtimeDelight:
+
+    def test_panel_style_changes_the_opening_chatter(self):
+        event = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+
+        fun = cbp._panel_opening_message(event, "fun")
+        professional = cbp._panel_opening_message(event, "professional")
+
+        assert fun.startswith("Panel chatter:")
+        assert "No spoilers" in fun
+        assert professional.startswith("Panel brief:")
+        assert "independently" in professional
+
+    def test_showtime_pause_respects_its_budget(self):
+        args = argparse.Namespace(showtime=True, no_suspense=False)
+        pacer = cbp._ShowtimePacer(0.5)
+        token = cbp._SHOWTIME_PACER.set(pacer)
+        try:
+            with patch.dict(os.environ, {"HJ_COLOR": "always"}, clear=True):
+                with patch.object(cbp.time, "sleep") as sleep:
+                    cbp._showtime_pause(args, 0.4)
+                    cbp._showtime_pause(args, 0.4)
+        finally:
+            cbp._SHOWTIME_PACER.reset(token)
+
+        assert [call.args[0] for call in sleep.call_args_list] == pytest.approx([0.4, 0.1])
+        assert pacer.remaining_seconds == pytest.approx(0.0)
+
+    def test_no_suspense_skips_showtime_pauses(self):
+        args = argparse.Namespace(showtime=True, no_suspense=True)
+
+        with patch.object(cbp.time, "sleep") as sleep:
+            cbp._showtime_pause(args, 1.0)
+
+        sleep.assert_not_called()
+
+    def test_workshop_caps_total_showtime_animation(self, tmp_path):
+        env = {
+            "HJ_RUNS_DIR": str(tmp_path / "runs"),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+            "HJ_COLOR": "always",
+        }
+        args = argparse.Namespace(
+            run_id="paced-show",
+            urls=[f"DUBSOpenHub/project-{index}" for index in range(4)],
+            file=None,
+            audience=None,
+            awards=None,
+            panel_style="fun",
+            config=None,
+            event=None,
+            showtime=True,
+            yes=True,
+            configure=False,
+            manual_confirm=False,
+            no_suspense=False,
+            projector=True,
+        )
+
+        def fake_metadata(url):
+            owner_repo = url.replace("https://github.com/", "", 1)
+            return {
+                "name_with_owner": owner_repo,
+                "description": "",
+                "language": "Python",
+                "stars": 0,
+                "forks": 0,
+                "updated_at": FIXED_TS,
+                "url": url,
+                "source": "test",
+            }
+
+        with patch.dict(os.environ, env):
+            with patch.object(cbp, "fetch_repo_metadata", fake_metadata):
+                with patch.object(cbp.time, "sleep") as sleep:
+                    assert cbp.cmd_workshop(args, MockGateway(), fixed_clock) == 0
+
+        total_animation_seconds = sum(call.args[0] for call in sleep.call_args_list)
+        assert total_animation_seconds <= cbp.SHOWTIME_PAUSE_BUDGET_SECONDS + 1e-9
+        assert total_animation_seconds > 0
+
+    @pytest.mark.parametrize(
+        "spoiler",
+        [
+            "Leading the ranking with a score of 9/10.",
+            "This is the first-place project with nine out of ten.",
+            "A 1st-place finish and a place among the winners.",
+            "The sixth-place project earned a perfect ten.",
+            "The panel gave this build 9 points.",
+            "This entry is number one in the room.",
+            "They earned 10 of 10.",
+        ],
+    )
+    def test_audience_chatter_redacts_score_like_language(self, spoiler):
+        assert cbp._audience_safe_commentary(spoiler, "safe fallback") == "safe fallback"
 
 
 # ---------------------------------------------------------------------------
@@ -559,6 +657,8 @@ class TestBulkUrlImport:
         assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
+        assert "Panel chatter:" in output
+        assert "One fast panel take per project" in output
 
     def test_gate_result_immutably_recorded(self, tmp_path):
         bundle_path = make_run(tmp_path)

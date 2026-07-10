@@ -26,6 +26,7 @@ exist. Two projections are exposed:
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -36,6 +37,29 @@ REVEALED_STATUSES = frozenset({"awarded", "exported"})
 # Verdict fields that must stay hidden from the audience projection until
 # the run has reached a revealed status.
 _SCORE_FIELDS = ("total_score", "dimension_scores")
+_NARRATIVE_SPOILER_RE = re.compile(
+    r"\b(?:score(?:s|d)?|rank(?:s|ed|ing)?|leaderboard|winners?|winning|"
+    r"finalists?|(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|"
+    r"seventh|eighth|ninth|tenth)[-\s]+place|leading|highest|lowest|"
+    r"top[-\s]+(?:project|build|entry)|best[-\s]+(?:project|build|entry)|perfect\s+ten)\b"
+    r"|\b\d+(?:\.\d+)?\s*(?:/|out\s+of|of)\s*\d+\b"
+    r"|(?:#\s*\d+|\bnumber\s+(?:one|two|three|four|five|six|seven|eight|nine|ten)\b)"
+    r"|\b(?:\d+(?:\.\d+)?|zero|one|two|three|four|five|six|seven|eight|nine|ten)"
+    r"\s+points?\b"
+    r"|\b(?:zero|one|two|three|four|five|six|seven|eight|nine|ten)"
+    r"(?:\s+point\s+(?:zero|one|two|three|four|five|six|seven|eight|nine))?"
+    r"\s+out\s+of\s+"
+    r"(?:one|two|three|four|five|six|seven|eight|nine|ten)\b",
+    re.IGNORECASE,
+)
+
+
+def redact_audience_narrative(value: Any, fallback: str) -> str:
+    """Keep audience narrative from leaking scores through model-written text."""
+    text = " ".join(str(value or "").split())
+    if not text or _NARRATIVE_SPOILER_RE.search(text):
+        return fallback
+    return text
 
 
 def _load_json_or_none(path: Path) -> Optional[Any]:
@@ -65,10 +89,46 @@ def _load_json_dir(dir_path: Path) -> List[Dict[str, Any]]:
 
 
 def _redact_verdict(verdict: Dict[str, Any]) -> Dict[str, Any]:
-    """Return a shallow copy of ``verdict`` with score fields removed."""
+    """Return an audience-safe verdict with scores and score-like prose removed."""
     redacted = dict(verdict)
     for score_field in _SCORE_FIELDS:
         redacted.pop(score_field, None)
+    reactions = redacted.get("archetype_verdicts")
+    if isinstance(reactions, list):
+        redacted["archetype_verdicts"] = [
+            {
+                **reaction,
+                "perspective": redact_audience_narrative(
+                    reaction.get("perspective"),
+                    "The panel found a thoughtful detail worth celebrating.",
+                ),
+                "bright_spot": redact_audience_narrative(
+                    reaction.get("bright_spot"),
+                    "This project gave the panel a thoughtful detail to celebrate.",
+                ),
+            }
+            if isinstance(reaction, dict)
+            else reaction
+            for reaction in reactions
+        ]
+    return redacted
+
+
+def _redact_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
+    """Return feedback safe for an unrevealed audience projection."""
+    redacted = dict(feedback)
+    redacted["bright_spot"] = redact_audience_narrative(
+        feedback.get("bright_spot"),
+        "This project brought a thoughtful moment to the room.",
+    )
+    redacted["next_commit"] = redact_audience_narrative(
+        feedback.get("next_commit"),
+        "A helpful next step will be shared after the reveal.",
+    )
+    redacted["panel_notes"] = redact_audience_narrative(
+        feedback.get("panel_notes"),
+        "The panel has a supportive note ready for this project.",
+    )
     return redacted
 
 
@@ -205,8 +265,10 @@ class BundleReader:
         """
         revealed = self.is_revealed()
         verdicts = self.verdicts()
+        feedback = self.feedback()
         if not revealed:
             verdicts = [_redact_verdict(v) for v in verdicts]
+            feedback = [_redact_feedback(f) for f in feedback]
 
         submissions = sorted(self.submissions(), key=_arrival_key)
         arrival_index = {
@@ -220,7 +282,7 @@ class BundleReader:
             ),
         )
         feedback = sorted(
-            self.feedback(),
+            feedback,
             key=lambda f: (
                 arrival_index.get(f.get("submission_id"), len(arrival_index)),
                 f.get("submission_id") or "",
