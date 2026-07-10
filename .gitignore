@@ -8,8 +8,8 @@ htmlcov/
 
 .DS_Store
 
-# Local Copilot Builder - Judging Panel run artifacts
-.copilot_builder_panel/
+# Local Hackathon Judge run artifacts
+.hackathon_judge/
 runs/
 *.bundle.tar.gz
 HASHES
@@ -20,4 +20,3 @@ SEAL
 .env.*
 .vscode/
 .idea/
-

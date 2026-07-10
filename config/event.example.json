@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "event": {
+    "name": "Spring Product Hackathon",
+    "tagline": "Projects in. Fair judging. A shared celebration."
+  },
+  "rubric": {
+    "dimensions": [
+      {
+        "id": "innovation",
+        "name": "Innovation",
+        "weight": 0.3,
+        "max_score": 10,
+        "description": "Originality and a thoughtful approach to the challenge"
+      },
+      {
+        "id": "impact",
+        "name": "Potential Impact",
+        "weight": 0.25,
+        "max_score": 10,
+        "description": "Value for people using the project"
+      },
+      {
+        "id": "execution",
+        "name": "Technical Execution",
+        "weight": 0.25,
+        "max_score": 10,
+        "description": "Quality, completeness, and craft"
+      },
+      {
+        "id": "presentation",
+        "name": "Clarity and Demo",
+        "weight": 0.2,
+        "max_score": 10,
+        "description": "How clearly the project and its value are communicated"
+      }
+    ]
+  },
+  "review_lenses": [
+    {
+      "id": "innovation",
+      "name": "Innovation lens",
+      "focus": "originality, problem framing, and useful creative choices"
+    },
+    {
+      "id": "craft",
+      "name": "Build quality lens",
+      "focus": "technical execution, completeness, and thoughtful implementation"
+    },
+    {
+      "id": "impact",
+      "name": "Impact lens",
+      "focus": "user value, feasibility, and the strength of the demo story"
+    }
+  ],
+  "awards": [
+    {
+      "id": "innovation",
+      "name": "Innovation Award",
+      "emoji": "*",
+      "tagline": "For a project with a memorable new idea.",
+      "dimensions": ["innovation"],
+      "reason": "This project paired a distinctive idea with a compelling problem to solve."
+    },
+    {
+      "id": "craft",
+      "name": "Build Quality Award",
+      "emoji": "+",
+      "tagline": "For thoughtful execution and a strong working experience.",
+      "dimensions": ["execution", "presentation"],
+      "reason": "This project showed care in its implementation and the way it was presented."
+    },
+    {
+      "id": "grand-prize",
+      "name": "Spring Product Hackathon Grand Prize",
+      "emoji": "#",
+      "tagline": "For the strongest overall project story.",
+      "dimensions": [],
+      "reason": "This project delivered the strongest overall result across the event rubric."
+    }
+  ],
+  "presentation": {
+    "audience_view": "masked-until-awards",
+    "screen_share": {
+      "hide_scores_until": "awarded",
+      "show_progress": true,
+      "show_spotlights": true
+    }
+  },
+  "privacy": {
+    "visibility": "internal",
+    "hide_scores_until": "awarded"
+  },
+  "accessibility": {
+    "high_contrast": true,
+    "reduced_motion": false
+  },
+  "model_policy": {
+    "policy_mode": "strict",
+    "preferred_model": "claude-opus-4.8",
+    "required_tier": "premium",
+    "required_reasoning": "high"
+  }
+}

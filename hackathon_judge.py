@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Copilot Builder - Judging Panel — single-file MVP
-Architecture: Copilot Circuit — the run bundle is the canonical unit of record.
+Hackathon Judge — sealed, replayable judging for project events.
+Architecture: the run bundle is the canonical unit of record.
 
 Commands: init, submit, judge, present, replay, resume, compare, list,
           award, feedback, export, validate, doctor
@@ -29,6 +29,7 @@ import io
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tarfile
@@ -37,38 +38,27 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
+from event_spec import (
+    DEFAULT_EVENT_SPEC,
+    EventSpecValidationError,
+    event_spec_to_rubric,
+    legacy_rubric_to_event_spec,
+    resolve_event_spec,
+)
+
 # ---------------------------------------------------------------------------
 # Layer 0 — Constants and defaults
 # ---------------------------------------------------------------------------
 
-VERSION = "1.1.0"
-AWARD_NAME = "Copilot Builder Award"
-AWARD_SLATE = [
-    {
-        "id": "spark",
-        "name": "Copilot Spark Award",
-        "emoji": "✨",
-        "tagline": "For the idea that made the room lean forward.",
-        "dimensions": ["innovation"],
-    },
-    {
-        "id": "ship",
-        "name": "Copilot Ship Award",
-        "emoji": "🚀",
-        "tagline": "For the build that feels closest to launch.",
-        "dimensions": ["execution", "presentation"],
-    },
-    {
-        "id": "builder",
-        "name": AWARD_NAME,
-        "emoji": "🏆",
-        "tagline": "For the strongest overall builder story.",
-        "dimensions": [],
-    },
-]
-DEFAULT_REGISTRY_PATH = Path.home() / ".copilot_builder_panel" / "registry" / "log.ndjson"
-DEFAULT_RUNS_DIR = Path.home() / ".copilot_builder_panel" / "runs"
+VERSION = "2.0.0"
+AWARD_SLATE = copy.deepcopy(DEFAULT_EVENT_SPEC["awards"])
+AWARD_NAME = next(
+    award["name"] for award in AWARD_SLATE if award["id"] == "grand-prize"
+)
+DEFAULT_REGISTRY_PATH = Path.home() / ".hackathon_judge" / "registry" / "log.ndjson"
+DEFAULT_RUNS_DIR = Path.home() / ".hackathon_judge" / "runs"
 SCHEMA_VERSION = "1.0"
+RUN_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 MAX_SUBMISSION_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MiB
 
@@ -105,34 +95,9 @@ FORWARD_NUDGE_PATTERNS = [
     r"\bnext\b", r"\bfuture\b", r"\byour next\b", r"\bcould\b", r"\bwould\b",
 ]
 
-# Default rubric configuration
-DEFAULT_RUBRIC = {
-    "version": "1.0",
-    "rubric": {
-        "dimensions": [
-            {"id": "innovation",    "name": "Innovation",          "weight": 0.30, "max_score": 10},
-            {"id": "impact",        "name": "Potential Impact",    "weight": 0.25, "max_score": 10},
-            {"id": "execution",     "name": "Technical Execution", "weight": 0.25, "max_score": 10},
-            {"id": "presentation",  "name": "Clarity & Demo",      "weight": 0.20, "max_score": 10},
-        ]
-    },
-    "judge_archetypes": [
-        {"id": "spark",    "name": "The Spark",    "focus": "novel ideas and creative leaps"},
-        {"id": "builder",  "name": "The Builder",  "focus": "technical depth and craft"},
-        {"id": "champion", "name": "The Champion", "focus": "real-world impact and adoption"},
-    ],
-    "tone_policy": {
-        "banned_phrases": [],
-        "extra_banned_phrases": [],
-    },
-    "freshness_gate": {
-        "policy_mode": "strict",
-        "preferred_model": "claude-opus-4.7-high",
-        "required_tier": "premium",
-        "required_reasoning": "high",
-    },
-    "submission_size_cap_bytes": MAX_SUBMISSION_SIZE_DEFAULT,
-}
+# Default rubric configuration. New event packs resolve to this shape before
+# reaching the existing evaluation engine, so historic bundle readers stay valid.
+DEFAULT_RUBRIC = event_spec_to_rubric(DEFAULT_EVENT_SPEC)
 
 # ---------------------------------------------------------------------------
 # Console Experience — colorful, deterministic, artifact-safe
@@ -153,9 +118,9 @@ ANSI = {
 
 
 def _color_enabled() -> bool:
-    if os.environ.get("NO_COLOR") or os.environ.get("CBP_NO_COLOR"):
+    if os.environ.get("NO_COLOR") or os.environ.get("HJ_NO_COLOR"):
         return False
-    if os.environ.get("CBP_COLOR", "").lower() == "always":
+    if os.environ.get("HJ_COLOR", "").lower() == "always":
         return True
     return sys.stdout.isatty()
 
@@ -235,7 +200,7 @@ def _warning(message: str) -> None:
 
 
 def _showtime_enabled(args: Optional[argparse.Namespace] = None) -> bool:
-    if os.environ.get("CBP_SHOWTIME", "").lower() in {"1", "true", "yes", "on"}:
+    if os.environ.get("HJ_SHOWTIME", "").lower() in {"1", "true", "yes", "on"}:
         return True
     return bool(getattr(args, "showtime", False)) if args is not None else False
 
@@ -251,7 +216,7 @@ def _suspense_enabled(args: Optional[argparse.Namespace] = None) -> bool:
         return False
     if getattr(args, "no_suspense", False):
         return False
-    return sys.stdout.isatty() or os.environ.get("CBP_COLOR", "").lower() == "always"
+    return sys.stdout.isatty() or os.environ.get("HJ_COLOR", "").lower() == "always"
 
 
 def _act_break(label: str, args: Optional[argparse.Namespace] = None) -> None:
@@ -274,7 +239,7 @@ def _tonight_card(run_id: str, repo_count: int, awards: str,
     award_labels = " · ".join(a.strip() for a in awards.split(",") if a.strip())
     lines = [
         ("Run", run_id),
-        ("Builders entered", str(repo_count)),
+        ("Projects entered", str(repo_count)),
         ("Awards on offer", award_labels),
         ("Mode", "Showtime Autopilot"),
         ("Envelope", "sealed live, replayable forever"),
@@ -289,13 +254,13 @@ def _tonight_card(run_id: str, repo_count: int, awards: str,
     _showtime_pause(args, 0.5)
 
 
-def _builder_count_hero(count: int, args: Optional[argparse.Namespace] = None) -> None:
+def _project_count_hero(count: int, args: Optional[argparse.Namespace] = None) -> None:
     if not _showtime_enabled(args):
         return
     width = min(76, _terminal_width(max_width=80))
-    noun = "BUILDER" if count == 1 else "BUILDERS"
+    noun = "PROJECT" if count == 1 else "PROJECTS"
     print()
-    print(_paint(f"{count} {noun} ENTER THE ARENA".center(width), "gold", bold=True))
+    print(_paint(f"{count} {noun} ENTER THE SHOWCASE".center(width), "gold", bold=True))
     print()
     _showtime_pause(args, 0.45)
 
@@ -335,40 +300,40 @@ APPROVED_MODELS = [
 # Layer 1 — Exceptions
 # ---------------------------------------------------------------------------
 
-class CopilotBuilderPanelError(Exception):
+class HackathonJudgeError(Exception):
     """Base error with exit code."""
     exit_code: int = 1
 
 
-class BundleSealError(CopilotBuilderPanelError):
+class BundleSealError(HackathonJudgeError):
     exit_code = 2
 
 
-class FreshnessGateBlock(CopilotBuilderPanelError):
+class FreshnessGateBlock(HackathonJudgeError):
     exit_code = 3
 
 
-class ToneSafetyFailure(CopilotBuilderPanelError):
+class ToneSafetyFailure(HackathonJudgeError):
     exit_code = 4
 
 
-class BundleTamperError(CopilotBuilderPanelError):
+class BundleTamperError(HackathonJudgeError):
     exit_code = 5
 
 
-class SubmissionSizeError(CopilotBuilderPanelError):
+class SubmissionSizeError(HackathonJudgeError):
     exit_code = 6
 
 
-class ConfigValidationError(CopilotBuilderPanelError):
+class ConfigValidationError(HackathonJudgeError):
     exit_code = 7
 
 
-class ModelAPIError(CopilotBuilderPanelError):
+class ModelAPIError(HackathonJudgeError):
     exit_code = 8
 
 
-class HumanApprovalGate(CopilotBuilderPanelError):
+class HumanApprovalGate(HackathonJudgeError):
     exit_code = 9
 
 # ---------------------------------------------------------------------------
@@ -478,13 +443,34 @@ def write_hashes_and_seal(bundle_path: Path) -> tuple[str, str]:
     return hashes_content, seal_hash
 
 
+def validate_run_id(run_id: str) -> str:
+    """Validate a run ID before it is joined to the configured runs directory."""
+    if not isinstance(run_id, str) or not RUN_ID_RE.fullmatch(run_id):
+        raise ConfigValidationError(
+            "Run IDs may contain only letters, numbers, dots, underscores, and hyphens "
+            "and must begin with a letter or number."
+        )
+    if run_id in {".", ".."}:
+        raise ConfigValidationError("Run ID may not be '.' or '..'.")
+    return run_id
+
+
+def get_runs_dir() -> Path:
+    """Return the configured root for Hackathon Judge run bundles."""
+    return Path(os.environ.get("HJ_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+
+
 def get_bundle_path(run_id: str, runs_dir: Optional[Path] = None) -> Path:
-    base = runs_dir or Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    return base / run_id
+    """Resolve a validated run ID to a path contained by the runs directory."""
+    base = (runs_dir or get_runs_dir()).resolve()
+    candidate = (base / validate_run_id(run_id)).resolve()
+    if candidate.parent != base:
+        raise ConfigValidationError(f"Run ID '{run_id}' resolves outside the runs directory.")
+    return candidate
 
 
 def get_registry_path() -> Path:
-    return Path(os.environ.get("CBP_REGISTRY_PATH", str(DEFAULT_REGISTRY_PATH)))
+    return Path(os.environ.get("HJ_REGISTRY_PATH", str(DEFAULT_REGISTRY_PATH)))
 
 
 _GITHUB_URL_RE = re.compile(
@@ -568,7 +554,7 @@ def fetch_repo_metadata(url: str) -> Dict[str, Any]:
 
 
 def import_url_submissions(bundle_path: Path, urls: List[str],
-                           builder_name: str = "Workshop Builders",
+                           builder_name: str = "Hackathon Participants",
                            clock: Optional[Callable] = None) -> List[Dict]:
     """Create idempotent submissions from GitHub repo URLs."""
     created: List[Dict] = []
@@ -581,7 +567,7 @@ def import_url_submissions(bundle_path: Path, urls: List[str],
         sub_path = inputs_dir / f"{sid}.json"
         if sub_path.exists():
             continue
-        summary_bits = [f"Repository submitted for Copilot Builder - Judging Panel: {url}"]
+        summary_bits = [f"Repository submitted for this hackathon: {url}"]
         if meta.get("description"):
             summary_bits.append(meta["description"])
         if meta.get("language"):
@@ -606,87 +592,13 @@ def import_url_submissions(bundle_path: Path, urls: List[str],
     return created
 
 
-_GITHUB_URL_RE = re.compile(
-    r"https?://github\.com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?:[/?#][^\s,)]*)?",
-    re.IGNORECASE,
-)
-_OWNER_REPO_RE = re.compile(
-    r"(?<![A-Za-z0-9_.-])([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?![A-Za-z0-9_.-])"
-)
-
-
-def parse_submission_urls(raw: str) -> List[str]:
-    """Extract GitHub repo URLs or owner/repo entries from pasted workshop text."""
-    found: List[str] = []
-    seen = set()
-
-    def add(owner: str, repo: str) -> None:
-        repo = repo.removesuffix(".git")
-        url = f"https://github.com/{owner}/{repo}"
-        key = url.lower()
-        if key not in seen:
-            seen.add(key)
-            found.append(url)
-
-    for match in _GITHUB_URL_RE.finditer(raw or ""):
-        add(match.group(1), match.group(2))
-
-    # Remove full URLs so owner/repo extraction does not double-count path fragments.
-    scrubbed = _GITHUB_URL_RE.sub(" ", raw or "")
-    for match in _OWNER_REPO_RE.finditer(scrubbed):
-        owner, repo = match.group(1), match.group(2)
-        if owner.lower() in {"http:", "https:"}:
-            continue
-        add(owner, repo)
-
-    return found
-
-
-def _submission_id_from_repo_url(url: str) -> str:
-    owner_repo = url.replace("https://github.com/", "", 1)
-    slug = re.sub(r"[^A-Za-z0-9]+", "-", owner_repo).strip("-").lower()
-    digest = hashlib.sha256(url.lower().encode("utf-8")).hexdigest()[:8]
-    return f"repo-{slug}-{digest}"[:96]
-
-
-def import_url_submissions(bundle_path: Path, urls: List[str],
-                           builder_name: str = "Workshop Builders",
-                           clock: Optional[Callable] = None) -> List[Dict]:
-    """Create idempotent submissions from GitHub repo URLs."""
-    created: List[Dict] = []
-    inputs_dir = bundle_path / "inputs"
-    inputs_dir.mkdir(parents=True, exist_ok=True)
-
-    for url in urls:
-        owner_repo = url.replace("https://github.com/", "", 1)
-        submission_id = _submission_id_from_repo_url(url)
-        sub_path = inputs_dir / f"{submission_id}.json"
-        if sub_path.exists():
-            continue
-        submission = {
-            "submission_id": submission_id,
-            "builder_name": builder_name,
-            "project_name": owner_repo,
-            "description": f"Repository submitted for Copilot Builder - Judging Panel: {url}",
-            "repo_url": url,
-            "artifacts": [],
-            "submitted_at": _now(clock),
-            "file_size_bytes": 0,
-        }
-        write_once_json(sub_path, submission)
-        created.append(submission)
-
-    if created:
-        update_status(bundle_path, "collecting", clock)
-    return created
-
-
 # ---------------------------------------------------------------------------
 # Layer 2b — Bundle Manifest (RunContext)
 # ---------------------------------------------------------------------------
 
 def init_bundle(run_id: str, mode: str, rubric_config: Dict, bundle_path: Path,
-                clock: Optional[Callable] = None) -> None:
+                clock: Optional[Callable] = None,
+                event_spec: Optional[Dict] = None) -> None:
     """Create the initial bundle structure for a new run."""
     if (bundle_path / "manifest" / "bundle.json").exists():
         raise ConfigValidationError(
@@ -694,16 +606,27 @@ def init_bundle(run_id: str, mode: str, rubric_config: Dict, bundle_path: Path,
             "Use a different run_id or delete the existing run."
         )
 
-    # Validate rubric weights
-    _validate_rubric(rubric_config)
+    try:
+        resolved_event_spec = resolve_event_spec(event_spec, rubric_config)
+        rubric_snapshot = event_spec_to_rubric(resolved_event_spec)
+    except EventSpecValidationError as exc:
+        raise ConfigValidationError(str(exc)) from exc
+
+    # Validate the engine-compatible scoring snapshot.
+    _validate_rubric(rubric_snapshot)
 
     # Create directory structure
     for subdir in ("manifest", "config", "inputs", "eval", "sealed",
                    "verdicts", "feedback", "winner", "registry"):
         (bundle_path / subdir).mkdir(parents=True, exist_ok=True)
 
-    # Write rubric snapshot (write-once)
-    rubric_with_snapshot = dict(rubric_config)
+    # Write the full event and legacy-compatible scoring snapshots. Existing
+    # bundles only contain rubric.json, so readers synthesize an EventSpec for them.
+    event_with_snapshot = copy.deepcopy(resolved_event_spec)
+    event_with_snapshot["snapshotted_at"] = _now(clock)
+    write_once_json(bundle_path / "config" / "event.json", event_with_snapshot)
+
+    rubric_with_snapshot = copy.deepcopy(rubric_snapshot)
     rubric_with_snapshot["snapshotted_at"] = _now(clock)
     write_once_json(bundle_path / "config" / "rubric.json", rubric_with_snapshot)
 
@@ -714,6 +637,11 @@ def init_bundle(run_id: str, mode: str, rubric_config: Dict, bundle_path: Path,
         "status": "init",
         "created_at": _now(clock),
         "updated_at": _now(clock),
+        "event": {
+            "name": resolved_event_spec["event"]["name"],
+            "tagline": resolved_event_spec["event"]["tagline"],
+            "schema_version": resolved_event_spec["schema_version"],
+        },
         "command_log": [
             {"command": "init", "timestamp": _now(clock), "status": "ok"}
         ],
@@ -749,6 +677,28 @@ def update_status(bundle_path: Path, status: str, clock: Optional[Callable] = No
 
 def load_rubric(bundle_path: Path) -> Dict:
     return load_json(bundle_path / "config" / "rubric.json")
+
+
+def load_event_spec(bundle_path: Path) -> Dict:
+    """Load a resolved EventSpec, adapting historical rubric-only bundles."""
+    path = bundle_path / "config" / "event.json"
+    if path.exists():
+        return load_json(path)
+    return legacy_rubric_to_event_spec(load_rubric(bundle_path))
+
+
+def _event_name(bundle_path: Path) -> str:
+    return str(load_event_spec(bundle_path)["event"]["name"])
+
+
+def _event_awards(bundle_path: Path) -> List[Dict]:
+    return copy.deepcopy(load_event_spec(bundle_path)["awards"])
+
+
+def _event_grand_prize_name(bundle_path: Path) -> str:
+    awards = _event_awards(bundle_path)
+    grand_prize = next((award for award in awards if not award.get("dimensions")), None)
+    return str((grand_prize or awards[0])["name"])
 
 
 def _validate_rubric(config: Dict) -> None:
@@ -925,6 +875,14 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
     required_tier = gate_config.get("required_tier", "premium")
     required_reasoning = gate_config.get("required_reasoning", "high")
     checked_at = _now(clock)
+    provenance = {
+        "mode": "live" if _gateway is not None else "simulated",
+        "detail": (
+            "Evaluation responses came from the configured model gateway."
+            if _gateway is not None
+            else "No model gateway was configured; deterministic synthetic responses were used."
+        ),
+    }
 
     try:
         available = query_available_models(_gateway)
@@ -938,6 +896,7 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
             "policy_mode": policy_mode,
             "reason": f"Model API unavailable: {exc}",
             "checked_at": checked_at,
+            "evaluation_provenance": provenance,
         }
         write_once_json(gate_path, result)
         raise ModelAPIError(f"Model API unavailable during freshness gate: {exc}") from exc
@@ -972,6 +931,7 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
                 "policy_mode": policy_mode,
                 "reason": reason,
                 "checked_at": checked_at,
+                "evaluation_provenance": provenance,
             }
             write_once_json(gate_path, result)
             raise FreshnessGateBlock(reason)
@@ -1006,6 +966,7 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
             "checked_at": checked_at,
         }
 
+    result["evaluation_provenance"] = provenance
     write_once_json(gate_path, result)
     return result
 
@@ -1229,7 +1190,8 @@ def _build_scoring_prompt(sub: Dict, rubric: Dict, archetype: Dict) -> str:
         for d in dims
     )
     return (
-        f"You are {archetype['name']}, a judge focused on {archetype['focus']}.\n\n"
+        "You are a neutral hackathon evaluator. "
+        f"Apply the {archetype['name']} ({archetype['focus']}).\n\n"
         f"Project: {sub.get('project_name', 'Unknown')}\n"
         f"Builder: {sub.get('builder_name', 'Unknown')}\n"
         f"Description: {sub.get('description', '')}\n\n"
@@ -1319,7 +1281,8 @@ def build_feedback_cards(
 
         # Pull from existing eval steps / model responses for consistency
         prompt = (
-            f"You are the Copilot Builder - Judging Panel. Write an encouraging feedback card for this builder.\n\n"
+            "You are a neutral hackathon judging panel. "
+            "Write an encouraging feedback card for this participant.\n\n"
             f"Project: {sub.get('project_name', 'Unknown')}\n"
             f"Builder: {sub.get('builder_name', 'Unknown')}\n"
             f"Description: {sub.get('description', '')}\n\n"
@@ -1387,18 +1350,23 @@ def cmd_init(args: argparse.Namespace, _gateway: Optional[Any] = None,
     run_id = args.run_id
     mode = getattr(args, "mode", "workshop")
     config_path = getattr(args, "config", None)
+    event_path = getattr(args, "event", None)
 
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
-    # Load rubric config
-    if config_path and Path(config_path).exists():
-        rubric_config = load_json(Path(config_path))
-    else:
-        rubric_config = copy.deepcopy(DEFAULT_RUBRIC)
+    if config_path and not Path(config_path).is_file():
+        _print_error(7, "ConfigValidationError", f"Rubric config not found: {config_path}")
+        return 7
+    if event_path and not Path(event_path).is_file():
+        _print_error(7, "ConfigValidationError", f"Event config not found: {event_path}")
+        return 7
+
+    rubric_config = load_json(Path(config_path)) if config_path else copy.deepcopy(DEFAULT_RUBRIC)
+    event_config = load_json(Path(event_path)) if event_path else None
 
     try:
-        init_bundle(run_id, mode, rubric_config, bundle_path, clock)
+        init_bundle(run_id, mode, rubric_config, bundle_path, clock, event_config)
     except ConfigValidationError as e:
         _hard_error(e, bundle_path if bundle_path.exists() else None, clock)
         return e.exit_code
@@ -1407,7 +1375,8 @@ def cmd_init(args: argparse.Namespace, _gateway: Optional[Any] = None,
         return 7
 
     if not getattr(args, "quiet", False):
-        _magic_banner("Copilot Builder - Judging Panel", "The panel is assembling. The build is about to shine.")
+        event = load_event_spec(bundle_path)["event"]
+        _magic_banner(event["name"], event["tagline"])
         _showtime_pause(args)
         _success(f"Run '{run_id}' initialized in {mode} mode.")
         _sideline(f"Bundle staged at {bundle_path}", "📦", "blue")
@@ -1418,8 +1387,8 @@ def cmd_submit(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """submit — add a project submission to a run."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -1496,8 +1465,8 @@ def cmd_import_urls(args: argparse.Namespace, _gateway: Optional[Any] = None,
                     clock: Optional[Callable] = None) -> int:
     """import-urls — bulk-create workshop submissions from pasted GitHub URLs."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -1512,12 +1481,12 @@ def cmd_import_urls(args: argparse.Namespace, _gateway: Optional[Any] = None,
     created = import_url_submissions(
         bundle_path,
         urls,
-        getattr(args, "builder_name", "Workshop Builders"),
+        getattr(args, "builder_name", "Hackathon Participants"),
         clock,
     )
     log_command(bundle_path, "import-urls", "ok", f"created={len(created)} urls={len(urls)}", clock)
 
-    _magic_banner("Builder Intake", f"{len(created)} new submissions · {len(urls) - len(created)} already present")
+    _magic_banner("Project Intake", f"{len(created)} new submissions · {len(urls) - len(created)} already present")
     _showtime_pause(args)
     for sub in created:
         _sideline(f"{sub['project_name']} joined the room.", "🌟", "magenta")
@@ -1608,7 +1577,7 @@ def _choose_award_winners(bundle_path: Path, builder_winner_id: Optional[str],
     feedback = {f.get("submission_id"): f for f in _load_feedback(bundle_path)}
 
     def pick_for(award: Dict) -> str:
-        if award["id"] == "builder" and ranking:
+        if not award.get("dimensions") and ranking:
             return ranking[0]
         candidates = []
         for sid, verdict in verdicts.items():
@@ -1623,20 +1592,17 @@ def _choose_award_winners(bundle_path: Path, builder_winner_id: Optional[str],
         candidates.sort(key=lambda item: (-item[0], -item[1], item[2]))
         return candidates[0][3]
 
-    reason_by_id = {
-        "spark": "This project showed creative builder energy and an idea that can make the room lean forward.",
-        "ship": "This project felt demo-ready, practical, and close to something people could try right away.",
-        "builder": "This project delivered the strongest overall builder story across spark, craft, and impact.",
-    }
-
     awards: List[Dict] = []
-    for award in AWARD_SLATE:
+    for award in _event_awards(bundle_path):
         sid = pick_for(award)
         sub = submissions.get(sid, {})
         verdict = verdicts.get(sid, {})
         fb = feedback.get(sid, {})
-        reason = reason_by_id[award["id"]]
-        if award["id"] == "builder" and fb.get("bright_spot"):
+        reason = award.get(
+            "reason",
+            "This project stood out through a strong response to the event rubric.",
+        )
+        if not award.get("dimensions") and fb.get("bright_spot"):
             reason = fb["bright_spot"]
         awards.append({
             "award_id": award["id"],
@@ -1660,7 +1626,7 @@ def _choose_award_winners(bundle_path: Path, builder_winner_id: Optional[str],
 
 
 def _write_awards_markdown(bundle_path: Path, awards_card: Dict) -> None:
-    lines = ["# Copilot Builder - Judging Panel Awards", ""]
+    lines = [f"# {_event_name(bundle_path)} Awards", ""]
     for award in awards_card.get("awards", []):
         lines += [
             f"## {award.get('emoji', '🏆')} {award.get('award_name', 'Award')}",
@@ -1673,7 +1639,7 @@ def _write_awards_markdown(bundle_path: Path, awards_card: Dict) -> None:
             f"**Why it stood out:** {award.get('reason', '')}",
             "",
         ]
-    lines += ["> Generated by Copilot Builder - Judging Panel. Human approval required before external publishing.", ""]
+    lines += ["> Generated by Hackathon Judge. Human approval is required before external publishing.", ""]
     write_once(bundle_path / "winner" / "awards.md", "\n".join(lines))
 
 
@@ -1723,7 +1689,7 @@ def _share_card(awards_card: Dict, run_id: str) -> None:
     print()
     print(_paint("┌" + "─" * width + "┐", "blue", bold=True))
     print(_paint("│" + "📣  SHARE THIS MOMENT".center(width) + "│", "gold", bold=True))
-    print(_paint("│" + _truncate(f"The Copilot Builder - Judging Panel · {run_id}", width - 4).center(width) + "│", "cyan"))
+    print(_paint("│" + _truncate(f"Hackathon Judge · {run_id}", width - 4).center(width) + "│", "cyan"))
     print(_paint("│" + " " * width + "│", "blue"))
     for award in awards:
         line = (
@@ -1732,7 +1698,7 @@ def _share_card(awards_card: Dict, run_id: str) -> None:
         )
         print(_paint("│  " + _truncate(line, width - 4).ljust(width - 2) + "│", "green"))
     print(_paint("│" + " " * width + "│", "blue"))
-    replay_line = f"Replay this exact run: python3 copilot_builder_panel.py replay {run_id}"
+    replay_line = f"Replay this exact run: python3 hackathon_judge.py replay {run_id}"
     print(_paint("│  " + _truncate(replay_line, width - 4).ljust(width - 2) + "│", "cyan"))
     print(_paint("└" + "─" * width + "┘", "blue", bold=True))
 
@@ -1816,10 +1782,14 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     """workshop — live facilitator flow from repo intake to award reveal."""
     configure = bool(getattr(args, "configure", False))
     manual_confirm = bool(getattr(args, "manual_confirm", False))
-    showtime = bool(getattr(args, "showtime", False)) or not configure
+    projector = bool(getattr(args, "projector", False))
+    showtime = bool(getattr(args, "showtime", False)) or projector or not configure
     assume_yes = bool(getattr(args, "yes", False) or showtime) and not manual_confirm
 
-    _magic_banner("Copilot Builder - Judging Panel Live", "Three judges. One envelope. Tonight's room.")
+    _magic_banner(
+        "Hackathon Judge Live",
+        "Paste project links. Fair judging. A shared celebration.",
+    )
 
     default_run = f"workshop-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
     run_id = getattr(args, "run_id", None) or (default_run if not configure else _ask_text("Run name", default_run))
@@ -1829,13 +1799,6 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     )
     mode = "workshop" if audience == "external" else "async"
 
-    awards = getattr(args, "awards", None) or (
-        "Builder,Spark,Ship" if not configure else _ask_choice(
-            "Which awards should the panel frame?",
-            ["Builder", "Builder,Spark,Ship"],
-            "Builder,Spark,Ship",
-        )
-    )
     panel_style = getattr(args, "panel_style", None) or (
         "fun" if not configure else _ask_choice("Panel style?", ["fun", "professional"], "fun")
     )
@@ -1853,19 +1816,23 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         _print_error(7, "ConfigValidationError", "No GitHub repo URLs found for the workshop.")
         return 7
 
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
-    show_args = argparse.Namespace(showtime=showtime, no_suspense=getattr(args, "no_suspense", False))
-    _tonight_card(run_id, len(urls), awards, show_args)
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
+    show_args = argparse.Namespace(
+        showtime=showtime,
+        no_suspense=getattr(args, "no_suspense", False),
+        projector=projector,
+    )
 
     if assume_yes:
-        _sideline("Opening the Builder Arena...", "🎬", "magenta")
+        _sideline("Opening the hackathon room...", "🎬", "magenta")
     elif not _confirm("Create the workshop run bundle?"):
         return 0
     init_args = argparse.Namespace(
         run_id=run_id,
         mode=mode,
         config=getattr(args, "config", None),
+        event=getattr(args, "event", None),
         showtime=showtime,
         quiet=showtime,
     )
@@ -1873,25 +1840,30 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if rc:
         return rc
 
+    event_spec = load_event_spec(bundle_path)
+    awards = ", ".join(award["name"] for award in event_spec["awards"])
+    _tonight_card(run_id, len(urls), awards, show_args)
     manifest = load_manifest(bundle_path)
     manifest["workshop_choices"] = {
         "audience": audience,
-        "awards": [a.strip() for a in awards.split(",") if a.strip()],
+        "awards": [award["name"] for award in event_spec["awards"]],
         "panel_style": panel_style,
         "showtime": showtime,
+        "projector": projector,
+        "audience_view": event_spec["presentation"]["audience_view"],
         "submission_count_requested": len(urls),
     }
     save_manifest(bundle_path, manifest)
 
-    _act_break("ACT I — BUILDERS ENTER", show_args)
+    _act_break("ACT I — PROJECTS ENTER", show_args)
     if assume_yes:
         _sideline(f"{len(urls)} repo URL(s) found. Rolling out the red carpet.", "📋", "cyan")
     elif not _confirm(f"Import {len(urls)} repo submission(s)?"):
         return 0
-    created = import_url_submissions(bundle_path, urls, "Workshop Room", clock)
+    created = import_url_submissions(bundle_path, urls, "Hackathon Participants", clock)
     log_command(bundle_path, "workshop-import", "ok", f"created={len(created)} urls={len(urls)}", clock)
-    _magic_banner("Builder Intake", f"{len(created)} builders entered · {len(urls) - len(created)} already present")
-    _builder_count_hero(len(created), show_args)
+    _magic_banner("Project Intake", f"{len(created)} projects entered · {len(urls) - len(created)} already present")
+    _project_count_hero(len(created), show_args)
     for sub in created:
         meta = sub.get("repo_metadata", {})
         details = []
@@ -1906,7 +1878,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     _act_break("ACT II — THE PANEL SCORES", show_args)
     if assume_yes:
         _sideline("The judges are taking their seats.", "🏟️", "magenta")
-    elif not _confirm("Start the Copilot Builder - Judging Panel?"):
+    elif not _confirm("Start judging?"):
         return 0
     rc = cmd_judge(argparse.Namespace(run_id=run_id, showtime=showtime, no_suspense=getattr(args, "no_suspense", False)), _gateway, clock)
     if rc:
@@ -1926,10 +1898,10 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         _print_error(7, "ConfigValidationError", "No winner could be selected.")
         return 7
 
-    _act_break("ACT IV — THE ENVELOPES", show_args)
+    _act_break("ACT IV — AWARD REVEAL", show_args)
     if assume_yes:
         _sideline("The envelopes are sealed. Opening the awards.", "✉️", "gold")
-    elif not _confirm("Reveal the Copilot Builder Award winners?"):
+    elif not _confirm("Reveal the award winners?"):
         return 0
     rc = cmd_award(argparse.Namespace(
         run_id=run_id,
@@ -1957,8 +1929,8 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
               clock: Optional[Callable] = None) -> int:
     """judge — trigger eval engine; freshness gate + scoring + shadow score seal."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -1970,16 +1942,17 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     _assert_status_in(manifest, ["init", "collecting", "judging"], "judge")
     rubric = load_rubric(bundle_path)
+    event_spec = load_event_spec(bundle_path)
 
     showtime = _showtime_enabled(args)
 
     # Step 2: Freshness gate
     if showtime:
-        _magic_banner("The Copilot Builder - Judging Panel", "The Spark · The Builder · The Champion")
-        _sideline("Premium judges are taking their seats. No teardowns. Only spotlights.", "🏟️", "magenta")
+        _magic_banner(event_spec["event"]["name"], event_spec["event"]["tagline"])
+        _sideline("Review lenses are ready. Scores stay sealed until the award reveal.", "🏟️", "magenta")
     else:
-        _magic_banner("Copilot Builder - Judging Panel", "Premium judges are taking their seats.")
-        _sideline("The judging panel is warming up: fresh models, sealed scores, no teardown.", "🏟️", "magenta")
+        _magic_banner(event_spec["event"]["name"], "Premium model policy, sealed scores, and fair review.")
+        _sideline("The judging panel is warming up.", "🏟️", "magenta")
     _showtime_pause(args)
     if showtime:
         _sideline("Freshness Gate opening...", "🧭", "cyan")
@@ -1997,8 +1970,13 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
         return 8
 
     selected_model = gate_result["selected_model"]
+    provenance = gate_result.get("evaluation_provenance", {})
     if showtime:
-        _sideline(f"Premium model locked: {selected_model} ({gate_result['status']}).", "🧠", "green")
+        _sideline(
+            f"Evaluation mode: {provenance.get('mode', 'unknown')} · model: {selected_model}.",
+            "🧠",
+            "green",
+        )
     else:
         _sideline(f"Freshness Gate: {gate_result['status']} — model: {selected_model}", "🧠", "green")
     _showtime_pause(args)
@@ -2032,11 +2010,10 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     def progress(sub: Dict, scored: Dict, index: int, total: int) -> None:
         if not showtime:
             return
-        score = float(scored.get("total_score", 0))
         name = _truncate(str(sub.get("project_name", sub.get("submission_id", "Project"))), 38)
         print(_paint(f"   ⬢ {name}", "cyan", bold=True))
         _showtime_pause(args, 0.25)
-        print(_paint(f"     {_score_bar(score)}  {score:.2f}/10  [{index}/{total}]", "green"))
+        print(_paint(f"     Review sealed  [{index}/{total}]", "green"))
         _showtime_pause(args, 0.3)
 
     try:
@@ -2109,8 +2086,8 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                 clock: Optional[Callable] = None) -> int:
     """present — generate presentation from stored artifacts only; no live calls."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -2120,10 +2097,18 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
     sub_map = {s["submission_id"]: s for s in submissions}
     feedback = {f.get("submission_id"): f for f in _load_feedback(bundle_path)}
     showtime = _showtime_enabled(args)
+    event_spec = load_event_spec(bundle_path)
+    show_scores = bool(getattr(args, "operator", False)) and manifest.get("status") in {
+        "awarded",
+        "exported",
+    }
 
-    _magic_banner("Copilot Builder - Judging Panel", f"Run: {run_id} · Mode: {manifest.get('mode', 'workshop').upper()}")
-    _sideline("The judges are seated. Every builder gets a spotlight.", "🏟️", "magenta")
-    _sideline("Scores are sealed; this view is generated only from stored artifacts.", "🔒", "blue")
+    _magic_banner(
+        event_spec["event"]["name"],
+        f"Run: {run_id} · Mode: {manifest.get('mode', 'workshop').upper()}",
+    )
+    _sideline("The judges are seated. Every project gets a spotlight.", "🏟️", "magenta")
+    _sideline("Scores remain hidden until the award reveal.", "🔒", "blue")
     _showtime_pause(args)
 
     # Load and display verdicts (NOT shadow scores)
@@ -2156,7 +2141,7 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
             print(_paint(f"│ About:   {_truncate(str(meta.get('description')), 88)}", "cyan"))
         if meta.get("recent_activity"):
             print(_paint(f"│ Recent:  {_truncate(str(meta.get('recent_activity')), 88)}", "cyan"))
-        if not showtime:
+        if show_scores:
             print(_paint(f"│ Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
         for arch_v in v.get("archetype_verdicts", []):
             print(_paint(f"│ 🎙️ {arch_v['archetype_name']}", "magenta", bold=True))
@@ -2186,8 +2171,8 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
     """award — declare winners; write award cards; append registry entry."""
     run_id = args.run_id
     winner_id = args.winner
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -2214,11 +2199,12 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     awards_card = _choose_award_winners(bundle_path, winner_id, clock)
     declared_at = awards_card["declared_at"]
+    grand_prize_name = _event_grand_prize_name(bundle_path)
     winner_card = {
         "run_id": run_id,
         "winner_submission_id": winner_id,
         "winner_builder_name": winner_sub.get("builder_name", "Unknown"),
-        "award_name": AWARD_NAME,
+        "award_name": grand_prize_name,
         "declared_at": declared_at,
         "requires_human_approval": True,
         "published": False,
@@ -2227,7 +2213,7 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     # Tone check winner card text
     card_text = (
-        f"{winner_sub.get('builder_name', '')} wins the {AWARD_NAME} "
+        f"{winner_sub.get('builder_name', '')} wins the {grand_prize_name} "
         f"for project {winner_sub.get('project_name', '')}."
     )
     tone = check_tone(card_text, load_rubric(bundle_path), "winner_card", clock)
@@ -2237,15 +2223,15 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
     write_once_json(bundle_path / "winner" / "awards.json", awards_card)
     _write_awards_markdown(bundle_path, awards_card)
     winner_md = (
-        f"# 🏆 {AWARD_NAME}\n\n"
+        f"# 🏆 {grand_prize_name}\n\n"
         f"**Winner:** {winner_sub.get('builder_name', 'Unknown')}  \n"
         f"**Project:** {winner_sub.get('project_name', 'Unknown')}  \n"
         f"**Run:** `{run_id}`  \n\n"
         "## Why it stood out\n"
-        "This build brought a clear builder story, strong execution, and a demo-ready spark.\n\n"
+        "This project showed a clear story, strong execution, and a compelling demonstration.\n\n"
         "## Next commit nudge\n"
         "Consider adding a short onboarding path so the next builder can try it immediately.\n\n"
-        "> Generated by Copilot Builder - Judging Panel. Human approval required before external publishing.\n"
+        "> Generated by Hackathon Judge. Human approval is required before external publishing.\n"
     )
     write_once(bundle_path / "winner" / "card.md", winner_md)
 
@@ -2254,7 +2240,7 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
     registry_entry = {
         "run_id": run_id,
         "winner_id": winner_id,
-        "award_name": AWARD_NAME,
+        "award_name": grand_prize_name,
         "declared_at": declared_at,
         "bundle_sha256": "",  # populated after export
     }
@@ -2277,8 +2263,8 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
               clock: Optional[Callable] = None) -> int:
     """recap — write a workshop recap Markdown file from stored artifacts only."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
     _assert_status_in(manifest, ["sealed", "awarded", "exported"], "recap")
@@ -2290,9 +2276,11 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if winner_path.exists():
         winner = load_json(winner_path)
     awards_card = _load_awards(bundle_path)
+    event_name = _event_name(bundle_path)
+    scores_revealed = manifest.get("status") in {"awarded", "exported"}
 
     lines = [
-        f"# Copilot Builder - Judging Panel Recap — {run_id}",
+        f"# {event_name} Recap — {run_id}",
         "",
         f"**Mode:** {manifest.get('mode', 'workshop')}",
         f"**Status:** {manifest.get('status', 'unknown')}",
@@ -2314,12 +2302,12 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
             ]
     elif winner:
         lines += [
-            f"## 🏆 {AWARD_NAME}",
+            f"## 🏆 {winner.get('award_name', _event_grand_prize_name(bundle_path))}",
             "",
             f"**Winner:** {winner.get('winner_builder_name', 'Unknown')}",
             "",
         ]
-    lines += ["## Builder Spotlights", ""]
+    lines += ["## Project Spotlights", ""]
     for v in verdicts:
         sid = v.get("submission_id")
         fb = feedback.get(sid, {})
@@ -2327,11 +2315,15 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
             f"### {v.get('project_name', sid)}",
             "",
             f"- **Builder:** {v.get('builder_name', 'Unknown')}",
-            f"- **Score:** {float(v.get('total_score', 0)):.2f}/10",
             f"- **Bright spot:** {fb.get('bright_spot', 'This build showed real promise.')}",
             f"- **Next commit nudge:** {fb.get('next_commit', 'Consider adding a quick-start path for the next user.')}",
             "",
         ]
+        if scores_revealed:
+            lines.insert(
+                len(lines) - 1,
+                f"- **Score:** {float(v.get('total_score', 0)):.2f}/10",
+            )
     lines += [
         "---",
         "Generated from stored artifacts only. No live model calls.",
@@ -2349,12 +2341,13 @@ def cmd_tui(args: argparse.Namespace, _gateway: Optional[Any] = None,
     """tui — live Textual dashboard with graceful CLI fallback."""
     run_id = getattr(args, "run_id", None)
     projector = getattr(args, "projector", False)
+    operator = getattr(args, "operator", False)
 
     # Try launching the Textual dashboard
     if run_id and sys.stdout.isatty():
         try:
-            from builder_dashboard import BuilderDashboard
-            app = BuilderDashboard(run_id=run_id, projector=projector)
+            from hackathon_judge_dashboard import BuilderDashboard
+            app = BuilderDashboard(run_id=run_id, projector=projector, operator=operator)
             app.run()
             return 0
         except ImportError:
@@ -2364,10 +2357,10 @@ def cmd_tui(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     # Graceful CLI fallback
     if run_id:
-        _magic_banner("Copilot Builder - Judging Panel Live Board", "Artifact-powered spotlight mode")
+        _magic_banner("Hackathon Judge Live Board", "Artifact-powered spotlight mode")
         return cmd_present(args, _gateway, clock)
 
-    _magic_banner("Copilot Builder - Judging Panel Live Board", "Choose a sealed run to present")
+    _magic_banner("Hackathon Judge Live Board", "Choose a sealed run to present")
     return cmd_list(args, _gateway, clock)
 
 
@@ -2375,34 +2368,32 @@ def cmd_export(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """export — package full immutable bundle; write HASHES + SEAL + tar.gz."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
     force = getattr(args, "force", False)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
     _assert_status_in(manifest, ["sealed", "awarded", "exported"], "export")
 
-    # Check winner card approval if awarded
+    # Archives remain internal artifacts. Approval is enforced by any external
+    # publishing workflow, and the card's approval state travels in the bundle.
     winner_path = bundle_path / "winner" / "card.json"
     if winner_path.exists():
         winner = load_json(winner_path)
         if winner.get("requires_human_approval", True) and not winner.get("published", False):
-            pass  # Warning only, not blocking per PRD note in section 11 risks
+            _warning("Winner material remains internal until a human approves external publishing.")
 
-    # Handle existing SEAL
+    # A sealed bundle is write-once. Re-sealing would replace the evidence that
+    # makes replay and validation meaningful, so --force is intentionally refused.
     seal_path = bundle_path / "SEAL"
-    hashes_path = bundle_path / "HASHES"
-    if seal_path.exists() and not force:
-        _print_error(2, "BundleSealError",
-                     "Bundle already exported (SEAL exists). Use --force to re-seal.")
-        return 2
-
     if force:
-        if seal_path.exists():
-            seal_path.unlink()
-        if hashes_path.exists():
-            hashes_path.unlink()
+        _print_error(2, "BundleSealError", "Re-sealing an existing bundle is not supported.")
+        return 2
+    if seal_path.exists():
+        _print_error(2, "BundleSealError",
+                     "Bundle already exported (SEAL exists). Create a new run for a new bundle.")
+        return 2
 
     # Update manifest status and log BEFORE computing HASHES so the final state is captured
     update_status(bundle_path, "exported", clock)
@@ -2431,13 +2422,13 @@ def cmd_validate(args: argparse.Namespace, _gateway: Optional[Any] = None,
                  clock: Optional[Callable] = None) -> int:
     """validate — verify bundle HASHES and SEAL integrity."""
     bundle_arg = getattr(args, "bundle", None) or getattr(args, "run_id", None)
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+    runs_dir = get_runs_dir()
 
     # Determine bundle path (may be a run_id or a direct path)
     if bundle_arg and Path(bundle_arg).is_dir():
         bundle_path = Path(bundle_arg)
     elif bundle_arg:
-        bundle_path = runs_dir / bundle_arg
+        bundle_path = get_bundle_path(bundle_arg, runs_dir)
     else:
         _print_error(7, "ConfigValidationError", "Provide --bundle <path> or a run_id.")
         return 7
@@ -2479,7 +2470,12 @@ def cmd_validate(args: argparse.Namespace, _gateway: Optional[Any] = None,
         if len(parts) != 2:
             continue
         stored_hash, rel_path = parts
-        artifact_path = bundle_path / rel_path
+        artifact_path = (bundle_path / rel_path).resolve()
+        try:
+            artifact_path.relative_to(bundle_path.resolve())
+        except ValueError:
+            failures.append(f"INVALID PATH: {rel_path}")
+            continue
         if not artifact_path.exists():
             failures.append(f"MISSING: {rel_path}")
             continue
@@ -2508,7 +2504,7 @@ def cmd_validate(args: argparse.Namespace, _gateway: Optional[Any] = None,
 def cmd_list(args: argparse.Namespace, _gateway: Optional[Any] = None,
              clock: Optional[Callable] = None) -> int:
     """list — enumerate all runs and statuses."""
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+    runs_dir = get_runs_dir()
 
     if not runs_dir.exists():
         print("No runs found.")
@@ -2538,7 +2534,7 @@ def cmd_list(args: argparse.Namespace, _gateway: Optional[Any] = None,
         print("No runs found.")
         return 0
 
-    _magic_banner("Copilot Builder - Judging Panel Runs", "Every run is replayable. Every bundle is proof.")
+    _magic_banner("Hackathon Judge Runs", "Every run is replayable. Every bundle is proof.")
     print(_paint(f"{'RUN ID':<40} {'STATUS':<12} {'MODE':<10} {'SUBS':>4}  CREATED", "cyan", bold=True))
     print(_paint("-" * 90, "blue"))
     for r in runs:
@@ -2548,24 +2544,48 @@ def cmd_list(args: argparse.Namespace, _gateway: Optional[Any] = None,
     return 0
 
 
+def _safe_extract_tar(archive: tarfile.TarFile, destination: Path) -> None:
+    """Extract only regular files and directories contained by destination."""
+    destination = destination.resolve()
+    members = archive.getmembers()
+    for member in members:
+        target = (destination / member.name).resolve()
+        try:
+            target.relative_to(destination)
+        except ValueError as exc:
+            raise ConfigValidationError(
+                f"Replay archive contains a path outside its extraction directory: {member.name}"
+            ) from exc
+        if not (member.isdir() or member.isfile()):
+            raise ConfigValidationError(
+                f"Replay archive contains an unsupported link or device entry: {member.name}"
+            )
+    for member in members:
+        archive.extract(member, path=destination)
+
+
 def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """replay — read-only re-run of any prior bundle; no model calls, no new artifacts."""
     bundle_arg = getattr(args, "bundle", None) or getattr(args, "run_id", None)
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+    runs_dir = get_runs_dir()
 
     if bundle_arg and Path(bundle_arg).is_dir():
         bundle_path = Path(bundle_arg)
     elif bundle_arg:
         # Could be a .tar.gz bundle
-        archive = Path(bundle_arg) if Path(bundle_arg).exists() else runs_dir / bundle_arg
+        archive = Path(bundle_arg) if Path(bundle_arg).exists() else get_bundle_path(bundle_arg, runs_dir)
         if archive.suffix == ".gz" and archive.exists():
             # Extract to temp location in runs dir and replay
-            import tempfile
             extract_dir = runs_dir / f"_replay_{uuid.uuid4().hex[:8]}"
             extract_dir.mkdir(parents=True)
-            with tarfile.open(archive, "r:gz") as tar:
-                tar.extractall(path=extract_dir)
+            try:
+                with tarfile.open(archive, "r:gz") as tar:
+                    _safe_extract_tar(tar, extract_dir)
+            except (tarfile.TarError, ConfigValidationError) as exc:
+                shutil.rmtree(extract_dir, ignore_errors=True)
+                _print_error(7, "ConfigValidationError", f"Could not safely extract replay archive: {exc}")
+                return 7
             # Find the run dir inside
             subdirs = [d for d in extract_dir.iterdir() if d.is_dir()]
             if subdirs:
@@ -2573,7 +2593,7 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
             else:
                 bundle_path = extract_dir
         else:
-            bundle_path = runs_dir / bundle_arg
+            bundle_path = get_bundle_path(bundle_arg, runs_dir)
     else:
         _print_error(7, "ConfigValidationError", "Provide --bundle <path> or a run_id.")
         return 7
@@ -2606,7 +2626,9 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if gate_path.exists():
         gate = load_json(gate_path)
 
-    _magic_banner("Copilot Builder - Judging Panel Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
+    event_name = _event_name(bundle_path)
+    scores_revealed = manifest.get("status") in {"awarded", "exported"}
+    _magic_banner(f"{event_name} Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
     _sideline(f"Status: {manifest.get('status', 'unknown')}", "📼", "blue")
     if gate:
         _sideline(f"Model: {gate.get('selected_model', 'unknown')} ({gate.get('status', '')})", "🧠", "green")
@@ -2617,7 +2639,10 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
             score = float(v.get("total_score", 0))
             print(_paint(f"\n  ─── 🛠️ {v.get('project_name', v['submission_id'])} ───", "blue", bold=True))
             print(_paint(f"  Builder: {v.get('builder_name', '')}", "cyan"))
-            print(_paint(f"  Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
+            if scores_revealed:
+                print(_paint(f"  Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
+            else:
+                print(_paint("  Score:   sealed until the award reveal", "gold", bold=True))
             for arch_v in v.get("archetype_verdicts", []):
                 print(_paint(f"    🎙️ {arch_v['archetype_name']}: {arch_v.get('bright_spot', '')[:100]}", "green"))
     else:
@@ -2638,7 +2663,10 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
     elif winner_path.exists():
         winner = load_json(winner_path)
         print()
-        _magic_banner(f"🏆 {AWARD_NAME}", f"{winner.get('winner_builder_name', 'Unknown')}")
+        _magic_banner(
+            f"🏆 {winner.get('award_name', _event_grand_prize_name(bundle_path))}",
+            f"{winner.get('winner_builder_name', 'Unknown')}",
+        )
 
     return 0
 
@@ -2647,8 +2675,8 @@ def cmd_resume(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """resume — re-enter an interrupted judge run at the last completed step."""
     run_id = args.run_id
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -2669,7 +2697,7 @@ def cmd_resume(args: argparse.Namespace, _gateway: Optional[Any] = None,
 def cmd_compare(args: argparse.Namespace, _gateway: Optional[Any] = None,
                 clock: Optional[Callable] = None) -> int:
     """compare — side-by-side diff of two sealed run bundles."""
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+    runs_dir = get_runs_dir()
     bundle_a_arg = args.bundle_a
     bundle_b_arg = args.bundle_b
 
@@ -2677,7 +2705,7 @@ def cmd_compare(args: argparse.Namespace, _gateway: Optional[Any] = None,
         p = Path(arg)
         if p.is_dir():
             return p
-        return runs_dir / arg
+        return get_bundle_path(arg, runs_dir)
 
     bundle_a = _resolve(bundle_a_arg)
     bundle_b = _resolve(bundle_b_arg)
@@ -2735,8 +2763,8 @@ def cmd_feedback(args: argparse.Namespace, _gateway: Optional[Any] = None,
     """
     run_id = args.run_id
     submission_id = getattr(args, "submission_id", None)
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
-    bundle_path = runs_dir / run_id
+    runs_dir = get_runs_dir()
+    bundle_path = get_bundle_path(run_id, runs_dir)
 
     _assert_bundle_exists(bundle_path, run_id)
     manifest = load_manifest(bundle_path)
@@ -2811,11 +2839,11 @@ def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """doctor — diagnose config, model gate, and bundle health without modifying state."""
     run_id = getattr(args, "run_id", None)
-    runs_dir = Path(os.environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR)))
+    runs_dir = get_runs_dir()
     issues: List[str] = []
     ok: List[str] = []
 
-    print("Copilot Builder - Judging Panel — Doctor")
+    print("Hackathon Judge — Doctor")
     print("=" * 50)
 
     # 1. Check Python version
@@ -2851,7 +2879,7 @@ def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     # 5. Specific bundle check
     if run_id:
-        bundle_path = runs_dir / run_id
+        bundle_path = get_bundle_path(run_id, runs_dir)
         if bundle_path.exists():
             manifest = load_manifest(bundle_path)
             status = manifest.get("status", "unknown")
@@ -2963,7 +2991,7 @@ def _print_error(code: int, cls: str, msg: str) -> None:
     print(f"[ERROR {code}] {cls}: {msg}", file=sys.stderr)
 
 
-def _hard_error(exc: CopilotBuilderPanelError,
+def _hard_error(exc: HackathonJudgeError,
                 bundle_path: Optional[Path],
                 clock: Optional[Callable] = None) -> None:
     _print_error(exc.exit_code, type(exc).__name__, str(exc))
@@ -2980,8 +3008,8 @@ def _hard_error(exc: CopilotBuilderPanelError,
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="copilot_builder_panel",
-        description="Copilot Builder - Judging Panel — CLI judging for hackathons and builder programs.",
+        prog="hackathon-judge",
+        description="Hackathon Judge — sealed, screen-share-friendly judging for project events.",
     )
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
@@ -2993,6 +3021,7 @@ def build_parser() -> argparse.ArgumentParser:
                         choices=["workshop", "async", "replay", "compare"],
                         help="Run mode (default: workshop).")
     p_init.add_argument("--config", help="Path to rubric config JSON file.")
+    p_init.add_argument("--event", help="Path to a portable EventSpec JSON file.")
     p_init.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
 
     # submit
@@ -3009,19 +3038,20 @@ def build_parser() -> argparse.ArgumentParser:
     p_import.add_argument("run_id", help="Run identifier.")
     p_import.add_argument("urls", nargs="*", help="GitHub URLs or owner/repo entries.")
     p_import.add_argument("--file", help="Text file containing GitHub repo URLs.")
-    p_import.add_argument("--builder-name", default="Workshop Builders",
-                          help="Builder display name for imported repo submissions.")
+    p_import.add_argument("--builder-name", default="Hackathon Participants",
+                          help="Participant display name for imported repo submissions.")
     p_import.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
 
     # workshop
-    p_workshop = sub.add_parser("workshop", help="Live facilitator flow: paste repos → judge → spotlight → awards.")
+    p_workshop = sub.add_parser("workshop", help="Live facilitator flow: paste project links → judge → spotlight → awards.")
     p_workshop.add_argument("urls", nargs="*", help="Optional GitHub URLs or owner/repo entries.")
     p_workshop.add_argument("--file", help="Text file containing GitHub repo URLs.")
     p_workshop.add_argument("--run-id", dest="run_id", help="Run identifier (default: timestamped).")
     p_workshop.add_argument("--audience", choices=["external", "internal"], help="Audience context.")
-    p_workshop.add_argument("--awards", help="Award slate (default: Builder,Spark,Ship).")
+    p_workshop.add_argument("--awards", help=argparse.SUPPRESS)
     p_workshop.add_argument("--panel-style", choices=["fun", "professional"], dest="panel_style", help="Panel voice.")
     p_workshop.add_argument("--config", help="Path to rubric config JSON file.")
+    p_workshop.add_argument("--event", help="Path to a portable EventSpec JSON file.")
     p_workshop.add_argument("--showtime", action="store_true", help="Run as a live audience show (default unless --configure).")
     p_workshop.add_argument("--yes", action="store_true", help="Run non-interactively with defaults.")
     p_workshop.add_argument("--configure", action="store_true", help="Ask advanced setup questions before the show.")
@@ -3041,6 +3071,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_present.add_argument("run_id", help="Run identifier.")
     p_present.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
     p_present.add_argument("--projector", action="store_true", help="Big-screen mode for projection.")
+    p_present.add_argument("--operator", action="store_true",
+                           help="Show revealed scores after awards have been declared.")
 
     # replay
     p_replay = sub.add_parser("replay", help="Read-only replay of a prior bundle.")
@@ -3077,6 +3109,8 @@ def build_parser() -> argparse.ArgumentParser:
     p_tui.add_argument("run_id", nargs="?", help="Optional run identifier to present.")
     p_tui.add_argument("--showtime", action="store_true", help="Add workshop pacing to the live CLI output.")
     p_tui.add_argument("--projector", action="store_true", help="Big-screen mode with larger elements for projection.")
+    p_tui.add_argument("--operator", action="store_true",
+                       help="Show the operator projection after an award reveal.")
 
     # feedback
     p_fb = sub.add_parser("feedback", help="Generate feedback proposal (human approval required).")
@@ -3086,7 +3120,8 @@ def build_parser() -> argparse.ArgumentParser:
     # export
     p_export = sub.add_parser("export", help="Package full immutable bundle.")
     p_export.add_argument("run_id", help="Run identifier.")
-    p_export.add_argument("--force", action="store_true", help="Re-seal an already-exported bundle.")
+    p_export.add_argument("--force", action="store_true",
+                          help=argparse.SUPPRESS)
 
     # validate
     p_val = sub.add_parser("validate", help="Verify bundle HASHES and SEAL integrity.")
@@ -3137,7 +3172,7 @@ def main(argv: Optional[List[str]] = None,
 
     try:
         return handler(args, _gateway, clock)
-    except CopilotBuilderPanelError as exc:
+    except HackathonJudgeError as exc:
         _print_error(exc.exit_code, type(exc).__name__, str(exc))
         return exc.exit_code
     except KeyboardInterrupt:

@@ -1,9 +1,9 @@
 """
-Test suite for Copilot Builder - Judging Panel
+Test suite for Hackathon Judge
 Tests all layers: tone safety, hash/seal, write-once, freshness gate,
 shadow score, eval engine, command flows, registry, exit codes.
 
-Run with: python -m pytest tests/test_copilot_builder_panel.py -v
+Run with: python -m pytest tests/test_hackathon_judge.py -v
 """
 
 import copy
@@ -21,7 +21,7 @@ import pytest
 
 # Add parent dir to sys.path so we can import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
-import copilot_builder_panel as cbp
+import hackathon_judge as cbp
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -344,7 +344,7 @@ class TestShadowScore:
         args = build_args("present", run_id="hidden-test")
         import io
         with patch.object(sys, "stdout", new_callable=io.StringIO) as mock_stdout:
-            with patch.dict(os.environ, {"CBP_RUNS_DIR": str(tmp_path)}):
+            with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path)}):
                 rc = cbp.cmd_present(args, None, fixed_clock)
         assert rc == 0
 
@@ -361,7 +361,8 @@ class TestFreshnessGate:
         gw = MockGateway()
         result = cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
         assert result["status"] == "pass"
-        assert result["selected_model"] == "claude-opus-4.7-high"
+        assert result["selected_model"] == "claude-opus-4.8"
+        assert result["evaluation_provenance"]["mode"] == "live"
         assert (bundle_path / "freshness_gate.json").exists()
 
     def test_default_gate_requires_premium_high_reasoning(self, tmp_path):
@@ -433,9 +434,34 @@ class TestBulkUrlImport:
 
     def test_workshop_yes_runs_full_guided_flow(self, tmp_path):
         env = {
-            "CBP_RUNS_DIR": str(tmp_path / "runs"),
-            "CBP_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+            "HJ_RUNS_DIR": str(tmp_path / "runs"),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
         }
+        event_path = tmp_path / "demo-day.json"
+        event_path.write_text(json.dumps({
+            "event": {
+                "name": "Demo Day",
+                "tagline": "Share what you made.",
+            },
+            "awards": [
+                {
+                    "id": "audience-choice",
+                    "name": "Audience Choice",
+                    "emoji": "*",
+                    "tagline": "For a project that connected with the room.",
+                    "dimensions": ["presentation"],
+                    "reason": "This project made its value especially clear.",
+                },
+                {
+                    "id": "grand-prize",
+                    "name": "Demo Day Grand Prize",
+                    "emoji": "#",
+                    "tagline": "For the strongest overall project.",
+                    "dimensions": [],
+                    "reason": "This project delivered the strongest overall result.",
+                },
+            ],
+        }), encoding="utf-8")
         args = build_args(
             "workshop",
             run_id="guided-room",
@@ -448,6 +474,7 @@ class TestBulkUrlImport:
             awards="Builder,Spark,Ship",
             panel_style="fun",
             config=None,
+            event=str(event_path),
             showtime=False,
             yes=True,
             no_suspense=True,
@@ -470,12 +497,15 @@ class TestBulkUrlImport:
             assert rc == 0
             bundle = tmp_path / "runs" / "guided-room"
             manifest = cbp.load_json(bundle / "manifest" / "bundle.json")
-            assert manifest["workshop_choices"]["awards"] == ["Builder", "Spark", "Ship"]
+            assert manifest["workshop_choices"]["awards"] == [
+                "Audience Choice",
+                "Demo Day Grand Prize",
+            ]
+            assert manifest["event"]["name"] == "Demo Day"
             awards = cbp.load_json(bundle / "winner" / "awards.json")
             assert [a["award_name"] for a in awards["awards"]] == [
-                "Copilot Spark Award",
-                "Copilot Ship Award",
-                "Copilot Builder Award",
+                "Audience Choice",
+                "Demo Day Grand Prize",
             ]
             assert (bundle / "recap.md").exists()
             assert (bundle / "HASHES").exists()
@@ -484,8 +514,8 @@ class TestBulkUrlImport:
 
     def test_workshop_showtime_defaults_to_audience_autopilot(self, tmp_path, capsys):
         env = {
-            "CBP_RUNS_DIR": str(tmp_path / "runs"),
-            "CBP_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+            "HJ_RUNS_DIR": str(tmp_path / "runs"),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
         }
         args = build_args(
             "workshop",
@@ -522,11 +552,11 @@ class TestBulkUrlImport:
         assert rc == 0
         output = capsys.readouterr().out
         assert "Create the workshop run bundle?" not in output
-        assert "Copilot Spark Award" in output
-        assert "Copilot Ship Award" in output
-        assert "Copilot Builder Award" in output
+        assert "Innovation Award" in output
+        assert "Build Quality Award" in output
+        assert "Hackathon Grand Prize" in output
         assert "Workshop Recap" in output
-        assert "ACT I — BUILDERS ENTER" in output
+        assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
 
@@ -558,7 +588,14 @@ class TestBulkUrlImport:
 class TestCommandFlows:
 
     def _env(self, tmp_path: Path) -> Dict:
-        return {"CBP_RUNS_DIR": str(tmp_path), "CBP_REGISTRY_PATH": str(tmp_path / "registry.ndjson")}
+        return {"HJ_RUNS_DIR": str(tmp_path), "HJ_REGISTRY_PATH": str(tmp_path / "registry.ndjson")}
+
+    def test_cli_parser_accepts_event_and_operator_flags(self):
+        parser = cbp.build_parser()
+        init_args = parser.parse_args(["init", "demo-day", "--event", "event.json"])
+        tui_args = parser.parse_args(["tui", "demo-day", "--operator"])
+        assert init_args.event == "event.json"
+        assert tui_args.operator is True
 
     def test_init_creates_bundle(self, tmp_path):
         with patch.dict(os.environ, self._env(tmp_path)):
@@ -1118,6 +1155,7 @@ def build_args(command: str, **kwargs) -> cbp.argparse.Namespace:
         "run_id": kwargs.get("run_id", "test-run"),
         "mode": "workshop",
         "config": None,
+        "event": None,
         "builder_name": "Test Builder",
         "project_name": "Test Project",
         "description": "Test description",
@@ -1128,6 +1166,8 @@ def build_args(command: str, **kwargs) -> cbp.argparse.Namespace:
         "bundle_a": kwargs.get("bundle_a", "run-a"),
         "bundle_b": kwargs.get("bundle_b", "run-b"),
         "force": False,
+        "projector": False,
+        "operator": False,
     }
     defaults.update(kwargs)
     return cbp.argparse.Namespace(**defaults)

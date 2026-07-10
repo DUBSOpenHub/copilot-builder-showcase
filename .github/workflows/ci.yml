@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Compile
-        run: python -m py_compile copilot_builder_panel.py builder_panel.py
+        run: python -m py_compile hackathon_judge.py hackathon_judge_dashboard.py event_spec.py bundle_reader.py
 
       - name: Install test dependency
         run: python -m pip install pytest

@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 """
-Copilot Builder — Judging Panel: Live Dashboard (Textual TUI)
+Hackathon Judge: Live Dashboard (Textual TUI)
 
-A real-time, Agent Pulse-style terminal dashboard for the Copilot Builder
-Judging Panel. Shows submissions, scoring progress, spotlight cards,
-and award reveals with animated in-place rendering.
+A real-time terminal dashboard for Hackathon Judge. Shows
+submissions, review progress, spotlight cards, and award reveals with
+animated in-place rendering.
+
+The dashboard reads bundles through ``bundle_reader.BundleReader`` and, by
+default, only ever sees the audience-safe projection: no scores or ranks
+are shown until a run's manifest status reaches ``awarded``/``exported``.
+Pass ``--operator`` to see the full, unredacted facilitator view instead.
 
 Usage:
-  python3 builder_dashboard.py <run_id>
-  python3 builder_dashboard.py <run_id> --projector   # big-screen mode
-  python3 copilot_builder_panel.py tui <run_id>       # via main CLI
+  python3 hackathon_judge_dashboard.py <run_id>
+  python3 hackathon_judge_dashboard.py <run_id> --projector   # big-screen mode
+  python3 hackathon_judge_dashboard.py <run_id> --operator    # full facilitator view
+  python3 hackathon_judge.py tui <run_id>                     # via main CLI
 """
 
 from __future__ import annotations
 
 import argparse
-import json
-import sys
+import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from textual.app import App, ComposeResult
 from textual.containers import Horizontal, Vertical, ScrollableContainer
@@ -39,9 +44,12 @@ from rich.align import Align
 from rich.console import Group
 from rich.columns import Columns
 
-DEFAULT_RUNS_DIR = Path.home() / ".copilot_builder_panel" / "runs"
+from bundle_reader import BundleReader, BundleView
+from hackathon_judge import get_bundle_path
 
-# ── Palette (matches Clawpilot theme spirit) ──
+DEFAULT_RUNS_DIR = Path.home() / ".hackathon_judge" / "runs"
+
+# ── Palette ──
 ACCENT = "#b11f4b"
 ACCENT_SOFT = "#fd8ea1"
 SURFACE = "#292929"
@@ -50,23 +58,6 @@ WARNING = "#fbbf24"
 DANGER = "#f87171"
 MUTED = "#919191"
 LINK = "#4da6ff"
-
-
-def _load_json(path: Path) -> Any:
-    if not path.exists():
-        return None
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def _load_ndjson(path: Path) -> List[Dict]:
-    if not path.exists():
-        return []
-    items = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line:
-            items.append(json.loads(line))
-    return items
 
 
 def _score_bar_rich(score: float, max_score: float = 10.0, width: int = 20) -> Text:
@@ -97,33 +88,69 @@ def _time_ago(iso_str: str) -> str:
 
 
 class BundleState:
-    """Reads and caches all artifacts from a run bundle directory."""
+    """Wraps a BundleReader and holds the most recently loaded projection.
 
-    def __init__(self, run_id: str, runs_dir: Path | None = None):
+    Defaults to the audience-safe projection (no scores/ranks until a run
+    is awarded or exported). Pass ``operator=True`` for the full,
+    unredacted facilitator view.
+    """
+
+    def __init__(self, run_id: str, runs_dir: Optional[Path] = None,
+                operator: bool = False):
         self.run_id = run_id
         self.runs_dir = runs_dir or Path(
-            __import__("os").environ.get("CBP_RUNS_DIR", str(DEFAULT_RUNS_DIR))
+            os.environ.get("HJ_RUNS_DIR", str(DEFAULT_RUNS_DIR))
         )
-        self.bundle_path = self.runs_dir / run_id
+        self.bundle_path = get_bundle_path(run_id, self.runs_dir)
+        self.operator = operator
+        self.reader = BundleReader(self.bundle_path)
+        self.view: BundleView
         self.refresh()
 
     def refresh(self) -> None:
-        self.manifest = _load_json(self.bundle_path / "manifest.json") or {}
-        self.submissions = _load_ndjson(self.bundle_path / "submissions.ndjson")
-        self.verdicts = _load_ndjson(self.bundle_path / "verdicts.ndjson")
-        self.feedback = _load_ndjson(self.bundle_path / "feedback.ndjson")
-        self.shadow = _load_json(self.bundle_path / "shadow_score.json")
-        self.awards = _load_json(self.bundle_path / "winner" / "awards.json")
-        self.gate = _load_json(self.bundle_path / "freshness_gate.json")
-        self.command_log = _load_ndjson(self.bundle_path / "command_log.ndjson")
+        self.view = (
+            self.reader.operator_view() if self.operator else self.reader.audience_view()
+        )
 
     @property
     def status(self) -> str:
-        return self.manifest.get("status", "unknown")
+        return self.view.status
 
     @property
     def mode(self) -> str:
-        return self.manifest.get("mode", "workshop")
+        return self.view.mode
+
+    @property
+    def event_name(self) -> str:
+        return self.view.event_name
+
+    @property
+    def submissions(self) -> List[Dict]:
+        return self.view.submissions
+
+    @property
+    def verdicts(self) -> List[Dict]:
+        return self.view.verdicts
+
+    @property
+    def feedback(self) -> List[Dict]:
+        return self.view.feedback
+
+    @property
+    def shadow(self) -> Optional[Dict]:
+        return self.view.shadow_score
+
+    @property
+    def awards(self) -> Optional[Dict]:
+        return self.view.awards
+
+    @property
+    def gate(self) -> Optional[Dict]:
+        return self.view.freshness_gate
+
+    @property
+    def command_log(self) -> List[Dict]:
+        return self.view.command_log
 
     @property
     def sub_count(self) -> int:
@@ -131,11 +158,11 @@ class BundleState:
 
     @property
     def verdict_map(self) -> Dict[str, Dict]:
-        return {v.get("submission_id"): v for v in self.verdicts}
+        return self.view.verdict_map
 
     @property
     def feedback_map(self) -> Dict[str, Dict]:
-        return {f.get("submission_id"): f for f in self.feedback}
+        return self.view.feedback_map
 
     @property
     def model_name(self) -> str:
@@ -143,6 +170,11 @@ class BundleState:
             return self.gate.get("selected_model", "unknown")
         return "pending"
 
+    @property
+    def is_revealed(self) -> bool:
+        return self.view.revealed
+
+    # Kept as an alias for readability where "sealed or later" is meant.
     @property
     def is_sealed(self) -> bool:
         return self.status in ("sealed", "awarded", "exported")
@@ -267,7 +299,7 @@ class HeaderBar(Static):
 
     def compose(self) -> ComposeResult:
         yield Static(
-            f"✨  Copilot Builder — Judging Panel  ✨\n"
+            f"🏟️  Hackathon Judge  🏟️\n"
             f"Run: {self.run_id}",
             id="header-text",
         )
@@ -298,7 +330,7 @@ class StatusStrip(Static):
         # Counts
         t.append(f"📋 {self.subs} submissions", style="white")
         t.append("  │  ", style="dim")
-        t.append(f"🎯 {self.scored} scored", style="white")
+        t.append(f"🎯 {self.scored} reviewed", style="white")
         t.append("  │  ", style="dim")
         # Model
         t.append(f"🧠 {self.model}", style="cyan")
@@ -356,13 +388,14 @@ class SpotlightCard(Static):
         if badges:
             lines.append(f"   {' · '.join(badges)}\n", style="bright_white")
 
-        # Verdict
+        # Verdict — score bar only appears once the run is revealed
+        # (audience_view() withholds total_score until then).
         if self._verdict:
-            score = float(self._verdict.get("total_score", 0))
             lines.append("\n")
-            lines.append("   Score: ", style="bold")
-            lines.append_text(_score_bar_rich(score))
-            lines.append("\n")
+            if "total_score" in self._verdict:
+                lines.append("   Score: ", style="bold")
+                lines.append_text(_score_bar_rich(float(self._verdict.get("total_score", 0))))
+                lines.append("\n")
             for av in self._verdict.get("archetype_verdicts", []):
                 lines.append(f"   🎙️ {av.get('archetype_name', '')}: ", style="bright_magenta")
                 lines.append(f"{av.get('bright_spot', av.get('perspective', ''))[:80]}\n", style="green")
@@ -444,10 +477,14 @@ class SidePanel(Static):
             lines.append(f"  Hash: {str(s.shadow.get('sealed_hash', ''))[:16]}…\n", style="dim")
             lines.append(f"  Sealed: {s.shadow.get('sealed_at', 'n/a')[:19]}\n", style="green")
 
-        # Score distribution
-        if s.verdicts:
-            lines.append(f"\n📊 Score Distribution\n", style="bold underline bright_white")
-            scores = sorted([float(v.get("total_score", 0)) for v in s.verdicts], reverse=True)
+        # Score distribution — withheld until the run is revealed (awarded
+        # or exported); the audience-safe view has no total_score before
+        # then, and even the operator view avoids showing a leaderboard
+        # ahead of the ceremony.
+        scored_verdicts = [v for v in s.verdicts if "total_score" in v]
+        if s.is_revealed and scored_verdicts:
+            lines.append(f"\n📊 Final Scores\n", style="bold underline bright_white")
+            scores = sorted((float(v["total_score"]) for v in scored_verdicts), reverse=True)
             for i, sc in enumerate(scores):
                 rank = ["🥇", "🥈", "🥉"][i] if i < 3 else f" {i+1}."
                 lines.append(f"  {rank} ")
@@ -464,7 +501,7 @@ class SidePanel(Static):
 
 
 class BuilderDashboard(App):
-    """Copilot Builder — Judging Panel Live Dashboard."""
+    """Hackathon Judge Live Dashboard."""
 
     CSS = DASHBOARD_CSS
     BINDINGS = [
@@ -475,16 +512,16 @@ class BuilderDashboard(App):
 
     spotlight_index = reactive(0)
 
-    def __init__(self, run_id: str, projector: bool = False, **kwargs):
+    def __init__(self, run_id: str, projector: bool = False, operator: bool = False, **kwargs):
         super().__init__(**kwargs)
         self.run_id = run_id
         self.projector = projector
-        self.state = BundleState(run_id)
+        self.state = BundleState(run_id, operator=operator)
         self._auto_refresh: Optional[Timer] = None
 
     def compose(self) -> ComposeResult:
         yield Static(
-            f"✨  Copilot Builder — Judging Panel  ✨\n"
+            f"🏟️  {self.state.event_name}  🏟️\n"
             f"Run: {self.run_id}",
             id="header-bar",
         )
@@ -504,7 +541,7 @@ class BuilderDashboard(App):
             self.screen.add_class("projector")
 
         table = self.query_one("#scores-table", DataTable)
-        table.add_columns("Rank", "Project", "Builder", "Score", "Bar")
+        table.add_columns("#", "Project", "Builder", "Verdict")
         table.cursor_type = "row"
 
         self._update_all()
@@ -522,7 +559,7 @@ class BuilderDashboard(App):
         if self.state.status != old_status:
             self._log(f"● Status changed: {old_status} → {self.state.status}")
         if len(self.state.verdicts) != old_verdict_count:
-            self._log(f"🎯 Scores updated: {len(self.state.verdicts)} verdicts")
+            self._log(f"🎯 Reviews updated: {len(self.state.verdicts)} verdicts")
         self._update_all()
 
     def _update_all(self) -> None:
@@ -536,22 +573,25 @@ class BuilderDashboard(App):
         strip.model = s.model_name
         strip.sealed = s.is_sealed
 
-        # Scores table
+        # Submissions table — presented in arrival order, never by score
+        # or rank. The "Verdict" column only shows a score once the run
+        # has been revealed (awarded/exported); until then it just shows
+        # review status.
         table = self.query_one("#scores-table", DataTable)
         table.clear()
-        ranked = sorted(s.verdicts, key=lambda v: float(v.get("total_score", 0)), reverse=True)
-        for i, v in enumerate(ranked):
-            score = float(v.get("total_score", 0))
-            rank = ["🥇", "🥈", "🥉"][i] if i < 3 else f" {i+1}."
-            ratio = max(0, min(1, score / 10))
-            filled = round(ratio * 14)
-            bar = "█" * filled + "░" * (14 - filled)
+        for i, v in enumerate(s.verdicts, start=1):
+            verdict_cell: Text
+            if "total_score" in v:
+                score = float(v["total_score"])
+                verdict_cell = Text(f"{score:.1f} ")
+                verdict_cell.append_text(_score_bar_rich(score, width=10))
+            else:
+                verdict_cell = Text("🕒 in review", style="dim")
             table.add_row(
-                rank,
+                f"{i}.",
                 v.get("project_name", "Unknown")[:28],
                 v.get("builder_name", "Unknown")[:20],
-                f"{score:.1f}",
-                bar,
+                verdict_cell,
             )
 
         # Spotlight
@@ -596,15 +636,19 @@ class BuilderDashboard(App):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Copilot Builder — Judging Panel: Live Dashboard",
+        description="Hackathon Judge: Live Dashboard",
     )
     parser.add_argument("run_id", help="Run ID to display")
     parser.add_argument("--projector", action="store_true",
                         help="Big-screen / projector mode with larger elements")
+    parser.add_argument("--operator", action="store_true",
+                        help="Show the full, unredacted facilitator view "
+                             "instead of the default audience-safe projection")
     args = parser.parse_args()
 
-    app = BuilderDashboard(run_id=args.run_id, projector=args.projector)
+    app = BuilderDashboard(run_id=args.run_id, projector=args.projector, operator=args.operator)
     app.run()
+
 
 
 if __name__ == "__main__":

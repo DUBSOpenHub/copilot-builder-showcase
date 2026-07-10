@@ -1,25 +1,27 @@
 {
-  "version": "1.0",
+  "version": "1.2",
   "rubric": {
     "dimensions": [
       { "id": "innovation",   "name": "Innovation",          "weight": 0.30, "max_score": 10, "description": "Novelty and creative approach" },
       { "id": "impact",       "name": "Potential Impact",    "weight": 0.25, "max_score": 10, "description": "Real-world value and reach" },
       { "id": "execution",    "name": "Technical Execution", "weight": 0.25, "max_score": 10, "description": "Code quality and craft" },
-      { "id": "presentation", "name": "Clarity & Demo",      "weight": 0.20, "max_score": 10, "description": "Communication and demo quality" }
+      { "id": "presentation", "name": "Clarity and Demo",    "weight": 0.20, "max_score": 10, "description": "Communication and demo quality" }
     ]
   },
   "judge_archetypes": [
-    { "id": "spark",    "name": "The Spark",    "focus": "novel ideas and creative leaps" },
-    { "id": "builder",  "name": "The Builder",  "focus": "technical depth and craft" },
-    { "id": "champion", "name": "The Champion", "focus": "real-world impact and adoption" }
+    { "id": "innovation", "name": "Innovation lens", "focus": "originality, problem framing, and useful creative choices" },
+    { "id": "craft", "name": "Build quality lens", "focus": "technical execution, completeness, and thoughtful implementation" },
+    { "id": "impact", "name": "Impact lens", "focus": "user value, feasibility, and the strength of the demo story" }
   ],
   "tone_policy": {
     "banned_phrases": [],
     "extra_banned_phrases": []
   },
   "freshness_gate": {
-    "policy_mode": "permissive",
-    "preferred_model": "gpt-4o"
+    "policy_mode": "strict",
+    "preferred_model": "claude-opus-4.8",
+    "required_tier": "premium",
+    "required_reasoning": "high"
   },
   "submission_size_cap_bytes": 5242880
 }
