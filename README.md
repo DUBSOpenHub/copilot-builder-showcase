@@ -7,6 +7,8 @@
 
 > **A room full of people built something. The ending should feel like a show.**
 
+![Hackathon Judge single-screen Live Show practice demo](docs/images/live-show-demo.png)
+
 Hackathon Judge turns a list of project links into the final act: every build
 gets a spotlight, the panel keeps the energy up without leaking scores, and the
 awards land with a proper reveal. Send the links. Start the show. Keep the
