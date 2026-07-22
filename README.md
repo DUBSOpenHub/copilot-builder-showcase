@@ -1,10 +1,21 @@
 # Hackathon Judge
 
-> **Builder sessions create real projects and usually end with a list of links.
-> Hackathon Judge turns that list into a live, AI-judged finale.**
+## Builder sessions are great at creating projects—and bad at ending them
 
-Workshop hosts paste the links once. An AI panel reviews every output through
-the same rubric, gives each build a spotlight and private feedback, brings the
+At the end of a builder workshop, product demo session, or online challenge,
+the projects are usually scattered across chat threads, shared documents, and
+browser tabs. A few people get demo time. Most outputs receive no consistent
+review. The audience has nothing to follow, and the session simply stops.
+
+A real judging panel would give the work a shared resolution, but recruiting
+judges, reviewing every project, and producing an award ceremony is too much
+overhead for most builder sessions.
+
+> **Hackathon Judge turns that loose list of projects into a live, AI-judged
+> finale.**
+
+The host pastes the links once. An AI panel reviews every output through the
+same rubric, gives each project a spotlight and private feedback, brings the
 audience into the reveal, and saves the whole event for replay. It is the
 ending of a hackathon without the work of organizing one.
 
