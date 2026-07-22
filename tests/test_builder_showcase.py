@@ -1,9 +1,9 @@
 """
-Test suite for Hackathon Judge
+Test suite for Copilot Builder Showcase
 Tests all layers: tone safety, hash/seal, write-once, freshness gate,
 shadow score, eval engine, command flows, registry, exit codes.
 
-Run with: python -m pytest tests/test_hackathon_judge.py -v
+Run with: python -m pytest tests/test_builder_showcase.py -v
 """
 
 import argparse
@@ -13,6 +13,7 @@ import io
 import json
 import os
 import re
+import subprocess
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -24,7 +25,7 @@ import pytest
 
 # Add parent dir to sys.path so we can import the module
 sys.path.insert(0, str(Path(__file__).parent.parent))
-import hackathon_judge as cbp
+import builder_showcase as cbp
 
 # ---------------------------------------------------------------------------
 # Fixtures and helpers
@@ -53,11 +54,57 @@ class MockGateway:
         return cbp._synthetic_model_response(prompt, model_id)
 
 
-def make_run(tmp_path: Path, run_id: str = "test-run", mode: str = "workshop",
-             gateway: Optional[MockGateway] = None) -> Path:
+def _podium_event_spec() -> Dict[str, Any]:
+    event = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+    event["awards"] = [
+        {
+            "id": "bronze",
+            "name": "Bronze — Third Place",
+            "emoji": "🥉",
+            "tagline": "A podium finish for a project with a strong overall story.",
+            "dimensions": [],
+            "rank": 3,
+            "reason": "This project earned the third-highest overall result across the event rubric.",
+        },
+        {
+            "id": "silver",
+            "name": "Silver — Second Place",
+            "emoji": "🥈",
+            "tagline": "A podium finish for a project with impact and craft.",
+            "dimensions": [],
+            "rank": 2,
+            "reason": "This project earned the second-highest overall result across the event rubric.",
+        },
+        {
+            "id": "grand-prize",
+            "name": "Gold — First Place",
+            "emoji": "🥇",
+            "tagline": "The top project across the event rubric.",
+            "dimensions": [],
+            "rank": 1,
+            "reason": "This project earned the highest overall result across the event rubric.",
+        },
+    ]
+    return event
+
+
+def make_run(
+    tmp_path: Path,
+    run_id: str = "test-run",
+    mode: str = "workshop",
+    gateway: Optional[MockGateway] = None,
+    event_spec: Optional[Dict[str, Any]] = None,
+) -> Path:
     """Initialize a run and return bundle_path."""
     bundle_path = tmp_path / run_id
-    cbp.init_bundle(run_id, mode, dict(cbp.DEFAULT_RUBRIC), bundle_path, fixed_clock)
+    cbp.init_bundle(
+        run_id,
+        mode,
+        dict(cbp.DEFAULT_RUBRIC),
+        bundle_path,
+        fixed_clock,
+        event_spec,
+    )
     return bundle_path
 
 
@@ -382,7 +429,7 @@ class TestShowtimeDelight:
 
         cbp._print_workshop_receipt(bundle_path, "legacy-official")
 
-        assert "OFFICIAL LIVE PANEL" in capsys.readouterr().out
+        assert "OFFICIAL COPILOT PANEL" in capsys.readouterr().out
 
     def test_workshop_caps_total_showtime_animation(self, tmp_path):
         env = {
@@ -591,7 +638,11 @@ class TestShadowScore:
             },
         ]
 
-        bundle_path = make_run(tmp_path, "tied-podium")
+        bundle_path = make_run(
+            tmp_path,
+            "tied-podium",
+            event_spec=_podium_event_spec(),
+        )
         for submission_id, project_name in (
             ("sub-a", "Aurora"),
             ("sub-b", "Beacon"),
@@ -634,6 +685,65 @@ class TestShadowScore:
             "The next numbered placement advances under the declared policy."
         ]
 
+    def test_category_tie_uses_shared_overall_placement_instead_of_id_order(self, tmp_path):
+        bundle_path = make_run(tmp_path, "category-tie")
+        scored_a = self._make_scored(
+            "sub-a",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_b = self._make_scored(
+            "sub-b",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_c = self._make_scored(
+            "sub-c",
+            {"innovation": 10, "impact": 10, "execution": 10, "presentation": 10},
+        )
+        for scored in (scored_a, scored_b, scored_c):
+            submission_id = scored["submission_id"]
+            cbp.write_once_json(
+                bundle_path / "inputs" / f"{submission_id}.json",
+                {
+                    "submission_id": submission_id,
+                    "builder_name": submission_id,
+                    "project_name": submission_id,
+                    "description": "A project.",
+                    "submitted_at": FIXED_TS,
+                },
+            )
+            cbp.write_once_json(
+                bundle_path / "verdicts" / f"{submission_id}.json",
+                {
+                    **scored,
+                    "project_name": submission_id,
+                    "builder_name": submission_id,
+                    "archetype_verdicts": [],
+                },
+            )
+        shadow = cbp.compute_shadow_score(
+            [scored_b, scored_c, scored_a],
+            cbp.load_rubric(bundle_path),
+            fixed_clock,
+        )
+        cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
+
+        awards_card = cbp._choose_award_winners(
+            bundle_path,
+            "sub-c",
+            fixed_clock,
+        )
+        boldest = [
+            award
+            for award in awards_card["awards"]
+            if award["award_id"] == "boldest-idea"
+        ]
+
+        assert {award["winner_submission_id"] for award in boldest} == {
+            "sub-a",
+            "sub-b",
+        }
+        assert all(award["shared_placement"] is True for award in boldest)
+
     def test_sealed_tiebreaker_resolves_public_score_tie_without_changing_scores(self):
         rubric = copy.deepcopy(cbp.DEFAULT_RUBRIC)
         rubric["tie_policy"] = {
@@ -664,7 +774,7 @@ class TestShadowScore:
         }]
 
     def test_human_tie_policy_requires_logged_decision(self, tmp_path):
-        event = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+        event = _podium_event_spec()
         event["tie_policy"] = {
             "mode": "human-resolution",
             "tiebreaker_dimensions": [],
@@ -882,6 +992,45 @@ class TestFreshnessGate:
         gate = cbp.load_json(bundle_path / "freshness_gate.json")
         assert gate["status"] == "blocked"
 
+    def test_cached_blocked_gate_stays_blocked(self, tmp_path):
+        bundle_path = make_run(tmp_path, "cached-block")
+        rubric = cbp.load_rubric(bundle_path)
+        rubric["freshness_gate"]["policy_mode"] = "strict"
+        rubric["freshness_gate"]["preferred_model"] = "gpt-4-legacy"
+        stale_gateway = MockGateway(
+            models=[{"id": "gpt-4-legacy", "tier": 1, "deprecated": True}]
+        )
+
+        with pytest.raises(cbp.FreshnessGateBlock):
+            cbp.run_freshness_gate(bundle_path, rubric, stale_gateway, fixed_clock)
+        with pytest.raises(cbp.FreshnessGateBlock):
+            cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
+
+    def test_cached_official_gate_requires_and_revalidates_gateway(self, tmp_path):
+        bundle_path = make_run(tmp_path, "cached-official")
+        rubric = cbp.load_rubric(bundle_path)
+        cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
+
+        with pytest.raises(cbp.ModelAPIError, match="Official Copilot Panel"):
+            cbp.run_freshness_gate(bundle_path, rubric, None, fixed_clock)
+        with pytest.raises(cbp.FreshnessGateBlock, match="revalidation"):
+            cbp.run_freshness_gate(
+                bundle_path,
+                rubric,
+                MockGateway(
+                    models=[
+                        {
+                            "id": "legacy-model",
+                            "tier": 0,
+                            "premium": False,
+                            "reasoning": "low",
+                            "deprecated": True,
+                        }
+                    ]
+                ),
+                fixed_clock,
+            )
+
     def test_gate_fallback_permissive(self, tmp_path):
         bundle_path = make_run(tmp_path)
         rubric = cbp.load_rubric(bundle_path)
@@ -910,6 +1059,99 @@ class TestBulkUrlImport:
             "https://github.com/DUBSOpenHub/terminal-stampede",
             "https://github.com/DUBSOpenHub/copilot-cli-agent-pulse",
         ]
+
+    def test_parse_submission_urls_accepts_generic_project_links(self):
+        raw = """
+        https://demo.example.com/projects/aurora
+        https://www.figma.com/design/abc123/workshop-demo
+        https://youtu.be/example-video
+        javascript:alert(1)
+        """
+
+        assert cbp.parse_submission_urls(raw) == [
+            "https://demo.example.com/projects/aurora",
+            "https://www.figma.com/design/abc123/workshop-demo",
+            "https://youtu.be/example-video",
+        ]
+
+    def test_generic_url_deduplication_preserves_case_sensitive_paths(self):
+        assert cbp.parse_submission_urls(
+            "https://demo.example.com/Project\nhttps://demo.example.com/project"
+        ) == [
+            "https://demo.example.com/Project",
+            "https://demo.example.com/project",
+        ]
+
+    def test_github_submission_ids_remain_legacy_compatible(self):
+        url = "https://github.com/DUBSOpenHub/terminal-stampede"
+
+        assert (
+            cbp._submission_id_from_project_url(url)
+            == "repo-dubsopenhub-terminal-stampede-1ee86947"
+        )
+        assert cbp._submission_id_from_repo_url(url) == cbp._submission_id_from_project_url(url)
+
+    def test_long_generic_submission_ids_keep_distinct_digests(self):
+        shared = "https://demo.example.com/projects/" + ("a" * 180)
+        first = cbp._submission_id_from_project_url(shared + "One")
+        second = cbp._submission_id_from_project_url(shared + "Two")
+
+        assert first != second
+        assert len(first) <= 96
+        assert len(second) <= 96
+        assert re.search(r"-[0-9a-f]{8}$", first)
+        assert re.search(r"-[0-9a-f]{8}$", second)
+
+    def test_generic_project_link_import_does_not_fetch_remote_metadata(self, tmp_path):
+        bundle_path = make_run(tmp_path, "generic-link")
+        url = "https://demo.example.com/projects/aurora"
+
+        with patch.object(cbp, "fetch_repo_metadata") as fetch_repo_metadata:
+            created = cbp.import_url_submissions(bundle_path, [url], clock=fixed_clock)
+
+        fetch_repo_metadata.assert_not_called()
+        assert created[0]["project_name"] == "demo.example.com/aurora"
+        assert created[0]["builder_name"] == "Project team"
+        assert created[0]["project_url"] == url
+        assert created[0]["repo_metadata"]["source"] == "project-link"
+
+    def test_percent_encoded_terminal_escape_is_removed_from_project_display(self, tmp_path, capsys):
+        bundle_path = make_run(tmp_path, "escaped-link")
+        url = "https://demo.example.com/projects/%1b%5b31mAurora"
+
+        created = cbp.import_url_submissions(bundle_path, [url], clock=fixed_clock)
+        cbp._sideline(f"{created[0]['project_name']} enters the showcase.")
+
+        assert "\x1b" not in created[0]["project_name"]
+        assert "\x1b" not in capsys.readouterr().out
+        assert "Aurora" in created[0]["project_name"]
+
+    def test_project_and_builder_identities_strip_controls_but_keep_unicode(self, tmp_path):
+        bundle_path = make_run(tmp_path, "safe-identities")
+        url = "https://demo.example.com/projects/caf%C3%A9-%F0%9F%9A%80"
+
+        created = cbp.import_url_submissions(
+            bundle_path,
+            [{"url": url, "builder_name": "Tēam 🚀\x07"}],
+            clock=fixed_clock,
+        )
+
+        assert created[0]["project_name"] == "demo.example.com/café-🚀"
+        assert created[0]["builder_name"] == "Tēam 🚀"
+
+    def test_terminal_title_removes_injected_control_sequences(self):
+        class TtyOutput(io.StringIO):
+            def isatty(self):
+                return True
+
+        output = TtyOutput()
+        with patch.object(cbp.sys, "stdout", output):
+            cbp._set_terminal_title("Aurora\x1b[2J Showcase")
+
+        rendered = output.getvalue()
+        assert rendered.startswith("\x1b]0;")
+        assert "\x1b[2J" not in rendered
+        assert "Aurora[2J Showcase" in rendered
 
     def test_import_url_submissions_creates_idempotent_submissions(self, tmp_path):
         bundle_path = make_run(tmp_path, "url-room")
@@ -1009,8 +1251,9 @@ class TestBulkUrlImport:
                 "Demo Day Grand Prize",
             ]
             assert manifest["event"]["name"] == "Demo Day"
-            assert manifest["result_status"] == "OFFICIAL LIVE PANEL"
+            assert manifest["result_status"] == "OFFICIAL COPILOT PANEL"
             assert manifest["results_are_illustrative"] is False
+            assert manifest["official_copilot_panel_connected"] is True
             assert manifest["official_live_panel_connected"] is True
             awards = cbp.load_json(bundle / "winner" / "awards.json")
             award_names = [a["award_name"] for a in awards["awards"]]
@@ -1020,7 +1263,7 @@ class TestBulkUrlImport:
             assert (bundle / "HASHES").exists()
             assert (bundle / "SEAL").exists()
             assert len(list((bundle / "inputs").glob("*.json"))) == 2
-        assert capsys.readouterr().out.count("OFFICIAL LIVE PANEL") >= 5
+        assert capsys.readouterr().out.count("OFFICIAL COPILOT PANEL") >= 5
 
     def test_workshop_showtime_defaults_to_audience_autopilot(self, tmp_path, capsys):
         env = {
@@ -1066,17 +1309,17 @@ class TestBulkUrlImport:
         assert rc == 0
         output = capsys.readouterr().out
         assert "Create the workshop run bundle?" not in output
-        assert "Bronze — Third Place" in output
-        assert "Silver — Second Place" in output
-        assert "Gold — First Place" in output
-        assert "Workshop Recap" in output
+        assert "Boldest Idea" in output
+        assert "Most Useful" in output
+        assert "Project of the Showcase" in output
+        assert "Copilot Builder Showcase Recap" in output
         assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
         assert "Panel chatter:" in output
         assert "One fast panel take per project" in output
         awards = cbp.load_json(tmp_path / "runs" / "show-room" / "winner" / "awards.json")
-        award_order = {"bronze": 0, "silver": 1, "grand-prize": 2}
+        award_order = {"boldest-idea": 0, "most-useful": 1, "grand-prize": 2}
         award_ids = [award["award_id"] for award in awards["awards"]]
         assert award_ids == sorted(award_ids, key=award_order.__getitem__)
         assert "grand-prize" in award_ids
@@ -1089,7 +1332,7 @@ class TestBulkUrlImport:
         cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
         gate_path = bundle_path / "freshness_gate.json"
         assert gate_path.exists()
-        # Second call should return existing result without re-running
+        # Second call keeps the immutable artifact but revalidates a live panel.
         result2 = cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
         assert result2["status"] in ("pass", "fallback", "blocked")
 
@@ -1112,6 +1355,87 @@ class TestBulkUrlImport:
         gw = MockGateway()
         with pytest.raises(cbp.FreshnessGateBlock):
             cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
+
+
+class TestCopilotCLIGateway:
+
+    def test_copilot_cli_supports_default_diverse_panel_and_inference(self, tmp_path):
+        calls = []
+
+        def runner(command, **kwargs):
+            calls.append((command, kwargs))
+            model_id = command[command.index("--model") + 1]
+            output = (
+                '{"status":"ready"}'
+                if model_id == "auto"
+                else '{"scores":{"impact":9}}'
+            )
+            return subprocess.CompletedProcess(command, 0, stdout=output, stderr="")
+
+        gateway = cbp.CopilotCLIGateway("/opt/homebrew/bin/copilot", runner=runner)
+        bundle_path = make_run(tmp_path, "copilot-panel")
+        gate = cbp.run_freshness_gate(
+            bundle_path,
+            cbp.load_rubric(bundle_path),
+            gateway,
+            fixed_clock,
+        )
+        completion = gateway.call_model("Return JSON.", "gpt-5.6-terra")
+
+        assert gate["status"] == "pass"
+        assert gate["selected_models"] == cbp.DEFAULT_EVENT_SPEC["model_policy"]["panel_models"]
+        assert completion == '{"scores":{"impact":9}}'
+        readiness_command, readiness_kwargs = calls[0]
+        model_command, model_kwargs = calls[1]
+        assert readiness_command[readiness_command.index("--model") + 1] == "auto"
+        assert model_command[model_command.index("--model") + 1] == "gpt-5.6-terra"
+        assert "--available-tools=" in model_command
+        assert "--disable-builtin-mcps" in model_command
+        assert "--no-custom-instructions" in model_command
+        assert readiness_kwargs["timeout"] == 90
+        assert model_kwargs["timeout"] == 180
+        assert model_kwargs["env"]["COPILOT_ALLOW_ALL"] == "false"
+
+    def test_environment_uses_installed_copilot_cli(self):
+        with patch.object(cbp.shutil, "which", return_value=None):
+            assert cbp._live_gateway_from_environment({}) is None
+        with patch.object(
+            cbp.shutil, "which", return_value="/opt/homebrew/bin/copilot"
+        ):
+            gateway = cbp._live_gateway_from_environment({})
+
+        assert isinstance(gateway, cbp.CopilotCLIGateway)
+        assert gateway.copilot_path == "/opt/homebrew/bin/copilot"
+
+    def test_copilot_failure_is_public_safe(self):
+        def runner(command, **_kwargs):
+            return subprocess.CompletedProcess(
+                command,
+                1,
+                stdout="",
+                stderr="private provider detail",
+            )
+
+        gateway = cbp.CopilotCLIGateway("copilot", runner=runner)
+        with pytest.raises(cbp.ModelAPIError, match="exit 1") as exc_info:
+            gateway.query_available_models()
+
+        assert "private provider detail" not in str(exc_info.value)
+
+    def test_main_passes_environment_gateway_to_command(self):
+        gateway = object()
+        received = {}
+
+        def handler(_args, selected_gateway, _clock):
+            received["gateway"] = selected_gateway
+            return 0
+
+        with patch.object(
+            cbp, "_live_gateway_from_environment", return_value=gateway
+        ), patch.dict(cbp.COMMAND_MAP, {"doctor": handler}):
+            assert cbp.main(["doctor"]) == 0
+
+        assert received["gateway"] is gateway
 
 
 # ---------------------------------------------------------------------------
@@ -1237,13 +1561,14 @@ class TestCommandFlows:
 
         output = capsys.readouterr().out
         manifest = cbp.load_manifest(tmp_path / "practice-show")
-        elapsed = re.search(r"Practice Live Show complete in ([0-9.]+)s", output)
-        assert output.count("PRACTICE SHOW — ILLUSTRATIVE RESULTS") >= 5
+        elapsed = re.search(r"Practice showcase complete in ([0-9.]+)s", output)
+        assert output.count("PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS") >= 5
         assert "Audience check ready" in output
         assert elapsed is not None
         assert float(elapsed.group(1)) < cbp.DEMO_TIME_BUDGET_SECONDS
-        assert manifest["result_status"] == "PRACTICE SHOW — ILLUSTRATIVE RESULTS"
+        assert manifest["result_status"] == "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS"
         assert manifest["results_are_illustrative"] is True
+        assert manifest["official_copilot_panel_connected"] is False
         assert manifest["official_live_panel_connected"] is False
         assert manifest["workshop_choices"]["display_surface"] == "single-terminal"
         assert manifest["workshop_choices"]["optional_monitor_auto_launched"] is False
@@ -1262,6 +1587,25 @@ class TestCommandFlows:
 
         assert "Official judging is not connected" in capsys.readouterr().err
         assert not (tmp_path / "official-show").exists()
+
+    def test_official_judge_resume_cannot_downgrade_to_practice(self, tmp_path, capsys):
+        bundle_path = make_run(tmp_path, "official-resume")
+        add_submission(bundle_path)
+        manifest = cbp.load_manifest(bundle_path)
+        manifest["result_status"] = "OFFICIAL COPILOT PANEL"
+        manifest["official_copilot_panel_connected"] = True
+        cbp.save_manifest(bundle_path, manifest)
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            assert cbp.cmd_judge(
+                build_args("judge", run_id="official-resume"),
+                None,
+                fixed_clock,
+            ) == 8
+
+        assert "cannot continue with practice judges" in capsys.readouterr().err
+        assert not (bundle_path / "freshness_gate.json").exists()
+        assert not list((bundle_path / "verdicts").glob("*.json"))
 
     def test_projector_tui_refuses_captured_output(self, capsys):
         args = argparse.Namespace(
@@ -1378,7 +1722,7 @@ class TestCommandFlows:
             next((tmp_path / run_id / "eval").glob("step_*.json"))
         )["model_judgments"]
 
-        assert submission["description_source"] == "repository-import"
+        assert submission["description_source"] == "project-link-import"
         assert feedback["grounding"]["status"] == "specific"
         assert {
             "builder.problem_statement",
@@ -1473,25 +1817,68 @@ class TestCommandFlows:
         assert card["next_commit"].startswith("Hypothesis:")
         assert card["panel_notes"].startswith("Hypothesis:")
 
-    def test_default_podium_follows_distinct_shadow_ranks(self, tmp_path):
-        bundle_path = make_run(tmp_path, "podium-ranks")
-        for project_name in ("Aurora", "Beacon", "Cinder"):
+    def test_default_recognitions_spotlight_distinct_projects(self, tmp_path):
+        bundle_path = make_run(tmp_path, "recognition-awards")
+        submission_ids = [
             add_submission(bundle_path, project_name=project_name)
-        full_judge_run(bundle_path)
+            for project_name in ("Aurora", "Beacon", "Cinder")
+        ]
+        score_sets = [
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+            {"innovation": 10, "impact": 7, "execution": 7, "presentation": 7},
+            {"innovation": 6, "impact": 10, "execution": 6, "presentation": 6},
+        ]
+        scored = []
+        for submission_id, scores in zip(submission_ids, score_sets):
+            dimension_scores = {
+                dimension["id"]: {
+                    "score": scores[dimension["id"]],
+                    "max_score": dimension["max_score"],
+                }
+                for dimension in cbp.DEFAULT_RUBRIC["rubric"]["dimensions"]
+            }
+            scored.append(
+                {
+                    "submission_id": submission_id,
+                    "dimension_scores": dimension_scores,
+                    "total_score": sum(
+                        dimension_scores[dimension["id"]]["score"]
+                        * dimension["weight"]
+                        for dimension in cbp.DEFAULT_RUBRIC["rubric"]["dimensions"]
+                    ),
+                    "scored_at": FIXED_TS,
+                }
+            )
+        shadow = cbp.compute_shadow_score(
+            scored, cbp.load_rubric(bundle_path), fixed_clock
+        )
+        cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
+        submissions = {
+            submission["submission_id"]: submission
+            for submission in cbp._load_submissions(bundle_path)
+        }
+        for record in scored:
+            submission = submissions[record["submission_id"]]
+            cbp.write_once_json(
+                bundle_path / "verdicts" / f"{record['submission_id']}.json",
+                {
+                    **record,
+                    "project_name": submission["project_name"],
+                    "builder_name": submission["builder_name"],
+                    "archetype_verdicts": [],
+                },
+            )
 
-        ranking = cbp.load_shadow_score(bundle_path)["ranking"]
+        ranking = shadow["ranking"]
         awards = cbp._choose_award_winners(bundle_path, ranking[0], fixed_clock)["awards"]
 
         assert [award["award_id"] for award in awards] == [
-            "bronze",
-            "silver",
+            "boldest-idea",
+            "most-useful",
             "grand-prize",
         ]
-        assert [award["winner_submission_id"] for award in awards] == [
-            ranking[2],
-            ranking[1],
-            ranking[0],
-        ]
+        assert awards[-1]["winner_submission_id"] == ranking[0]
+        assert len({award["winner_submission_id"] for award in awards}) == 3
 
     def test_project_showcase_badges_include_activity_and_topics(self):
         badges = cbp.project_showcase_badges({
@@ -1584,13 +1971,13 @@ class TestCommandFlows:
 
         output = capsys.readouterr().out
         assert "Quick judging complete" in output
-        assert "Results status: PRACTICE SHOW — ILLUSTRATIVE RESULTS" in output
+        assert "Results status: PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" in output
         assert "Panel chatter:" not in output
         assert "🥁" not in output
         assert "Score:" not in output
         assert "Private project feedback:" in output
         assert "Validation: passed" in output
-        assert "Replay: hackathon replay quick-flow" in output
+        assert "Replay: showcase replay quick-flow" in output
         assert cbp.load_manifest(tmp_path / run_id)["engagement_mode"] == "quick"
         assert cbp.load_manifest(tmp_path / run_id)["status"] == "exported"
         assert (tmp_path / run_id / "HASHES").exists()
@@ -1998,7 +2385,7 @@ class TestCommandFlows:
                 args = build_args("doctor", run_id=None)
                 rc = cbp.cmd_doctor(args, None, fixed_clock)
         assert rc == 0
-        assert "Judge panel: Practice Show ready" in capsys.readouterr().out
+        assert "Judge panel: practice showcase ready" in capsys.readouterr().out
 
     def test_doctor_reports_missing_textual(self, tmp_path, capsys):
         env = self._env(tmp_path)

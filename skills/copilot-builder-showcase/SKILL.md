@@ -1,18 +1,18 @@
 ---
-name: hackathon-judge
+name: copilot-builder-showcase
 description: >
-  Give any builder workshop, product demo, conference build session, online
-  challenge, or hackathon a shared ending. Paste project links and create one
-  single-screen AI-panel show where every build gets a spotlight, the audience
-  joins the reveal, and the result is preserved. Say "hackathon" to start.
+  Turn any workshop into a live Copilot Builder Showcase. Drop the links,
+  activate the judging panel, and spotlight the winners in under two minutes.
+  The same single-screen flow works for builder workshops, product demos,
+  conference build sessions, and online challenges. Say "showcase" to start.
 tools:
   - bash
   - ask_user
 ---
 
-# Hackathon Judge
+# Copilot Builder Showcase
 
-The primary experience is one Live Show. Use the installed `hackathon` command;
+The primary experience is one live showcase. Use the installed `showcase` command;
 never ask a beginner to run Python or know the internal `workshop` subcommand.
 Never invent an outcome in prose.
 
@@ -20,12 +20,15 @@ Never invent an outcome in prose.
 
 - `hackathon`
 - `hackathon judge`
+- `showcase`
+- `builder showcase`
+- `copilot builder showcase`
 - `run hackathon judging`
 - `judge these projects`
 - `judge these repos`
 - `judge these demos`
 - `wrap up this builder workshop`
-- `turn these projects into a show`
+- `turn these projects into a showcase`
 - `run the panel`
 - `run a hackathon judge demo`
 
@@ -34,26 +37,31 @@ Never invent an outcome in prose.
 Before collecting projects, check for the command:
 
 ```bash
-command -v hackathon
+command -v showcase
 ```
 
 If it is missing:
 
 1. Explain in one sentence that installation downloads this repository into
-   `~/.local/share/hackathon-judge` and creates commands in `~/.local/bin`.
+   `~/.local/share/copilot-builder-showcase` and creates commands in
+   `~/.local/bin`.
 2. Use `ask_user` to request installation permission.
 3. Do not install unless the user explicitly approves.
 4. When approved, run:
 
    ```bash
-   gh api -H "Accept: application/vnd.github.raw" \
-     repos/DUBSOpenHub/hackathon-judge/contents/install.sh | bash
+   bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
+     -H "Accept: application/vnd.github.raw+json" | bash'
    ```
 
-5. Use `~/.local/bin/hackathon` for the current run even if the shell has not
+5. Use `~/.local/bin/showcase` for the current run even if the shell has not
    reloaded its PATH.
-6. Run `~/.local/bin/hackathon doctor`. If it fails, stop and report the
+6. Run `~/.local/bin/showcase doctor`. If it fails, stop and report the
    specific setup issue before accepting projects.
+
+The install command requires an authenticated GitHub CLI. If `gh auth status`
+fails, stop and tell the user to run `gh auth login`; never request or handle a
+token directly.
 
 If installation is declined, provide the install command and stop. Never change
 shell profiles automatically.
@@ -62,36 +70,38 @@ shell profiles automatically.
 
 - Do not offer Live, Quick, or Slack judging as mode choices.
 - If project links or an uploaded submissions file are already present, start
-  the Live Show immediately.
+  the live showcase immediately.
 - If no project links are present, ask only for the links.
-- Accept plain GitHub URLs or `owner/repo` entries.
+- Accept safe HTTP(S) project or demo URLs and GitHub `owner/repo` entries.
 - If the organizer says `run again` or `start over`, reuse the previous project
   entries with a fresh run ID.
-- If the organizer asks for a demo without links, use `hackathon --demo`.
+- If the organizer asks for a demo without links, use `showcase --demo`.
 
-Plain links are enough. Hackathon Judge automatically uses public repository
-context and labels an unnamed entry as `<repository owner> team`. Never infer
-Copilot or frontier use from a link, code, metadata, or a judge impression.
-Missing evidence stays `not provided`.
+Plain links are enough. GitHub links may use public repository context and label
+an unnamed entry as `<repository owner> team`. Generic links are never fetched
+during intake; derive a safe project label and use `Project team` when no team is
+supplied. Never infer Copilot or frontier use from a link, code, metadata, or a
+judge impression. Missing evidence stays `not provided`.
 
 ## Result status
 
-Keep the show's result status explicit:
+Keep the showcase result status explicit:
 
-- `PRACTICE SHOW — ILLUSTRATIVE RESULTS` means local practice judges are active.
-- `OFFICIAL LIVE PANEL` means a host connected live judges.
+- `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` means local practice judges are active.
+- `OFFICIAL COPILOT PANEL` means an authenticated GitHub Copilot CLI panel is connected.
 
-Installed local runs are Practice Shows unless an official host integration is
-connected. If the organizer requires an official event, add `--official`; the
-command must block rather than silently produce practice results.
+Installed local runs use the authenticated GitHub Copilot CLI when available.
+`showcase --demo` is always a deterministic practice showcase. If the organizer
+requires an official event, add `--official`; the command must block rather than
+silently produce practice results. Never request or expose Copilot credentials.
 
-## Start the Live Show
+## Start the live showcase
 
 Write supplied links to a temporary file. Use the absolute command path when
 needed:
 
 ```bash
-~/.local/bin/hackathon \
+~/.local/bin/showcase \
   --file <temporary-submissions-file> \
   --run-id <safe-event-run-id> \
   --require-live-terminal \
@@ -102,7 +112,7 @@ On macOS, open exactly one real Terminal using that command:
 
 ```bash
 osascript \
-  -e 'tell application "Terminal" to do script "<shell-quoted-absolute-hackathon-command>"' \
+  -e 'tell application "Terminal" to do script "<shell-quoted-absolute-showcase-command>"' \
   -e 'tell application "Terminal" to activate'
 ```
 
@@ -111,15 +121,15 @@ text directly into the AppleScript command; pass it through the temporary file.
 
 The new Terminal contains the complete audience experience. Share that one
 window. Never auto-open the optional Textual monitor or a second Terminal.
-Captured tool output is not the audience show; if a real Terminal cannot be
-opened, stop before judging and provide the exact manual `hackathon` command.
+Captured tool output is not the audience showcase; if a real Terminal cannot be
+opened, stop before judging and provide the exact manual `showcase` command.
 
-## Run the two-minute practice demo
+## Run the two-minute practice showcase
 
-Use the same Live Show:
+Use the same showcase:
 
 ```bash
-~/.local/bin/hackathon \
+~/.local/bin/showcase \
   --demo \
   --run-id <safe-demo-run-id> \
   --require-live-terminal \
@@ -130,9 +140,9 @@ The demo is deterministic, avoids network metadata calls, exercises the full
 intake-to-replay flow, and targets completion within 120 seconds. It is always
 illustrative and never an official competition result.
 
-## Show direction
+## Showcase direction
 
-The Live Show should feel like a punchy startup demo day:
+The showcase should feel like a punchy startup demo day:
 
 1. Project links enter immediately.
 2. A generic sideline reporter describes the action with short, energetic lines.
@@ -157,9 +167,11 @@ the ceremony concise enough for a two-minute demo.
 
 ## Awards, ties, and feedback
 
-The default reveal is project-first bronze → silver → gold. Exact ties follow
-the EventSpec policy: shared podium, a predeclared sealed tiebreaker, or a logged
-human decision. Never use entry order as a tiebreaker.
+The default reveal is project-first: Boldest Idea, Most Useful, then Project of
+the Showcase. Category awards prefer distinct recipients when enough projects exist.
+Exact overall ties follow the EventSpec policy: shared recognition, a
+predeclared sealed tiebreaker, or a logged human decision. Never use entry order
+as a tiebreaker.
 
 Private feedback may include award rationale, what judges liked, one actionable
 next step, a Copilot next move, a bounded frontier experiment, and explicit

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-bundle_reader.py — Canonical read-only reader for Hackathon Judge
-run bundles (the format written by hackathon_judge.py).
+bundle_reader.py — Canonical read-only reader for Copilot Builder Showcase
+run bundles (the format written by builder_showcase.py).
 
 Reads the current primary bundle layout:
 
@@ -312,7 +312,7 @@ class BundleView:
 
 
 class BundleReader:
-    """Read-only accessor for a single Hackathon Judge run bundle.
+    """Read-only accessor for a single Copilot Builder Showcase run bundle.
 
     Every accessor re-reads its artifact from disk on each call — the
     reader intentionally holds no cache, so callers that poll a live bundle
@@ -340,7 +340,7 @@ class BundleReader:
         event = self.manifest().get("event", {})
         if isinstance(event, dict) and event.get("name"):
             return str(event["name"])
-        return "Hackathon Judge"
+        return "Copilot Builder Showcase"
 
     def command_log(self) -> List[Dict[str, Any]]:
         """command_log is embedded directly in the manifest, not a

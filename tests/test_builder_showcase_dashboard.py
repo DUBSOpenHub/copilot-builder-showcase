@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 pytest.importorskip("textual")
 
-from hackathon_judge_dashboard import (
+from builder_showcase_dashboard import (
     AwardReveal,
     BuilderDashboard,
     BundleState,
@@ -74,7 +74,7 @@ def test_dashboard_surfaces_are_unambiguous():
     audience = type("Surface", (), {"operator": False})()
     operator = type("Surface", (), {"operator": True})()
 
-    assert "NOT PART OF THE LIVE SHOW" in BuilderDashboard.surface_label.fget(audience)
+    assert "NOT PART OF THE LIVE SHOWCASE" in BuilderDashboard.surface_label.fget(audience)
     assert "KEEP PRIVATE" in BuilderDashboard.surface_label.fget(operator)
 
 

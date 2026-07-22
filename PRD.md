@@ -1,21 +1,22 @@
-# Hackathon Judge
+# Copilot Builder Showcase
 ## Product Requirements Document
 
 ## Purpose
 
-Hackathon Judge gives builder workshops, product demos, conference build
-sessions, and online challenges a shared resolution. A host types `hackathon`,
-pastes the projects people built, and creates an AI-panel show with consistent
-reviews, one spotlight per output, audience participation, awards, feedback,
-and a replayable event bundle.
+Copilot Builder Showcase gives workshops, product demos, conference build
+sessions, and online challenges a shared resolution. A host types `showcase`,
+pastes the projects people built, and creates a live Copilot judging showcase with
+consistent reviews, one spotlight per output, audience participation, awards,
+feedback, and a replayable event bundle.
 
-The product turns any list of session outputs into a lightweight hackathon
+The product turns any list of session outputs into a lightweight Copilot-judged
 finale without requiring the host to recruit judges or produce a ceremony by
 hand.
 
 The product is event-neutral: it does not impose a named host personality,
-organization identity, or judge character. The default show uses a bronze →
-silver → gold podium; EventSpecs may replace that award slate.
+organization identity, or judge character. The default showcase recognizes Boldest
+Idea, Most Useful, and Project of the Showcase; EventSpecs may replace that slate
+with other categories or a formal podium.
 
 ## Primary users
 
@@ -30,8 +31,8 @@ silver → gold podium; EventSpecs may replace that award slate.
 ## Success criteria
 
 1. A first-time facilitator can turn projects from a workshop, demo session, or
-   online build challenge into a complete judging show without first organizing
-   a formal hackathon panel.
+   online build challenge into a complete judging showcase without first organizing
+   a formal judging panel.
 2. An audience view never shows numerical totals, dimension scores, rank order,
    judge prompts, or unrevealed awards before the award stage.
 3. Every project receives a spotlight before the celebration.
@@ -39,26 +40,32 @@ silver → gold podium; EventSpecs may replace that award slate.
 5. A historical rubric-only bundle remains readable.
 6. The primary experience uses one visible terminal and never auto-opens a
    second audience or monitor window.
-7. The bundled practice show completes the full intake-to-replay flow within
+7. The bundled practice showcase completes the full intake-to-replay flow within
    120 seconds under supported local conditions.
 8. The final result follows one randomly selected audience-participation cue and
-   explicit operator confirmation in an interactive Live Show.
-9. `PRACTICE SHOW — ILLUSTRATIVE RESULTS` or `OFFICIAL LIVE PANEL` remains
+   explicit operator confirmation in an interactive showcase.
+9. `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` or `OFFICIAL COPILOT PANEL` remains
    visible in the title, opening, run card, act breaks, receipt, and manifest.
-10. Installation creates the primary `hackathon` command, preserves the
-    advanced `hackathon-judge` CLI, and never blocks the Live Show when the
-    optional monitor dependency is unavailable.
+10. Installation creates the primary `showcase` command and advanced
+    `copilot-builder-showcase` CLI, preserves `hackathon` and `hackathon-judge`,
+    and never blocks the showcase when the optional monitor dependency is
+    unavailable.
+11. Safe HTTP(S) project and demo links work without requiring a GitHub
+    repository. Intake never fetches arbitrary non-GitHub URLs.
+12. Installed runs connect to the authenticated GitHub Copilot CLI when
+    available; `--official` blocks when no compliant live Copilot panel can be
+    reached.
 
 ## Core flow
 
 ```text
-type hackathon and paste project links
+type showcase and paste project links
         |
         v
 resolve and snapshot EventSpec
         |
         v
-metadata-enriched project intake
+safe project-link intake with optional GitHub metadata
         |
         v
 premium policy check and sealed evaluation
@@ -79,17 +86,18 @@ recap, validation, and immutable replay archive
 The intended first-run command is:
 
 ```bash
-hackathon
+showcase
 ```
 
-The command collects one project link per line and begins when the organizer
-submits an empty line. Links can also be supplied directly:
+The command collects one safe HTTP(S) project or demo link per line and begins
+when the organizer submits an empty line. GitHub `owner/repo` shorthand and
+direct arguments are also supported:
 
 ```bash
-hackathon owner/project-one owner/project-two
+showcase https://demo.example/project-one owner/project-two
 ```
 
-The complete run of show and commentary appears in one terminal. The current
+The complete showcase and commentary appear in one terminal. The current
 Practice or Official result status remains visible throughout.
 
 ## EventSpec
@@ -124,16 +132,18 @@ at initialization.
 | After awards | Award results | `present --operator` can show numeric scores |
 
 The optional Textual monitor must use the audience projection by default. It is
-never auto-launched by the Live Show. Any operator projection is explicit and
+never auto-launched by the showcase. Any operator projection is explicit and
 remains unavailable before awards.
 
 ## Reliability and integrity
 
 - Project imports are idempotent and preserve GitHub metadata when available.
+- Generic project links are never fetched during intake; only their normalized
+  URL and organizer-supplied context enter the bundle.
 - All initial EventSpec, rubric, input, evaluation, verdict, and award artifacts
   are write-once or append-only as appropriate.
 - `freshness_gate.json` records the selected judges and whether the run used an
-  Official Live Panel or illustrative practice judges.
+  Official Copilot Panel or illustrative practice judges.
 - `HASHES` and `SEAL` bind exported artifacts to a replayable bundle.
 - A sealed bundle cannot be force re-sealed.
 - Replay archives reject paths, symlinks, hardlinks, and device entries that
@@ -151,8 +161,8 @@ remains unavailable before awards.
 
 ## Compatibility
 
-`hackathon_launcher.py` is the beginner entry point and routes the default
-experience into `hackathon_judge.py`, the canonical implementation. The
-installer preserves `hackathon-judge` for advanced compatibility. Existing
+`showcase_launcher.py` is the beginner entry point and routes the default
+experience into `builder_showcase.py`, the canonical implementation. The
+installer preserves `hackathon` and `hackathon-judge` for compatibility. Existing
 bundles with only `config/rubric.json` are read through a legacy adapter; they
 do not need to be rewritten to use the current audience and replay surfaces.

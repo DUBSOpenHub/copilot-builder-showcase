@@ -1,8 +1,8 @@
 {
   "schema_version": "1.0",
   "event": {
-    "name": "Spring Product Hackathon",
-    "tagline": "Projects in. Fair judging. A shared celebration."
+    "name": "Spring Builder Showcase",
+    "tagline": "Drop the links. Activate the panel. Spotlight the winners."
   },
   "rubric": {
     "dimensions": [
@@ -55,31 +55,33 @@
   ],
   "awards": [
     {
-      "id": "bronze",
-      "name": "Bronze — Third Place",
-      "emoji": "🥉",
-      "tagline": "A podium finish for a project with a strong overall story.",
-      "dimensions": [],
-      "rank": 3,
-      "reason": "This project earned the third-highest overall result across the event rubric."
+      "id": "boldest-idea",
+      "name": "Boldest Idea",
+      "emoji": "💡",
+      "tagline": "For the project that took the most original swing.",
+      "dimensions": ["innovation"],
+      "distinct_recipient": true,
+      "tie_breaker": "overall-ranking",
+      "reason": "This project stood out for originality, thoughtful problem framing, and a bold approach."
     },
     {
-      "id": "silver",
-      "name": "Silver — Second Place",
-      "emoji": "🥈",
-      "tagline": "A podium finish for a project with impact and craft.",
-      "dimensions": [],
-      "rank": 2,
-      "reason": "This project earned the second-highest overall result across the event rubric."
+      "id": "most-useful",
+      "name": "Most Useful",
+      "emoji": "🛠️",
+      "tagline": "For the project with the clearest path to helping people.",
+      "dimensions": ["impact"],
+      "distinct_recipient": true,
+      "tie_breaker": "overall-ranking",
+      "reason": "This project stood out for practical value and a clear path to helping its intended users."
     },
     {
       "id": "grand-prize",
-      "name": "Gold — First Place",
-      "emoji": "🥇",
-      "tagline": "The top project across the event rubric.",
+      "name": "Project of the Showcase",
+      "emoji": "🏆",
+      "tagline": "The strongest complete project across the full review.",
       "dimensions": [],
       "rank": 1,
-      "reason": "This project earned the highest overall result across the event rubric."
+      "reason": "This project delivered the strongest overall result across the event rubric."
     }
   ],
   "tie_policy": {

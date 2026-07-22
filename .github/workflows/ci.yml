@@ -22,7 +22,7 @@ jobs:
           python-version: "3.11"
 
       - name: Compile
-        run: python -m py_compile hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py event_spec.py bundle_reader.py
+        run: python -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py
 
       - name: Check installer syntax
         run: bash -n install.sh
@@ -44,22 +44,24 @@ jobs:
           trap cleanup EXIT
 
           git branch -f installer-smoke HEAD
-          HJ_REPOSITORY_URL="file://$GITHUB_WORKSPACE" \
-            HJ_REF=installer-smoke \
-            HJ_INSTALL_DIR="$root/install" \
-            HJ_BIN_DIR="$root/bin" \
-            HJ_SKIP_OPTIONAL_MONITOR=1 \
+          CBS_REPOSITORY_URL="file://$GITHUB_WORKSPACE" \
+            CBS_REF=installer-smoke \
+            CBS_INSTALL_DIR="$root/install" \
+            CBS_BIN_DIR="$root/bin" \
+            CBS_SKIP_OPTIONAL_MONITOR=1 \
             bash install.sh > "$root/install.log"
 
-          "$root/bin/hackathon" --help > "$root/help.log"
-          "$root/bin/hackathon" --version > "$root/version.log"
-          HJ_RUNS_DIR="$root/runs" \
-            HJ_REGISTRY_PATH="$root/registry/log.ndjson" \
-            HJ_COLOR=never \
-            "$root/bin/hackathon" --demo --run-id ci-demo --no-suspense --yes \
+          "$root/bin/showcase" --help > "$root/help.log"
+          "$root/bin/showcase" --version > "$root/version.log"
+          "$root/bin/hackathon" --version > "$root/legacy-version.log"
+          CBS_RUNS_DIR="$root/runs" \
+            CBS_REGISTRY_PATH="$root/registry/log.ndjson" \
+            CBS_COLOR=never \
+            "$root/bin/showcase" --demo --run-id ci-demo --no-suspense --yes \
             > "$root/demo.log"
 
-          grep -q "Type: hackathon" "$root/install.log"
-          grep -q "hackathon owner/project-one owner/project-two" "$root/help.log"
-          grep -q "3.1.0" "$root/version.log"
-          grep -q "PRACTICE SHOW — ILLUSTRATIVE RESULTS" "$root/demo.log"
+          grep -q "Type: showcase" "$root/install.log"
+          grep -q "showcase owner/project-one owner/project-two" "$root/help.log"
+          grep -q "3.2.0" "$root/version.log"
+          grep -q "3.2.0" "$root/legacy-version.log"
+          grep -q "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" "$root/demo.log"

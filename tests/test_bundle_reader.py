@@ -2,7 +2,7 @@
 Test suite for bundle_reader.BundleReader.
 
 Exercises the reader against real bundles produced by the current
-hackathon_judge.py artifact writers (manifest/bundle.json,
+builder_showcase.py artifact writers (manifest/bundle.json,
 inputs/*.json, verdicts/*.json, feedback/*.json, sealed/shadow_score.json,
 winner/awards.json, freshness_gate.json) — not the legacy root
 manifest.json / NDJSON layout.
@@ -23,7 +23,7 @@ import pytest
 # Add parent dir to sys.path so we can import the modules under test.
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-import hackathon_judge as cbp
+import builder_showcase as cbp
 from bundle_reader import BundleReader, REVEALED_STATUSES, redact_audience_narrative
 
 FIXED_TS = "2026-06-04T22:44:37+00:00"
@@ -126,7 +126,7 @@ class TestCurrentBundlePaths:
         assert manifest["run_id"] == "run-1"
         assert reader.status() == "collecting"
         assert reader.mode() == "workshop"
-        assert reader.audience_view().event_name == "Hackathon Judge"
+        assert reader.audience_view().event_name == "Copilot Builder Showcase"
         # command_log is embedded in the manifest, not a separate artifact.
         assert reader.command_log() == manifest["command_log"]
         assert reader.command_log()[0]["command"] == "init"

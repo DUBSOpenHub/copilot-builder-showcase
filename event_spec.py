@@ -1,4 +1,4 @@
-"""Portable, validated event configuration for Hackathon Judge."""
+"""Portable, validated event configuration for Copilot Builder Showcase."""
 
 from __future__ import annotations
 
@@ -11,8 +11,8 @@ EVENT_SPEC_VERSION = "1.0"
 DEFAULT_EVENT_SPEC: Dict[str, Any] = {
     "schema_version": EVENT_SPEC_VERSION,
     "event": {
-        "name": "Hackathon Judge",
-        "tagline": "Projects in. Fair judging. A shared celebration.",
+        "name": "Copilot Builder Showcase",
+        "tagline": "Drop the links. Activate the panel. Spotlight the winners.",
     },
     "rubric": {
         "dimensions": [
@@ -65,31 +65,33 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
     ],
     "awards": [
         {
-            "id": "bronze",
-            "name": "Bronze — Third Place",
-            "emoji": "🥉",
-            "tagline": "A podium finish for a project with a strong overall story.",
-            "dimensions": [],
-            "rank": 3,
-            "reason": "This project earned the third-highest overall result across the event rubric.",
+            "id": "boldest-idea",
+            "name": "Boldest Idea",
+            "emoji": "💡",
+            "tagline": "For the project that took the most original swing.",
+            "dimensions": ["innovation"],
+            "distinct_recipient": True,
+            "tie_breaker": "overall-ranking",
+            "reason": "This project stood out for originality, thoughtful problem framing, and a bold approach.",
         },
         {
-            "id": "silver",
-            "name": "Silver — Second Place",
-            "emoji": "🥈",
-            "tagline": "A podium finish for a project with impact and craft.",
-            "dimensions": [],
-            "rank": 2,
-            "reason": "This project earned the second-highest overall result across the event rubric.",
+            "id": "most-useful",
+            "name": "Most Useful",
+            "emoji": "🛠️",
+            "tagline": "For the project with the clearest path to helping people.",
+            "dimensions": ["impact"],
+            "distinct_recipient": True,
+            "tie_breaker": "overall-ranking",
+            "reason": "This project stood out for practical value and a clear path to helping its intended users.",
         },
         {
             "id": "grand-prize",
-            "name": "Gold — First Place",
-            "emoji": "🥇",
-            "tagline": "The top project across the event rubric.",
+            "name": "Project of the Showcase",
+            "emoji": "🏆",
+            "tagline": "The strongest complete project across the full review.",
             "dimensions": [],
             "rank": 1,
-            "reason": "This project earned the highest overall result across the event rubric.",
+            "reason": "This project delivered the strongest overall result across the event rubric.",
         },
     ],
     "tie_policy": {
@@ -168,6 +170,8 @@ def _require_string(value: Any, field: str) -> None:
 def _model_provider(model_id: str) -> str:
     """Classify model IDs using the same family rule as the freshness gate."""
     normalized = model_id.lower()
+    if "/" in normalized:
+        return normalized.split("/", 1)[0]
     if normalized.startswith("claude"):
         return "anthropic"
     if normalized.startswith("gpt"):
@@ -233,8 +237,24 @@ def validate_event_spec(spec: Mapping[str, Any]) -> None:
         _require_string(award.get("name"), "awards[].name")
         _require_string(award.get("emoji"), "awards[].emoji")
         _require_string(award.get("tagline"), "awards[].tagline")
-        if not isinstance(award.get("dimensions"), list):
+        award_dimensions = award.get("dimensions")
+        if not isinstance(award_dimensions, list):
             raise EventSpecValidationError("EventSpec awards[].dimensions must be a list.")
+        for dimension_id in award_dimensions:
+            _require_string(dimension_id, "awards[].dimensions[]")
+            if dimension_id not in {str(dimension["id"]) for dimension in dimensions}:
+                raise EventSpecValidationError(
+                    "EventSpec awards[].dimensions must reference configured rubric dimensions."
+                )
+        distinct_recipient = award.get("distinct_recipient", False)
+        if not isinstance(distinct_recipient, bool):
+            raise EventSpecValidationError(
+                "EventSpec awards[].distinct_recipient must be a boolean when provided."
+            )
+        if award.get("tie_breaker") not in {None, "overall-ranking"}:
+            raise EventSpecValidationError(
+                "EventSpec awards[].tie_breaker currently supports only 'overall-ranking'."
+            )
         rank = award.get("rank")
         if rank is not None and (
             not isinstance(rank, int) or isinstance(rank, bool) or rank < 1

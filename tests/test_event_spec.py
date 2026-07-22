@@ -16,7 +16,7 @@ from unittest.mock import patch
 
 import pytest
 
-import hackathon_judge as cbp
+import builder_showcase as cbp
 from event_spec import DEFAULT_EVENT_SPEC
 
 
@@ -161,6 +161,31 @@ def test_event_spec_rejects_invalid_podium_rank(tmp_path: Path):
             "workshop",
             copy.deepcopy(cbp.DEFAULT_RUBRIC),
             tmp_path / "invalid-podium",
+            fixed_clock,
+            event,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("dimensions", ["missing-dimension"]),
+        ("distinct_recipient", "yes"),
+        ("tie_breaker", "coin-flip"),
+    ],
+)
+def test_event_spec_rejects_invalid_award_selection_policy(
+    tmp_path: Path, field: str, value: object
+):
+    event = copy.deepcopy(DEFAULT_EVENT_SPEC)
+    event["awards"][0][field] = value
+
+    with pytest.raises(cbp.ConfigValidationError):
+        cbp.init_bundle(
+            "invalid-award-policy",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            tmp_path / "invalid-award-policy",
             fixed_clock,
             event,
         )

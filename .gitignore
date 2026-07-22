@@ -9,7 +9,7 @@ htmlcov/
 
 .DS_Store
 
-# Local Hackathon Judge run artifacts
+# Local Copilot Builder Showcase run artifacts
 .hackathon_judge/
 runs/
 *.bundle.tar.gz
