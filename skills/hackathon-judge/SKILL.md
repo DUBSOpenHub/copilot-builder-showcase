@@ -1,9 +1,10 @@
 ---
 name: hackathon-judge
 description: >
-  Turn project links into one single-screen, replayable Hackathon Judge Live
-  Show. Every project gets a spotlight, results stay sealed, the audience joins
-  the final reveal, and the run is preserved. Say "hackathon" to start.
+  Give any builder workshop, product demo, conference build session, online
+  challenge, or hackathon a shared ending. Paste project links and create one
+  single-screen AI-panel show where every build gets a spotlight, the audience
+  joins the reveal, and the result is preserved. Say "hackathon" to start.
 tools:
   - bash
   - ask_user
@@ -22,6 +23,9 @@ Never invent an outcome in prose.
 - `run hackathon judging`
 - `judge these projects`
 - `judge these repos`
+- `judge these demos`
+- `wrap up this builder workshop`
+- `turn these projects into a show`
 - `run the panel`
 - `run a hackathon judge demo`
 

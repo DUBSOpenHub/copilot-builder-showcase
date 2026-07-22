@@ -13,6 +13,10 @@
 
 ## Product invariants
 
+- Position Hackathon Judge as the resolution layer for builder workshops,
+  product demos, conference build sessions, online challenges, and hackathons.
+  Any list of projects built together should be able to become a watchable
+  AI-panel finale without requiring a pre-organized human judging panel.
 - The first instruction is `hackathon`. With no arguments it collects pasted
   links; with links it starts immediately. Do not require users to know the
   internal `workshop` subcommand.

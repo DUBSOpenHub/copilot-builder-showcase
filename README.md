@@ -1,21 +1,21 @@
 # Hackathon Judge
 
-> **Most hackathons spend hours building and end with judges staring at a
-> spreadsheet. Hackathon Judge turns project links into a fair, watchable
-> awards show.**
+> **Most builder sessions end with a folder of links and no real ending.
+> Hackathon Judge turns everything people built into a show everyone can watch
+> and join.**
 
-Hackathon Judge is a one-command live judging room for hackathons, build
-sprints, and demo days. Organizers paste GitHub links once. Every project is
-reviewed against the same rubric, introduced to the room, and given private
-feedback. Scores stay sealed until the audience joins the final reveal, and the
-entire event is preserved as a tamper-evident replay.
+Hackathon Judge is the resolution layer for things people build together.
+Paste a list of project links and it creates an AI judging panel that reviews
+each output, gives every build a spotlight, brings the audience into the final
+reveal, and preserves the result as a replayable event.
 
-It starts with the hardest ten minutes of a hackathon: judging the projects and
-revealing a winner without losing the room.
+That means a builder workshop, product demo, conference build session, or
+online challenge can end like a real hackathon without recruiting a judging
+panel or producing the show by hand.
 
-- **Built for:** hackathon organizers and event facilitators
-- **Input:** a list of GitHub project links
-- **Live experience:** one shared Terminal, one spotlight per build, one sealed reveal
+- **Built for:** workshop hosts, product teams, community leads, and event facilitators
+- **Input:** any list of GitHub projects built during a session
+- **Resolution:** AI panel reviews, project spotlights, audience participation, awards, and private feedback
 - **Proof:** the bundled three-project show runs end to end in under two minutes
 
 ![CI](https://github.com/DUBSOpenHub/hackathon-judge/actions/workflows/ci.yml/badge.svg)
@@ -49,26 +49,25 @@ one PATH command if `~/.local/bin` is not already available in your shell.
 
 ![Hackathon Judge single-screen Live Show practice demo](docs/images/live-show-demo.png)
 
-## From spreadsheet to show
+## From loose outputs to a live finale
 
-| The usual finish | With Hackathon Judge |
+| How builder sessions usually end | With Hackathon Judge |
 | --- | --- |
-| Judges bounce between tabs and spreadsheets | The organizer pastes every project link once |
-| Feedback depends on which judge saw which build | Every project follows the same sealed review flow |
-| The audience waits while judges operate admin tools | Every accepted build gets a visible spotlight |
-| A winner is announced without context | The room joins a short, suspenseful final reveal |
-| Results disappear after the event | The recap, feedback, awards, and replay stay together |
+| Project links land in a chat or shared document | The host pastes the full project list once |
+| A few people demo while the rest disappear into the list | Every accepted build gets a visible spotlight |
+| There is no panel unless someone organizes one in advance | An AI judging panel reviews every output through the same flow |
+| The session ends after the last demo | The audience joins a short, suspenseful award reveal |
+| The work has no shared resolution | The recap, feedback, awards, and replay stay together |
 
 ## Why now
 
-Modern build tools let more people ship credible demos in a day. Events now have
-more projects, more first-time builders, and less time to give each one a fair
-moment. Judging has become the bottleneck, and the final ten minutes still run
-like an internal meeting.
+AI coding tools let more people build credible projects during a workshop,
+conference session, or online challenge. The amount of output has grown, but
+the way those sessions end has not. Hosts still collect links, pick a few demos,
+and move on.
 
-Hackathon Judge gives those ten minutes their own product experience: fast
-enough for the room, structured enough for the judges, and memorable enough for
-the builders.
+Hackathon Judge closes that loop. It gives every output a fair moment, gives the
+group something fun to watch, and gives the work a clear shared ending.
 
 No Python command, mode picker, team spreadsheet, panel setup, or EventSpec is
 required. When no team name is supplied, Hackathon Judge labels the entry from

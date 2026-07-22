@@ -3,10 +3,15 @@
 
 ## Purpose
 
-Hackathon Judge runs a clear, fair, and celebratory project judging experience
-from a terminal. An organizer types `hackathon`, pastes project links,
-screen-shares a single guided show, and leaves with a replayable,
-tamper-evident event bundle.
+Hackathon Judge gives builder workshops, product demos, conference build
+sessions, and online challenges a shared resolution. A host types `hackathon`,
+pastes the projects people built, and creates an AI-panel show with consistent
+reviews, one spotlight per output, audience participation, awards, feedback,
+and a replayable event bundle.
+
+The product turns any list of session outputs into a lightweight hackathon
+finale without requiring the host to recruit judges or produce a ceremony by
+hand.
 
 The product is event-neutral: it does not impose a named host personality,
 organization identity, or judge character. The default show uses a bronze →
@@ -16,7 +21,7 @@ silver → gold podium; EventSpecs may replace that award slate.
 
 | User | Need |
 |---|---|
-| Facilitator | Start a credible judging show with one command |
+| Facilitator | Give a builder session a watchable shared ending with one command |
 | Judge | Review project links through a clear rubric without score leaks |
 | Participant | Receive a spotlight and useful feedback |
 | Audience | Follow visible progress and celebrate a fair reveal |
@@ -24,8 +29,9 @@ silver → gold podium; EventSpecs may replace that award slate.
 
 ## Success criteria
 
-1. A first-time facilitator can type `hackathon`, paste project links, and
-   start without knowing Python, subcommands, panel internals, or EventSpecs.
+1. A first-time facilitator can turn projects from a workshop, demo session, or
+   online build challenge into a complete judging show without first organizing
+   a formal hackathon panel.
 2. An audience view never shows numerical totals, dimension scores, rank order,
    judge prompts, or unrevealed awards before the award stage.
 3. Every project receives a spotlight before the celebration.
