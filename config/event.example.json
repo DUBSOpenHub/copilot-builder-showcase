@@ -55,33 +55,31 @@
   ],
   "awards": [
     {
-      "id": "boldest-idea",
-      "name": "Boldest Idea",
-      "emoji": "💡",
-      "tagline": "For the project that took the most original swing.",
-      "dimensions": ["innovation"],
-      "distinct_recipient": true,
-      "tie_breaker": "overall-ranking",
-      "reason": "This project stood out for originality, thoughtful problem framing, and a bold approach."
+      "id": "third-place",
+      "name": "Third Place — Builder Bronze",
+      "emoji": "🥉",
+      "tagline": "A podium finish for a build with a memorable spark.",
+      "dimensions": [],
+      "rank": 3,
+      "reason": "This project earned the third-highest complete result across the judging lenses."
     },
     {
-      "id": "most-useful",
-      "name": "Most Useful",
-      "emoji": "🛠️",
-      "tagline": "For the project with the clearest path to helping people.",
-      "dimensions": ["impact"],
-      "distinct_recipient": true,
-      "tie_breaker": "overall-ranking",
-      "reason": "This project stood out for practical value and a clear path to helping its intended users."
+      "id": "second-place",
+      "name": "Second Place — Builder Silver",
+      "emoji": "🥈",
+      "tagline": "One step from the crown with a standout builder story.",
+      "dimensions": [],
+      "rank": 2,
+      "reason": "This project earned the second-highest complete result across the judging lenses."
     },
     {
       "id": "grand-prize",
-      "name": "Project of the Showcase",
+      "name": "First Place — Copilot Builder Award",
       "emoji": "🏆",
-      "tagline": "The strongest complete project across the full review.",
+      "tagline": "The strongest complete build in the showcase.",
       "dimensions": [],
       "rank": 1,
-      "reason": "This project delivered the strongest overall result across the event rubric."
+      "reason": "This project delivered the strongest complete showcase across idea, impact, craft, and demo story."
     }
   ],
   "tie_policy": {

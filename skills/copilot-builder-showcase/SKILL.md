@@ -7,6 +7,7 @@ description: >
   conference build sessions, and online challenges. Say "showcase" to start.
 tools:
   - bash
+  - powershell
   - ask_user
 ---
 
@@ -34,10 +35,18 @@ Never invent an outcome in prose.
 
 ## First-run setup
 
-Before collecting projects, check for the command:
+Before collecting projects, check for the command.
+
+On macOS or Linux:
 
 ```bash
 command -v showcase
+```
+
+On Windows PowerShell:
+
+```powershell
+Get-Command showcase -ErrorAction SilentlyContinue
 ```
 
 If it is missing:
@@ -47,16 +56,27 @@ If it is missing:
    `~/.local/bin`.
 2. Use `ask_user` to request installation permission.
 3. Do not install unless the user explicitly approves.
-4. When approved, run:
+4. When approved on macOS or Linux, run:
 
    ```bash
    bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
      -H "Accept: application/vnd.github.raw+json" | bash'
    ```
 
-5. Use `~/.local/bin/showcase` for the current run even if the shell has not
-   reloaded its PATH.
-6. Run `~/.local/bin/showcase doctor`. If it fails, stop and report the
+   On Windows PowerShell, run:
+
+   ```powershell
+   $installer = Join-Path $env:TEMP "install-copilot-builder-showcase.ps1"
+   gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.ps1 `
+     -H "Accept: application/vnd.github.raw+json" > $installer
+   if ($LASTEXITCODE -ne 0) { throw "Installer download failed." }
+   powershell -ExecutionPolicy Bypass -File $installer
+   ```
+
+5. Use the absolute launcher for the current run even if the shell has not
+   reloaded its PATH: `~/.local/bin/showcase` on macOS/Linux or
+   `$HOME\.local\bin\showcase.exe` on Windows.
+6. Run the absolute launcher with `doctor`. If it fails, stop and report the
    specific setup issue before accepting projects.
 
 The install command requires an authenticated GitHub CLI. If `gh auth status`
@@ -94,6 +114,9 @@ Installed local runs use the authenticated GitHub Copilot CLI when available.
 `showcase --demo` is always a deterministic practice showcase. If the organizer
 requires an official event, add `--official`; the command must block rather than
 silently produce practice results. Never request or expose Copilot credentials.
+On Windows, official judging requires the native `copilot.exe` installation
+from `winget install GitHub.Copilot`; never invoke an npm `.cmd` or `.bat` shim
+with project text.
 
 ## Start the live showcase
 
@@ -118,6 +141,10 @@ osascript \
 
 Shell-quote every generated path and argument. Never place untrusted project
 text directly into the AppleScript command; pass it through the temporary file.
+
+On Windows, use one real Windows Terminal or PowerShell window and invoke
+`$HOME\.local\bin\showcase.exe` with the same arguments. Do not run the audience
+experience through captured tool output.
 
 The new Terminal contains the complete audience experience. Share that one
 window. Never auto-open the optional Textual monitor or a second Terminal.
@@ -167,11 +194,11 @@ the ceremony concise enough for a two-minute demo.
 
 ## Awards, ties, and feedback
 
-The default reveal is project-first: Boldest Idea, Most Useful, then Project of
-the Showcase. Category awards prefer distinct recipients when enough projects exist.
-Exact overall ties follow the EventSpec policy: shared recognition, a
-predeclared sealed tiebreaker, or a logged human decision. Never use entry order
-as a tiebreaker.
+The default reveal is a ranked podium: Builder Bronze, Builder Silver, then the
+first-place Copilot Builder Award. Every project receives three brief judge takes
+before the reveal, but only the top three receive awards. Exact ties follow the
+EventSpec policy: shared placement, a predeclared sealed tiebreaker, or a logged
+human decision. Never use entry order as a tiebreaker.
 
 Private feedback may include award rationale, what judges liked, one actionable
 next step, a Copilot next move, a bounded frontier experiment, and explicit

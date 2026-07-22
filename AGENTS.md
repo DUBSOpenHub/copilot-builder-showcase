@@ -36,11 +36,11 @@
   official panel is connected; never silently downgrade.
 - The installer must create `showcase` and `copilot-builder-showcase`, preserve
   `hackathon` and `hackathon-judge`, request no shell-profile changes, and treat
-  Textual as optional.
-- Keep the default experience general-purpose: no host personality or
-  organization branding. Default live showcase uses Boldest Idea, Most Useful,
-  and Project of the Showcase; custom EventSpecs may define an alternate recognition
-  slate or formal podium.
+  Textual as optional. Keep `install.sh` and `install.ps1` behavior aligned.
+- Keep the default experience general-purpose: no named host personality or
+  organization branding. Default live showcase uses a ranked Builder Bronze,
+  Builder Silver, and first-place Copilot Builder Award podium; custom EventSpecs
+  may define an alternate award slate.
 - Keep one primary audience surface: the current live showcase terminal contains
   the run of show and commentary. Never auto-open a dashboard or second terminal.
 - Live showcase commentary may use a concise generic sideline-reporter voice and
@@ -105,6 +105,9 @@ Run the focused suite after Python changes:
 
 ```bash
 python3 -m pytest -q
-python3 -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py
+python3 -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py
 bash -n install.sh
 ```
+
+Windows behavior is validated by the `windows-latest` CI job, including the
+PowerShell installer and both new and legacy command shims.

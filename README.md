@@ -15,11 +15,12 @@ two minutes.
 > **Never used Copilot Builder Showcase before?**
 >
 > 1. Open a terminal.
-> 2. Paste:
+> 2. On macOS or Linux, paste:
 >    ```bash
 >    bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
 >      -H "Accept: application/vnd.github.raw+json" | bash'
 >    ```
+>    On Windows, use the PowerShell command in [Install](#-install).
 > 3. Type:
 >    ```bash
 >    showcase
@@ -43,8 +44,8 @@ together:
 - **Want the room involved?** The audience joins a quick final reveal.
 - **Need more than applause?** Each run preserves awards, private feedback, and replay evidence.
 
-The default result is one watchable Terminal showcase with three recognitions:
-**Boldest Idea**, **Most Useful**, and **Project of the Showcase**.
+The default result is one watchable Terminal showcase with a real podium:
+**Builder Bronze**, **Builder Silver**, and the first-place **Copilot Builder Award**.
 
 ---
 
@@ -130,14 +131,14 @@ project links -> sealed panel review -> every project gets a spotlight
 
 1. **Projects enter** — HTTP(S) project links and GitHub `owner/repo` entries
    become project cards.
-2. **The panel reviews** — every entry uses the same configured rubric and model
-   policy while scores remain sealed.
-3. **Every project gets a spotlight** — concise, project-specific highlights
-   appear without exposing scores or rank.
+2. **The rapid panel reviews** — one compact Copilot scorecard applies Innovation,
+   Build Quality, and Impact lenses to each project while scores remain sealed.
+3. **Every project gets a spotlight** — three brief judge reactions appear without
+   exposing scores or rank.
 4. **The room joins in** — a quick audience cue asks for a drumroll, countdown,
    applause check, or another participation moment.
-5. **The recognitions land** — Boldest Idea, Most Useful, and Project of the Showcase
-   celebrate different strengths.
+5. **The podium lands** — third place, second place, then the first-place Copilot
+   Builder Award.
 6. **The work stays useful** — recap, private feedback, validation, export, and
    replay are saved together.
 
@@ -157,9 +158,21 @@ Every run keeps its status visible:
 
 ### Instant install
 
+**macOS or Linux**
+
 ```bash
 bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
   -H "Accept: application/vnd.github.raw+json" | bash'
+```
+
+**Windows PowerShell**
+
+```powershell
+$installer = Join-Path $env:TEMP "install-copilot-builder-showcase.ps1"
+gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.ps1 `
+  -H "Accept: application/vnd.github.raw+json" > $installer
+if ($LASTEXITCODE -ne 0) { throw "Installer download failed." }
+powershell -ExecutionPolicy Bypass -File $installer
 ```
 
 Then run:
@@ -172,21 +185,45 @@ The installer:
 
 - checks for Git and Python 3.11+,
 - installs into `~/.local/share/copilot-builder-showcase`,
-- creates `showcase` and `copilot-builder-showcase` in `~/.local/bin`,
+- creates `showcase` and `copilot-builder-showcase` launchers in `~/.local/bin`,
 - preserves `hackathon` and `hackathon-judge` as compatibility aliases,
 - never edits your shell profile,
 - and treats the optional Textual monitor as non-blocking.
 
-> 💡 **Security note:** Inspect [install.sh](install.sh) before piping it to
-> Bash if that is your preferred installation policy.
+> 💡 **Security note:** Inspect [install.sh](install.sh) or
+> [install.ps1](install.ps1) before execution if that is your preferred
+> installation policy.
 
 ### Clone and install
+
+**macOS or Linux**
 
 ```bash
 gh repo clone DUBSOpenHub/copilot-builder-showcase
 cd copilot-builder-showcase
 bash install.sh
 ```
+
+**Windows PowerShell**
+
+```powershell
+gh repo clone DUBSOpenHub/copilot-builder-showcase
+Set-Location copilot-builder-showcase
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+```
+
+Windows 10 or 11 with Windows Terminal or a modern PowerShell host is
+recommended for the Unicode ceremony and ANSI color output.
+
+For an Official Copilot Panel on Windows, install the native CLI:
+
+```powershell
+winget install GitHub.Copilot
+```
+
+Copilot Builder Showcase requires `copilot.exe` for official Windows judging
+and rejects `.cmd` or `.bat` shims so project text never passes through
+`cmd.exe`. Practice showcases do not require Copilot CLI.
 
 ---
 
@@ -260,20 +297,19 @@ metadata, or judge impression.
 
 ---
 
-## 🏅 Recognition, Not Just Ranking
+## 🏅 A Real Podium, Useful Feedback
 
-The workshop-friendly default slate celebrates different strengths:
+Every project receives a brief on-screen review. Only the top three receive awards:
 
-| Recognition | Selection |
+| Award | Selection |
 |---|---|
-| 💡 **Boldest Idea** | Strongest innovation signal |
-| 🛠️ **Most Useful** | Strongest practical-impact signal |
-| 🏆 **Project of the Showcase** | Strongest overall result |
+| 🥉 **Third Place — Builder Bronze** | Third-highest complete result |
+| 🥈 **Second Place — Builder Silver** | Second-highest complete result |
+| 🏆 **First Place — Copilot Builder Award** | Strongest complete result |
 
-Category recognitions prefer distinct recipients when enough projects exist and
-use the sealed overall ranking to resolve an exact category tie. Project of the
-Showcase follows the event's declared tie policy: shared recognition, a predeclared
-rubric tiebreaker, or a logged human decision.
+Each award explains why the project placed, what the panel uniquely liked, and one
+specific level-up move. Exact ties follow the event's declared policy: shared
+placement, a predeclared rubric tiebreaker, or a logged human decision.
 
 Formal events can replace this slate with a traditional podium or any custom
 recognitions in the EventSpec.

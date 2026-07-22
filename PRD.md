@@ -14,9 +14,9 @@ finale without requiring the host to recruit judges or produce a ceremony by
 hand.
 
 The product is event-neutral: it does not impose a named host personality,
-organization identity, or judge character. The default showcase recognizes Boldest
-Idea, Most Useful, and Project of the Showcase; EventSpecs may replace that slate
-with other categories or a formal podium.
+organization identity, or judge character. The default showcase gives every project
+a brief three-lens review, then awards Builder Bronze, Builder Silver, and the
+first-place Copilot Builder Award. EventSpecs may replace that podium.
 
 ## Primary users
 
@@ -55,6 +55,8 @@ with other categories or a formal podium.
 12. Installed runs connect to the authenticated GitHub Copilot CLI when
     available; `--official` blocks when no compliant live Copilot panel can be
     reached.
+13. Native Bash and PowerShell installers provide the same primary and
+    compatibility commands on macOS, Linux, and Windows.
 
 ## Core flow
 

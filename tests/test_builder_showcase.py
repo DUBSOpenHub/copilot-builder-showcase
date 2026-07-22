@@ -11,6 +11,7 @@ import copy
 import hashlib
 import io
 import json
+import ntpath
 import os
 import re
 import subprocess
@@ -218,6 +219,25 @@ class TestToneSafety:
         result = cbp.check_feedback_card_tone(card)
         assert result["passed"] is False
 
+    @pytest.mark.parametrize(
+        "next_commit",
+        [
+            "Show one complete workflow end-to-end.",
+            "Prove the daily-use path with one target user.",
+            "Demonstrate the core experience with a live example.",
+            "Validate the main journey with a focused test.",
+            "Document the daemon loop and reliability safeguards.",
+        ],
+    )
+    def test_feedback_card_accepts_direct_action_verbs(self, next_commit: str):
+        card = {
+            "bright_spot": "This project demonstrates strong technical execution.",
+            "next_commit": next_commit,
+            "panel_notes": "Great work!",
+        }
+
+        assert cbp.check_feedback_card_tone(card)["passed"] is True
+
     def test_valid_feedback_card_passes(self):
         card = {
             "bright_spot": "This project demonstrates outstanding creativity and excellent execution.",
@@ -358,6 +378,97 @@ class TestShowtimeDelight:
             cbp._showtime_pause(args, 1.0)
 
         sleep.assert_not_called()
+
+    def test_terminal_wrapper_keeps_words_inside_the_requested_width(self):
+        text = (
+            "This project stood out for reconciling scattered updates across "
+            "workshop organizers and demo-day producers."
+        )
+
+        lines = cbp._wrap_terminal_text(text, 28)
+
+        assert " ".join(lines) == text
+        assert any("scattered" in line for line in lines)
+        assert all(cbp._terminal_text_width(line) <= 28 for line in lines)
+
+    def test_terminal_width_keeps_emoji_graphemes_together(self):
+        for emoji in (
+            "👍🏽",
+            "⛹🏼",
+            "👩‍💻",
+            "🏳️‍🌈",
+            "1️⃣",
+            "❤️",
+            "🇺🇸",
+            "🏴󠁧󠁢󠁳󠁣󠁴󠁿",
+        ):
+            assert cbp._terminal_text_width(emoji) == 2
+            assert cbp._terminal_safe_text(emoji, preserve_newlines=False) == emoji
+            assert cbp._split_terminal_prefix(f"{emoji} builder", 2) == (
+                emoji,
+                " builder",
+            )
+
+    def test_award_card_wraps_at_word_boundaries_in_an_80_column_terminal(self, capsys):
+        awards_card = {
+            "awards": [
+                {
+                    "emoji": "🏆",
+                    "award_name": "Project of the Showcase",
+                    "project_name": "demo-day/skillbridge",
+                    "winner_builder_name": "Team Lift",
+                    "tagline": "For the strongest complete project across the full review.",
+                    "reason": (
+                        "This project stood out for reconciling scattered updates "
+                        "for workshop organizers and demo-day producers."
+                    ),
+                }
+            ]
+        }
+        args = argparse.Namespace(
+            run_id="layout-test",
+            showtime=True,
+            no_suspense=True,
+            operator=False,
+        )
+
+        with patch.dict(os.environ, {"NO_COLOR": "1"}, clear=True):
+            with patch.object(cbp, "_terminal_width", return_value=76):
+                cbp._print_award_ceremony(awards_card, args)
+
+        output = capsys.readouterr().out
+        card_lines = [
+            line
+            for line in output.splitlines()
+            if line.startswith(("╔", "╠", "║", "╚"))
+        ]
+        assert "scattered" in output
+        assert all(cbp._terminal_text_width(line) == 78 for line in card_lines)
+
+    def test_share_card_preserves_space_after_long_award_name(self, capsys):
+        awards_card = {
+            "awards": [
+                {
+                    "emoji": "🏆",
+                    "award_name": "Project of the Showcase",
+                    "project_name": "demo-day/skillbridge",
+                    "winner_builder_name": "Team Lift",
+                }
+            ]
+        }
+
+        with patch.dict(os.environ, {"NO_COLOR": "1"}, clear=True):
+            with patch.object(cbp, "_terminal_width", return_value=76):
+                cbp._share_card(awards_card, "layout-test")
+
+        output = capsys.readouterr().out
+        assert "Project of the Showcase →" in output
+        card_lines = [
+            line
+            for line in output.splitlines()
+            if line.startswith(("┌", "│", "└"))
+        ]
+        assert all(cbp._terminal_text_width(line) == 78 for line in card_lines)
 
     def test_audience_reveal_moment_is_stable_per_run(self):
         args = argparse.Namespace(
@@ -686,7 +797,25 @@ class TestShadowScore:
         ]
 
     def test_category_tie_uses_shared_overall_placement_instead_of_id_order(self, tmp_path):
-        bundle_path = make_run(tmp_path, "category-tie")
+        event_spec = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+        event_spec["awards"] = [
+            {
+                "id": "frontier-spark",
+                "name": "Frontier Spark",
+                "emoji": "🚀",
+                "tagline": "A future-facing idea.",
+                "dimensions": ["innovation"],
+                "distinct_recipient": True,
+                "tie_breaker": "overall-ranking",
+                "reason": "The strongest innovation signal.",
+            },
+            copy.deepcopy(cbp.DEFAULT_EVENT_SPEC["awards"][-1]),
+        ]
+        bundle_path = make_run(
+            tmp_path,
+            "category-tie",
+            event_spec=event_spec,
+        )
         scored_a = self._make_scored(
             "sub-a",
             {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
@@ -732,17 +861,17 @@ class TestShadowScore:
             "sub-c",
             fixed_clock,
         )
-        boldest = [
+        frontier = [
             award
             for award in awards_card["awards"]
-            if award["award_id"] == "boldest-idea"
+            if award["award_id"] == "frontier-spark"
         ]
 
-        assert {award["winner_submission_id"] for award in boldest} == {
+        assert {award["winner_submission_id"] for award in frontier} == {
             "sub-a",
             "sub-b",
         }
-        assert all(award["shared_placement"] is True for award in boldest)
+        assert all(award["shared_placement"] is True for award in frontier)
 
     def test_sealed_tiebreaker_resolves_public_score_tie_without_changing_scores(self):
         rubric = copy.deepcopy(cbp.DEFAULT_RUBRIC)
@@ -1115,6 +1244,29 @@ class TestBulkUrlImport:
         assert created[0]["project_url"] == url
         assert created[0]["repo_metadata"]["source"] == "project-link"
 
+    def test_github_metadata_decodes_subprocess_output_as_utf8(self):
+        response = subprocess.CompletedProcess(
+            ["gh"],
+            0,
+            stdout=json.dumps(
+                {
+                    "nameWithOwner": "demo/café",
+                    "description": "Built for teams 🏆",
+                    "primaryLanguage": {"name": "Python"},
+                    "repositoryTopics": [],
+                    "url": "https://github.com/demo/cafe",
+                },
+                ensure_ascii=False,
+            ),
+            stderr="",
+        )
+
+        with patch.object(cbp.subprocess, "run", return_value=response) as run:
+            metadata = cbp.fetch_repo_metadata("https://github.com/demo/cafe")
+
+        assert metadata["description"] == "Built for teams 🏆"
+        assert run.call_args.kwargs["encoding"] == "utf-8"
+
     def test_percent_encoded_terminal_escape_is_removed_from_project_display(self, tmp_path, capsys):
         bundle_path = make_run(tmp_path, "escaped-link")
         url = "https://demo.example.com/projects/%1b%5b31mAurora"
@@ -1309,17 +1461,17 @@ class TestBulkUrlImport:
         assert rc == 0
         output = capsys.readouterr().out
         assert "Create the workshop run bundle?" not in output
-        assert "Boldest Idea" in output
-        assert "Most Useful" in output
-        assert "Project of the Showcase" in output
+        assert "Third Place — Builder Bronze" in output
+        assert "Second Place — Builder Silver" in output
+        assert "First Place — Copilot Builder Award" in output
         assert "Copilot Builder Showcase Recap" in output
         assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
         assert "Panel chatter:" in output
-        assert "One fast panel take per project" in output
+        assert "Three rapid judge takes per project" in output
         awards = cbp.load_json(tmp_path / "runs" / "show-room" / "winner" / "awards.json")
-        award_order = {"boldest-idea": 0, "most-useful": 1, "grand-prize": 2}
+        award_order = {"third-place": 0, "second-place": 1, "grand-prize": 2}
         award_ids = [award["award_id"] for award in awards["awards"]]
         assert award_ids == sorted(award_ids, key=award_order.__getitem__)
         assert "grand-prize" in award_ids
@@ -1394,18 +1546,58 @@ class TestCopilotCLIGateway:
         assert "--no-custom-instructions" in model_command
         assert readiness_kwargs["timeout"] == 90
         assert model_kwargs["timeout"] == 180
+        assert readiness_kwargs["encoding"] == "utf-8"
+        assert model_kwargs["encoding"] == "utf-8"
         assert model_kwargs["env"]["COPILOT_ALLOW_ALL"] == "false"
 
     def test_environment_uses_installed_copilot_cli(self):
         with patch.object(cbp.shutil, "which", return_value=None):
-            assert cbp._live_gateway_from_environment({}) is None
+            assert cbp._live_gateway_from_environment({"PATH": "/opt/homebrew/bin"}) is None
         with patch.object(
             cbp.shutil, "which", return_value="/opt/homebrew/bin/copilot"
-        ):
-            gateway = cbp._live_gateway_from_environment({})
+        ) as which:
+            gateway = cbp._live_gateway_from_environment(
+                {"PATH": ".:/opt/homebrew/bin"}
+            )
 
         assert isinstance(gateway, cbp.CopilotCLIGateway)
         assert gateway.copilot_path == "/opt/homebrew/bin/copilot"
+        which.assert_called_once_with("copilot", path="/opt/homebrew/bin")
+
+    def test_windows_uses_native_executable_from_trusted_path(self):
+        trusted = ntpath.normpath(
+            r"C:\Program Files\GitHub Copilot\copilot.exe"
+        )
+        with patch.object(cbp.os, "name", "nt"), patch.object(
+            cbp.os, "getcwd", return_value=r"C:\workspace"
+        ), patch.object(
+            cbp.os.path,
+            "isfile",
+            side_effect=lambda candidate: ntpath.normcase(candidate)
+            == ntpath.normcase(trusted),
+        ):
+            gateway = cbp._live_gateway_from_environment(
+                {
+                    "PATH": (
+                        r".;C:\workspace;"
+                        r"C:\Program Files\GitHub Copilot"
+                    )
+                }
+            )
+
+        assert isinstance(gateway, cbp.CopilotCLIGateway)
+        assert ntpath.normcase(gateway.copilot_path) == ntpath.normcase(trusted)
+
+    def test_windows_never_loads_copilot_from_current_directory(self):
+        with patch.object(cbp.os, "name", "nt"), patch.object(
+            cbp.os, "getcwd", return_value=r"C:\workspace"
+        ), patch.object(cbp.os.path, "isfile", return_value=True) as isfile:
+            gateway = cbp._live_gateway_from_environment(
+                {"PATH": r".;C:\workspace"}
+            )
+
+        assert gateway is None
+        isfile.assert_not_called()
 
     def test_copilot_failure_is_public_safe(self):
         def runner(command, **_kwargs):
@@ -1873,12 +2065,14 @@ class TestCommandFlows:
         awards = cbp._choose_award_winners(bundle_path, ranking[0], fixed_clock)["awards"]
 
         assert [award["award_id"] for award in awards] == [
-            "boldest-idea",
-            "most-useful",
+            "third-place",
+            "second-place",
             "grand-prize",
         ]
         assert awards[-1]["winner_submission_id"] == ranking[0]
         assert len({award["winner_submission_id"] for award in awards}) == 3
+        assert all(award["panel_favorite"] for award in awards)
+        assert all(award["next_move"] for award in awards)
 
     def test_project_showcase_badges_include_activity_and_topics(self):
         badges = cbp.project_showcase_badges({
@@ -2047,7 +2241,9 @@ class TestCommandFlows:
             for award in awards_card["awards"]:
                 feedback = feedback_by_submission[award["winner_submission_id"]]
                 assert award["selection_basis"]["award_criterion"] in award["reason"]
-                assert feedback["bright_spot"] in award["reason"]
+                assert "Deciding signal:" in award["reason"]
+                assert feedback["bright_spot"] == award["panel_favorite"]
+                assert feedback["next_commit"] == award["next_move"]
                 assert award["selection_basis"]["judges_liked"] == feedback["judges_liked"]
 
             # present
@@ -2301,7 +2497,10 @@ class TestCommandFlows:
             proposal_path = next((tmp_path.parent / "feedback_proposals" / run_id).glob("proposal_*.json"))
             proposal = json.loads(proposal_path.read_text())["proposals"][0]
             assert proposal["selected_for"]
-            assert proposal["bright_spot"] in proposal["selected_for"][0]["why_selected"]
+            assert (
+                proposal["bright_spot"]
+                == proposal["selected_for"][0]["panel_favorite"]
+            )
             assert proposal["judges_liked"]
             assert proposal["next_commit"] == proposal["ways_to_improve"]
             assert proposal["copilot_use"]["status"] == "not_provided"
@@ -2550,6 +2749,201 @@ class TestMultiModelConsensusAndShadowSpec:
         assert step["model_panel"] == ["model-a", "model-b", "model-c"]
         assert len(step["model_judgments"]) == 9
         assert "model_judgments" not in scored[0]
+
+    def test_live_scorecards_collapse_calls_and_reuse_shadow_results(self, tmp_path):
+        class ScorecardGateway:
+            supports_showcase_scorecards = True
+            scores = {"model-a": 6, "model-b": 8, "model-c": 10}
+
+            def __init__(self):
+                self.call_count = 0
+
+            def call_model(self, prompt, model_id):
+                self.call_count += 1
+                submission_ids = re.findall(
+                    r"^Submission ID: (.+)$", prompt, re.MULTILINE
+                )
+                score = self.scores[model_id]
+                return json.dumps(
+                    {
+                        "projects": [
+                            {
+                                "submission_id": submission_id,
+                                "scores": {
+                                    dimension["id"]: score
+                                    for dimension in cbp.DEFAULT_RUBRIC["rubric"]["dimensions"]
+                                },
+                                "reactions": {
+                                    "innovation": "Strong concept with a memorable hook.",
+                                    "craft": "Clear builder utility and focused scope.",
+                                    "impact": "Useful payoff for the target audience.",
+                                },
+                                "panel_favorite": "Top Pick",
+                                "next_commit": "Show one complete workflow end-to-end.",
+                                "copilot_next_move": "Use Copilot to draft a focused regression test.",
+                                "frontier_experiment": "Prototype one bounded automation with human review.",
+                                "grounding_refs": ["submission.project_description"],
+                            }
+                            for submission_id in submission_ids
+                        ]
+                    }
+                )
+
+        bundle_path = make_run(tmp_path, "scorecard-panel")
+        submission_ids = [
+            add_submission(bundle_path, project_name=f"Project {index}")
+            for index in range(1, 4)
+        ]
+        rubric = cbp.load_rubric(bundle_path)
+        gateway = ScorecardGateway()
+        panel = ["model-a", "model-b", "model-c"]
+        shadow_spec = cbp.generate_shadow_spec(
+            bundle_path,
+            rubric,
+            panel,
+            gateway,
+            fixed_clock,
+            deterministic=True,
+        )
+
+        submissions = cbp._load_submissions(bundle_path)
+        scored = cbp.score_submissions(
+            submissions,
+            rubric,
+            panel,
+            bundle_path,
+            gateway,
+            fixed_clock,
+            shadow_spec=shadow_spec,
+        )
+        assessment = cbp.assess_shadow_spec(
+            scored,
+            submissions,
+            shadow_spec,
+            panel,
+            bundle_path,
+            gateway,
+            fixed_clock,
+            rubric=rubric,
+        )
+        cards = cbp.build_feedback_cards(
+            scored,
+            submissions,
+            rubric,
+            panel,
+            bundle_path,
+            gateway,
+            fixed_clock,
+        )
+
+        assert gateway.call_count == 3
+        assert {item["submission_id"] for item in scored} == set(submission_ids)
+        assert all(
+            dimension["score"] == 8
+            for item in scored
+            for dimension in item["dimension_scores"].values()
+        )
+        steps = [
+            cbp.load_json(path)
+            for path in sorted((bundle_path / "eval").glob("step_*.json"))
+        ]
+        assert len(steps) == 3
+        step = steps[0]
+        assert step["evaluation_strategy"] == "room-wide-panel-scorecard"
+        assert len(step["model_judgments"]) == 9
+        assert len(step["shadow_judgments"]) == 3
+        assert {
+            judgment["bright_spot"]
+            for judgment in step["model_judgments"]
+        } == {
+            "Strong concept with a memorable hook.",
+            "Clear builder utility and focused scope.",
+            "Useful payoff for the target audience.",
+        }
+        assert set(assessment["submissions"]) == set(submission_ids)
+        assert all(
+            card["bright_spot"] == "Strong concept with a memorable hook."
+            for card in cards
+        )
+        assert all(
+            card["next_commit"] == "Show one complete workflow end-to-end."
+            for card in cards
+        )
+
+    def test_scorecard_panel_favorite_rejects_project_slug(self):
+        scorecard = {
+            "feedback": {"panel_favorite": "hoot"},
+            "lenses": {
+                "innovation": {
+                    "panel_notes": "A personal AI daemon is ambitious.",
+                    "bright_spot": "Top Pick",
+                },
+                "craft": {
+                    "panel_notes": "The builder story is memorable.",
+                    "bright_spot": "Top Pick",
+                },
+                "impact": {
+                    "panel_notes": "It could become a useful daily companion.",
+                    "bright_spot": "Top Pick",
+                },
+            },
+        }
+
+        favorite = cbp._scorecard_panel_favorite(
+            scorecard,
+            cbp.DEFAULT_RUBRIC["judge_archetypes"],
+            {"criteria": []},
+            {"project_name": "DUBSOpenHub/hoot", "submission_id": "repo-hoot"},
+        )
+
+        assert favorite == "A personal AI daemon is ambitious."
+
+    def test_live_scorecards_block_malformed_official_results(self, tmp_path):
+        class BrokenScorecardGateway:
+            supports_showcase_scorecards = True
+
+            def call_model(self, _prompt, _model_id):
+                return "not json"
+
+        bundle_path = make_run(tmp_path, "broken-scorecard-panel")
+        add_submission(bundle_path)
+        rubric = cbp.load_rubric(bundle_path)
+        panel = ["model-a", "model-b", "model-c"]
+        shadow_spec = cbp.generate_shadow_spec(
+            bundle_path,
+            rubric,
+            panel,
+            BrokenScorecardGateway(),
+            fixed_clock,
+            deterministic=True,
+        )
+
+        with pytest.raises(cbp.ModelAPIError):
+            cbp.score_submissions(
+                cbp._load_submissions(bundle_path),
+                rubric,
+                panel,
+                bundle_path,
+                BrokenScorecardGateway(),
+                fixed_clock,
+                shadow_spec=shadow_spec,
+            )
+
+        assert not list((bundle_path / "eval").glob("step_*.json"))
+
+    def test_live_scorecard_plan_reports_one_room_call_per_panel_model(self):
+        plan = cbp._build_evaluation_plan(
+            [{}, {}, {}],
+            cbp.DEFAULT_RUBRIC,
+            ["model-a", "model-b", "model-c"],
+            fixed_clock,
+            showcase_scorecards=True,
+        )
+
+        assert plan["calls"]["total"] == 3
+        assert plan["calls"]["collapsed"] == 34
+        assert plan["max_parallel_calls"] == 3
+        assert plan["estimated_batches"] == 1
 
     def test_scoring_bounds_parallel_calls_and_preserves_judgment_order(self, tmp_path):
         import threading

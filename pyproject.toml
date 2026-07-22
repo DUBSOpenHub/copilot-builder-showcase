@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "copilot-builder-showcase"
+version = "3.2.1"
+description = "Live Copilot judging showcases for builder workshops and project events."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+
+[project.scripts]
+showcase = "showcase_launcher:main"
+copilot-builder-showcase = "builder_showcase:main"
+hackathon = "showcase_launcher:main"
+hackathon-judge = "builder_showcase:main"
+
+[tool.setuptools]
+py-modules = [
+  "builder_showcase",
+  "builder_showcase_dashboard",
+  "bundle_reader",
+  "event_spec",
+  "hackathon_judge",
+  "hackathon_judge_dashboard",
+  "hackathon_launcher",
+  "showcase_launcher",
+]

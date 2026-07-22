@@ -62,6 +62,87 @@ jobs:
 
           grep -q "Type: showcase" "$root/install.log"
           grep -q "showcase owner/project-one owner/project-two" "$root/help.log"
-          grep -q "3.2.0" "$root/version.log"
-          grep -q "3.2.0" "$root/legacy-version.log"
+          grep -q "3.2.1" "$root/version.log"
+          grep -q "3.2.1" "$root/legacy-version.log"
           grep -q "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" "$root/demo.log"
+
+  windows:
+    name: Windows tests
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Compile
+        shell: pwsh
+        run: python -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py
+
+      - name: Install test dependencies
+        shell: pwsh
+        run: python -m pip install pytest "textual>=8,<9"
+
+      - name: Test
+        shell: pwsh
+        run: python -m pytest -q
+
+      - name: Smoke test PowerShell install
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $root = Join-Path $env:RUNNER_TEMP "copilot-builder-showcase-展示"
+          if (Test-Path $root) {
+            Remove-Item -Recurse -Force $root
+          }
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+
+          git branch -f installer-smoke-windows HEAD
+          $env:CBS_REPOSITORY_URL = $env:GITHUB_WORKSPACE
+          $env:CBS_REF = "installer-smoke-windows"
+          $env:CBS_INSTALL_DIR = Join-Path $root "install"
+          $env:CBS_BIN_DIR = Join-Path $root "bin"
+          $env:CBS_SKIP_OPTIONAL_MONITOR = "1"
+          .\install.ps1 6>&1 | Out-File (Join-Path $root "install.log")
+
+          $showcase = Join-Path $root "bin\showcase.exe"
+          $legacy = Join-Path $root "bin\hackathon.exe"
+          & $showcase --help | Out-File (Join-Path $root "help.log")
+          if ($LASTEXITCODE -ne 0) { throw "Primary command help failed." }
+          & $showcase --version | Out-File (Join-Path $root "version.log")
+          if ($LASTEXITCODE -ne 0) { throw "Primary command version failed." }
+          & $legacy --version | Out-File (Join-Path $root "legacy-version.log")
+          if ($LASTEXITCODE -ne 0) { throw "Legacy command version failed." }
+
+          $env:CBS_RUNS_DIR = Join-Path $root "runs"
+          $env:CBS_REGISTRY_PATH = Join-Path $root "registry\log.ndjson"
+          $env:CBS_COLOR = "never"
+          & $showcase --demo --run-id windows-ci-demo --no-suspense --yes |
+            Out-File (Join-Path $root "demo.log")
+          if ($LASTEXITCODE -ne 0) { throw "Windows demo failed." }
+          & $showcase "https://demo.example/projects/windows?x=1&whoami" --demo `
+            --run-id windows-argument-demo --no-suspense --yes |
+            Out-File (Join-Path $root "argument-demo.log")
+          if ($LASTEXITCODE -ne 0) { throw "Windows argument-safety demo failed." }
+
+          if (-not (Select-String -Quiet -Path (Join-Path $root "install.log") -Pattern "Type: showcase")) {
+            throw "Installer output did not advertise showcase."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "help.log") -Pattern "showcase --demo")) {
+            throw "Beginner help did not include the demo command."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "version.log") -Pattern "3.2.1")) {
+            throw "Primary command version is incorrect."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-version.log") -Pattern "3.2.1")) {
+            throw "Legacy command version is incorrect."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "demo.log") -Pattern "PRACTICE SHOWCASE")) {
+            throw "Windows demo did not complete."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "argument-demo.log") -Pattern "PRACTICE SHOWCASE")) {
+            throw "Windows argument-safety demo did not complete."
+          }
