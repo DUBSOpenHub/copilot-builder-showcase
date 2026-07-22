@@ -2,7 +2,9 @@
 
 ## Canonical surfaces
 
-- Use `hackathon_judge.py` for the CLI.
+- Use `hackathon_launcher.py` for the primary `hackathon` beginner command.
+- Use `hackathon_judge.py` for the canonical engine and advanced
+  `hackathon-judge` compatibility CLI.
 - Use `hackathon_judge_dashboard.py` only for the optional Textual run monitor.
 - Use `HJ_RUNS_DIR`, `HJ_REGISTRY_PATH`, `HJ_COLOR`, `HJ_NO_COLOR`, and
   `HJ_SHOWTIME` for local configuration.
@@ -11,6 +13,16 @@
 
 ## Product invariants
 
+- The first instruction is `hackathon`. With no arguments it collects pasted
+  links; with links it starts immediately. Do not require users to know the
+  internal `workshop` subcommand.
+- Plain links are the beginner intake. Infer `<repository owner> team` when no
+  team is supplied, while keeping explicit builder names authoritative.
+- Keep `PRACTICE SHOW — ILLUSTRATIVE RESULTS` or `OFFICIAL LIVE PANEL` visible
+  throughout every run and in the manifest. `--official` must block when no
+  official panel is connected; never silently downgrade.
+- The installer must create `hackathon`, preserve `hackathon-judge`, request no
+  shell-profile changes, and treat Textual as optional.
 - Keep the default experience general-purpose: no host personality or
   organization branding. Default Live Show uses a bronze → silver → gold
   podium; custom EventSpecs may define an alternate award slate.
@@ -77,5 +89,6 @@ Run the focused suite after Python changes:
 
 ```bash
 python3 -m pytest -q
-python3 -m py_compile hackathon_judge.py hackathon_judge_dashboard.py event_spec.py bundle_reader.py
+python3 -m py_compile hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py event_spec.py bundle_reader.py
+bash -n install.sh
 ```

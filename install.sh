@@ -22,9 +22,11 @@ REF="${HJ_REF:-main}"
 REPOSITORY_URL="${HJ_REPOSITORY_URL:-}"
 INSTALL_DIR="${HJ_INSTALL_DIR:-$HOME/.local/share/hackathon-judge}"
 BIN_DIR="${HJ_BIN_DIR:-$HOME/.local/bin}"
-COMMAND_PATH="$BIN_DIR/hackathon-judge"
+PRIMARY_COMMAND_PATH="$BIN_DIR/hackathon"
+ADVANCED_COMMAND_PATH="$BIN_DIR/hackathon-judge"
 VENV_DIR="${HJ_VENV_DIR:-$INSTALL_DIR/.venv}"
 TEXTUAL_REQUIREMENT="${HJ_TEXTUAL_REQUIREMENT:-textual>=8,<9}"
+SKIP_OPTIONAL_MONITOR="${HJ_SKIP_OPTIONAL_MONITOR:-0}"
 
 require_command git
 require_command python3
@@ -67,40 +69,51 @@ else
 fi
 
 [[ -f "$INSTALL_DIR/hackathon_judge.py" ]] || die "Installed checkout is missing hackathon_judge.py."
+[[ -f "$INSTALL_DIR/hackathon_launcher.py" ]] || die "Installed checkout is missing hackathon_launcher.py."
 
 if [[ -L "$VENV_DIR" ]]; then
   die "Virtual environment directory must not be a symbolic link: $VENV_DIR"
 fi
 
-printf 'Preparing the audience projector dashboard...\n'
+printf 'Preparing Hackathon Judge...\n'
 if ! "$PYTHON_BIN" -m venv "$VENV_DIR"; then
   die "Could not create the Python virtual environment at $VENV_DIR."
 fi
 VENV_PYTHON="$VENV_DIR/bin/python"
-if ! "$VENV_PYTHON" -m pip install --quiet --disable-pip-version-check "$TEXTUAL_REQUIREMENT"; then
-  die "Could not install the Textual audience dashboard dependency."
-fi
-if ! "$VENV_PYTHON" -c 'import textual'; then
-  die "Textual installed but could not be imported by $VENV_PYTHON."
+if [[ "$SKIP_OPTIONAL_MONITOR" != "1" ]]; then
+  printf 'Adding the optional run monitor...\n'
+  if ! "$VENV_PYTHON" -m pip install --quiet --disable-pip-version-check "$TEXTUAL_REQUIREMENT"; then
+    printf 'Warning: the optional run monitor could not be installed. The Live Show is still ready.\n' >&2
+  elif ! "$VENV_PYTHON" -c 'import textual'; then
+    printf 'Warning: the optional run monitor could not be loaded. The Live Show is still ready.\n' >&2
+  fi
 fi
 
 mkdir -p "$BIN_DIR"
-if [[ -L "$COMMAND_PATH" || (-e "$COMMAND_PATH" && ! -f "$COMMAND_PATH") ]]; then
-  die "Command path must be a regular file: $COMMAND_PATH"
-fi
+
+for command_path in "$PRIMARY_COMMAND_PATH" "$ADVANCED_COMMAND_PATH"; do
+  if [[ -L "$command_path" || (-e "$command_path" && ! -f "$command_path") ]]; then
+    die "Command path must be a regular file: $command_path"
+  fi
+done
 
 printf '#!/usr/bin/env bash\nexec %q %q "$@"\n' \
-  "$VENV_PYTHON" "$INSTALL_DIR/hackathon_judge.py" > "$COMMAND_PATH"
-chmod 0755 "$COMMAND_PATH"
+  "$VENV_PYTHON" "$INSTALL_DIR/hackathon_launcher.py" > "$PRIMARY_COMMAND_PATH"
+printf '#!/usr/bin/env bash\nexec %q %q "$@"\n' \
+  "$VENV_PYTHON" "$INSTALL_DIR/hackathon_judge.py" > "$ADVANCED_COMMAND_PATH"
+chmod 0755 "$PRIMARY_COMMAND_PATH" "$ADVANCED_COMMAND_PATH"
 
 printf '\n🏆 Hackathon Judge is ready.\n'
-printf '   Command: %s\n' "$COMMAND_PATH"
-printf '   Try:     hackathon-judge --help\n'
+printf '   Type: hackathon\n'
+printf '   Then paste project links, one per line.\n'
+printf '   Practice first: hackathon --demo\n'
 
 case ":${PATH:-}:" in
   *":$BIN_DIR:"*) ;;
   *)
-    printf '\nAdd this directory to your PATH before using the short command:\n'
+    printf '\nOne final setup step: add this directory to your PATH:\n'
     printf '   export PATH="%s:$PATH"\n' "$BIN_DIR"
+    printf '\nOr start immediately with:\n'
+    printf '   PATH="%s:$PATH" hackathon --demo\n' "$BIN_DIR"
     ;;
 esac

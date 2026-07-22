@@ -3,9 +3,10 @@
 
 ## Purpose
 
-Hackathon Judge runs a clear, fair, and celebratory project judging
-experience from a terminal. An organizer pastes project links, screen-shares a
-single guided show, and leaves with a replayable, tamper-evident event bundle.
+Hackathon Judge runs a clear, fair, and celebratory project judging experience
+from a terminal. An organizer types `hackathon`, pastes project links,
+screen-shares a single guided show, and leaves with a replayable,
+tamper-evident event bundle.
 
 The product is event-neutral: it does not impose a named host personality,
 organization identity, or judge character. The default show uses a bronze →
@@ -23,8 +24,8 @@ silver → gold podium; EventSpecs may replace that award slate.
 
 ## Success criteria
 
-1. A facilitator can create a live event from project links and a JSON event
-   pack without editing Python.
+1. A first-time facilitator can type `hackathon`, paste project links, and
+   start without knowing Python, subcommands, panel internals, or EventSpecs.
 2. An audience view never shows numerical totals, dimension scores, rank order,
    judge prompts, or unrevealed awards before the award stage.
 3. Every project receives a spotlight before the celebration.
@@ -36,11 +37,16 @@ silver → gold podium; EventSpecs may replace that award slate.
    120 seconds under supported local conditions.
 8. The final result follows one randomly selected audience-participation cue and
    explicit operator confirmation in an interactive Live Show.
+9. `PRACTICE SHOW — ILLUSTRATIVE RESULTS` or `OFFICIAL LIVE PANEL` remains
+   visible in the title, opening, run card, act breaks, receipt, and manifest.
+10. Installation creates the primary `hackathon` command, preserves the
+    advanced `hackathon-judge` CLI, and never blocks the Live Show when the
+    optional monitor dependency is unavailable.
 
 ## Core flow
 
 ```text
-paste project links
+type hackathon and paste project links
         |
         v
 resolve and snapshot EventSpec
@@ -64,19 +70,21 @@ award reveal and operator score access
 recap, validation, and immutable replay archive
 ```
 
-The intended facilitator command is:
+The intended first-run command is:
 
 ```bash
-python3 hackathon_judge.py workshop \
-  --event event.json \
-  --file submissions.txt \
-  --run-id event-2026 \
-  --require-live-terminal \
-  --yes
+hackathon
 ```
 
-The complete run of show and commentary appears in that one terminal under the
-label `LIVE SHOW — SHARE THIS WINDOW`.
+The command collects one project link per line and begins when the organizer
+submits an empty line. Links can also be supplied directly:
+
+```bash
+hackathon owner/project-one owner/project-two
+```
+
+The complete run of show and commentary appears in one terminal. The current
+Practice or Official result status remains visible throughout.
 
 ## EventSpec
 
@@ -118,8 +126,8 @@ remains unavailable before awards.
 - Project imports are idempotent and preserve GitHub metadata when available.
 - All initial EventSpec, rubric, input, evaluation, verdict, and award artifacts
   are write-once or append-only as appropriate.
-- `freshness_gate.json` records both the selected model and whether the
-  evaluation was `live` or `simulated`.
+- `freshness_gate.json` records the selected judges and whether the run used an
+  Official Live Panel or illustrative practice judges.
 - `HASHES` and `SEAL` bind exported artifacts to a replayable bundle.
 - A sealed bundle cannot be force re-sealed.
 - Replay archives reject paths, symlinks, hardlinks, and device entries that
@@ -137,6 +145,8 @@ remains unavailable before awards.
 
 ## Compatibility
 
-`hackathon_judge.py` is the canonical implementation. Existing bundles with
-only `config/rubric.json` are read through a legacy adapter; they do not need
-to be rewritten to use the current audience and replay surfaces.
+`hackathon_launcher.py` is the beginner entry point and routes the default
+experience into `hackathon_judge.py`, the canonical implementation. The
+installer preserves `hackathon-judge` for advanced compatibility. Existing
+bundles with only `config/rubric.json` are read through a legacy adapter; they
+do not need to be rewritten to use the current audience and replay surfaces.

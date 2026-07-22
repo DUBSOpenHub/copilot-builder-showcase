@@ -59,7 +59,7 @@ from event_spec import (
 # Layer 0 — Constants and defaults
 # ---------------------------------------------------------------------------
 
-VERSION = "3.0.0"
+VERSION = "3.1.0"
 AWARD_SLATE = copy.deepcopy(DEFAULT_EVENT_SPEC["awards"])
 AWARD_NAME = next(
     award["name"] for award in AWARD_SLATE if award["id"] == "grand-prize"
@@ -362,6 +362,20 @@ def _sideline(message: str, icon: str = "🎙️", color: str = "cyan") -> None:
     print(_paint(f"{icon} {message}", color, bold=True))
 
 
+def _result_status(gateway: Optional[Any]) -> tuple[str, str, str]:
+    if gateway is None:
+        return (
+            "PRACTICE SHOW — ILLUSTRATIVE RESULTS",
+            "Practice judges are active; every result is illustrative.",
+            "yellow",
+        )
+    return (
+        "OFFICIAL LIVE PANEL",
+        "Connected live judges are active for this official run.",
+        "green",
+    )
+
+
 def _step(step: int, total: int, message: str, icon: str = "⬢") -> None:
     print(_paint(f"  {icon} [{step}/{total}] {message}", "cyan"))
 
@@ -539,6 +553,9 @@ def _act_break(label: str, args: Optional[argparse.Namespace] = None) -> None:
     print()
     print(_paint("━" * width, "blue", bold=True))
     print(_paint(f"  ▸ {label}", "magenta", bold=True))
+    result_status = getattr(args, "result_status", None)
+    if result_status:
+        print(_paint(f"  {result_status}", getattr(args, "status_color", "cyan"), bold=True))
     print(_paint("━" * width, "blue", bold=True))
     print()
     _showtime_pause(args, 0.35)
@@ -554,6 +571,7 @@ def _tonight_card(run_id: str, repo_count: int, awards: str,
         ("Run", run_id),
         ("Projects entered", str(repo_count)),
         ("Awards on offer", award_labels),
+        ("Results", getattr(args, "result_status", "PRACTICE SHOW — ILLUSTRATIVE RESULTS")),
         ("Mode", "Showtime Autopilot"),
         ("Envelope", "sealed live, replayable forever"),
     ]
@@ -1047,6 +1065,13 @@ def project_showcase_badges(metadata: Dict[str, Any]) -> List[str]:
     return badges
 
 
+def _default_builder_name(owner_repo: str, fallback: str) -> str:
+    if fallback != "Hackathon Participants":
+        return fallback
+    owner = owner_repo.split("/", 1)[0].strip()
+    return f"{owner} team" if owner else fallback
+
+
 def import_url_submissions(bundle_path: Path, urls: List[Any],
                            builder_name: str = "Hackathon Participants",
                            clock: Optional[Callable] = None,
@@ -1077,6 +1102,7 @@ def import_url_submissions(bundle_path: Path, urls: List[Any],
             raise ConfigValidationError("Submission entry is missing a GitHub URL.")
         meta = (metadata_provider or fetch_repo_metadata)(url)
         owner_repo = meta.get("name_with_owner") or url.replace("https://github.com/", "", 1)
+        entry_builder = str(entry.get("builder_name") or "").strip()
         sid = _submission_id_from_repo_url(url)
         sub_path = inputs_dir / f"{sid}.json"
         if sub_path.exists():
@@ -1090,7 +1116,7 @@ def import_url_submissions(bundle_path: Path, urls: List[Any],
             summary_bits.append(f"Stars: {meta['stars']}")
         submission = {
             "submission_id": sid,
-            "builder_name": str(entry.get("builder_name") or builder_name),
+            "builder_name": entry_builder or _default_builder_name(owner_repo, builder_name),
             "project_name": owner_repo,
             "description": " · ".join(summary_bits),
             "description_source": "repository-import",
@@ -1791,9 +1817,9 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
         "mode": "live" if _gateway is not None else "simulated",
         "official_awards_eligible": _gateway is not None,
         "detail": (
-            "Evaluation responses came from the configured model gateway."
+            "Evaluation responses came from the connected Official Live Panel."
             if _gateway is not None
-            else "No model gateway was configured; deterministic synthetic responses were used."
+            else "Practice judges produced deterministic synthetic responses; results are illustrative."
         ),
     }
 
@@ -1897,7 +1923,7 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
             "Configured model panel could not be fully satisfied; "
             f"using {len(selected_models)} available model(s) in permissive mode."
         )
-        print(f"[WARN] Freshness gate fallback: {reason}", file=sys.stderr)
+        print(f"[WARN] Judge panel fallback: {reason}", file=sys.stderr)
     else:
         reason = (
             f"{len(selected_models)}-model consensus panel is current and approved."
@@ -4410,12 +4436,13 @@ def _share_card(awards_card: Dict, run_id: str) -> None:
         )
         print(_paint("│  " + _truncate(line, width - 4).ljust(width - 2) + "│", "green"))
     print(_paint("│" + " " * width + "│", "blue"))
-    replay_line = f"Replay this exact run: python3 hackathon_judge.py replay {run_id}"
+    replay_line = f"Replay this exact run: hackathon replay {run_id}"
     print(_paint("│  " + _truncate(replay_line, width - 4).ljust(width - 2) + "│", "cyan"))
     print(_paint("└" + "─" * width + "┘", "blue", bold=True))
 
 
 def _print_workshop_receipt(bundle_path: Path, run_id: str) -> None:
+    manifest = load_manifest(bundle_path)
     awards_card = _load_awards(bundle_path) or {}
     awards = awards_card.get("awards", [])
     verdicts = _load_verdicts(bundle_path)
@@ -4430,9 +4457,18 @@ def _print_workshop_receipt(bundle_path: Path, run_id: str) -> None:
     )
 
     envelope_status = "envelope sealed" if bundle_sealed else "export pending"
+    result_status = manifest.get("result_status")
+    if not result_status:
+        provenance = gate.get("evaluation_provenance", {})
+        result_status = (
+            "OFFICIAL LIVE PANEL"
+            if provenance.get("mode") == "live"
+            else "PRACTICE SHOW — ILLUSTRATIVE RESULTS"
+        )
+    status_color = "green" if result_status == "OFFICIAL LIVE PANEL" else "yellow"
     _magic_banner(
         "Workshop Recap",
-        f"{len(verdicts)} repos · {len(awards)} awards · {envelope_status}",
+        f"{result_status} · {len(verdicts)} repos · {len(awards)} awards · {envelope_status}",
     )
     if awards:
         for award in awards:
@@ -4444,6 +4480,7 @@ def _print_workshop_receipt(bundle_path: Path, run_id: str) -> None:
             ))
     print()
     print(_paint("📊 Room energy", "magenta", bold=True))
+    print(_paint(f"   Results:             {result_status}", status_color, bold=True))
     print(_paint(f"   Repos judged:        {len(verdicts)}", "cyan"))
     print(_paint(f"   Bright spots found:  {len(feedback)}", "cyan"))
     print(
@@ -4469,7 +4506,7 @@ def _print_workshop_receipt(bundle_path: Path, run_id: str) -> None:
         _share_card(awards_card, run_id)
     else:
         print(_paint(
-            f"⚠️  Run 'hackathon-judge export {run_id}' before treating this result as tamper-evident.",
+            f"⚠️  Run 'hackathon export {run_id}' before treating this result as tamper-evident.",
             "yellow",
         ))
 
@@ -4530,6 +4567,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     started_at = time.monotonic()
     configure = bool(getattr(args, "configure", False))
     demo = bool(getattr(args, "demo", False))
+    official_required = bool(getattr(args, "official", False))
     manual_confirm = bool(getattr(args, "manual_confirm", False))
     require_projector_window = bool(getattr(args, "require_projector_window", False))
     require_live_terminal = bool(
@@ -4539,6 +4577,22 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     showtime = True if demo else _workshop_showtime_enabled(args)
     assume_yes = bool(getattr(args, "yes", False) or showtime or demo) and not manual_confirm
     gateway = None if demo else _gateway
+    if demo and official_required:
+        _print_error(
+            7,
+            "ConfigValidationError",
+            "The built-in demo is always a Practice Show. Remove --official to continue.",
+        )
+        return 7
+    if official_required and gateway is None:
+        _print_error(
+            7,
+            "ConfigValidationError",
+            "Official judging is not connected. Run without --official for a clearly labeled "
+            "Practice Show.",
+        )
+        return 7
+    result_status, status_detail, status_color = _result_status(gateway)
     if require_live_terminal and not sys.stdout.isatty():
         _print_error(
             7,
@@ -4548,25 +4602,20 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         )
         return 7
     if showtime:
-        _set_terminal_title("Hackathon Judge — LIVE SHOW — SHARE THIS WINDOW")
+        _set_terminal_title(f"Hackathon Judge — {result_status} — SHARE THIS WINDOW")
 
     _magic_banner(
         "Hackathon Judge Live Show",
-        "LIVE SHOW — SHARE THIS WINDOW",
+        result_status,
     )
     _sideline(
         "Sideline report: one screen, every project, and a sealed final reveal.",
         "📡",
         "magenta",
     )
-    if demo:
-        _sideline(
-            "Practice demo: the projects and results are illustrative, not official outcomes.",
-            "🧪",
-            "yellow",
-        )
+    _sideline(status_detail, "🪪", status_color)
 
-    run_prefix = "demo" if demo else "show"
+    run_prefix = "demo" if demo else ("official" if gateway is not None else "practice")
     default_run = f"{run_prefix}-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
     run_id = getattr(args, "run_id", None) or (default_run if not configure else _ask_text("Run name", default_run))
 
@@ -4601,6 +4650,8 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         showtime=showtime,
         no_suspense=getattr(args, "no_suspense", False),
         projector=projector,
+        result_status=result_status,
+        status_color=status_color,
     )
 
     if assume_yes:
@@ -4640,6 +4691,9 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         "audience_view": event_spec["presentation"]["audience_view"],
         "submission_count_requested": len(entries),
     }
+    manifest["result_status"] = result_status
+    manifest["results_are_illustrative"] = gateway is None
+    manifest["official_live_panel_connected"] = gateway is not None
     save_manifest(bundle_path, manifest)
 
     _sideline("This is the complete show. No second audience window will open.", "🖥️", "cyan")
@@ -4760,8 +4814,10 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         )
         if elapsed_seconds > DEMO_TIME_BUDGET_SECONDS:
             _warning("The practice demo exceeded its two-minute show budget.")
+    elif gateway is None:
+        _success(f"Practice Live Show complete: {run_id}")
     else:
-        _success(f"Live Show complete: {run_id}")
+        _success(f"Official Live Show complete: {run_id}")
     return 0
 
 
@@ -4872,7 +4928,7 @@ def cmd_quick(args: argparse.Namespace, _gateway: Optional[Any] = None,
             runs_dir / f"{run_id}.bundle.tar.gz"
         ).exists():
             print(
-                f"Resume the partial export with: python3 hackathon_judge.py export {run_id}",
+                f"Resume the partial export with: hackathon export {run_id}",
                 file=sys.stderr,
             )
         return rc
@@ -4884,16 +4940,16 @@ def cmd_quick(args: argparse.Namespace, _gateway: Optional[Any] = None,
     print(f"Quick judging complete: {run_id}")
     print(f"Projects reviewed: {len(created)}")
     if evaluation_mode == "simulated":
-        print("Evaluation mode: simulated — practice demo only; do not publish these as official awards.")
+        print("Results status: PRACTICE SHOW — ILLUSTRATIVE RESULTS; do not publish as official awards.")
     else:
         print(
-            f"Evaluation mode: {evaluation_mode} · "
+            f"Results status: OFFICIAL LIVE PANEL · "
             f"panel: {_model_panel_label(freshness_gate)}"
         )
     _print_quiet_award_results(awards_card.get("awards", []))
     print(f"Run bundle: {bundle_path}")
     print("Validation: passed (HASHES and SEAL verified).")
-    print(f"Replay: python3 hackathon_judge.py replay {run_id}")
+    print(f"Replay: hackathon replay {run_id}")
     print(f"Private project feedback: {proposal_path}")
     print("Human approval is required before delivering feedback externally.")
     return 0
@@ -4930,13 +4986,13 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
         _sideline("Review lenses are ready. Scores stay sealed until the award reveal.", "🏟️", "magenta")
         _sideline(_panel_opening_message(event_spec, panel_style), "🎙️", "magenta")
     else:
-        _magic_banner(event_spec["event"]["name"], "Premium model policy, sealed scores, and fair review.")
+        _magic_banner(event_spec["event"]["name"], "Judge panel policy, sealed scores, and fair review.")
         _sideline("The judging panel is warming up.", "🏟️", "magenta")
     _showtime_pause(args)
     if showtime:
-        _sideline("Freshness Gate opening...", "🧭", "cyan")
+        _sideline("Judge panel check opening...", "🧭", "cyan")
     else:
-        _step(1, 7, "Running Model Freshness Gate...", "🧭")
+        _step(1, 7, "Checking the judge panel...", "🧭")
     stage_started_at = time.monotonic()
     try:
         gate_result = run_freshness_gate(bundle_path, rubric, _gateway, clock)
@@ -4957,19 +5013,19 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if showtime:
         if provenance.get("mode") == "simulated":
             _sideline(
-                "Evaluation mode: simulated — practice demo only; awards are illustrative.",
+                "Results status: PRACTICE SHOW — ILLUSTRATIVE RESULTS.",
                 "🧠",
                 "yellow",
             )
         else:
             _sideline(
-                f"Evaluation mode: {provenance.get('mode', 'unknown')} · {panel_label}.",
+                f"Results status: OFFICIAL LIVE PANEL · {panel_label}.",
                 "🧠",
                 "green",
             )
     else:
         _sideline(
-            f"Freshness Gate: {gate_result['status']} — {panel_label}",
+            f"Judge panel check: {gate_result['status']} — {panel_label}",
             "🧠",
             "green",
         )
@@ -6523,13 +6579,13 @@ def cmd_feedback(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
 def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
-    """doctor — diagnose config, model gate, and bundle health without modifying state."""
+    """doctor — check setup, judge-panel connection, and bundle health."""
     run_id = getattr(args, "run_id", None)
     runs_dir = get_runs_dir()
     issues: List[str] = []
     ok: List[str] = []
 
-    print("Hackathon Judge — Doctor")
+    print("Hackathon Judge — Setup Check")
     print("=" * 50)
 
     # 1. Check Python version
@@ -6563,15 +6619,20 @@ def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
     else:
         ok.append(f"Registry not yet created: {registry_path} (will be created on first award)")
 
-    # 5. Model gate ping
-    try:
-        models = query_available_models(_gateway)
-        non_deprecated = [m for m in models if not m.get("deprecated", False)]
-        ok.append(f"Model gate: {len(models)} models available, {len(non_deprecated)} non-deprecated")
-        best = _select_best_model(models)
-        ok.append(f"Best available model: {best}")
-    except Exception as exc:
-        issues.append(f"Model gate: {exc}")
+    # 5. Judge-panel connection
+    if _gateway is None:
+        ok.append("Judge panel: Practice Show ready — results will be clearly marked illustrative")
+    else:
+        try:
+            models = query_available_models(_gateway)
+            non_deprecated = [m for m in models if not m.get("deprecated", False)]
+            ok.append(
+                "Judge panel: OFFICIAL LIVE PANEL connected "
+                f"({len(non_deprecated)} active judges)"
+            )
+            ok.append(f"Lead judge: {_select_best_model(models)}")
+        except Exception as exc:
+            issues.append(f"Judge panel connection: {exc}")
 
     # 6. Specific bundle check
     if run_id:
@@ -6864,6 +6925,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Run the same Live Show as a deterministic practice demo; bundled projects are used when no links are supplied.",
     )
+    p_workshop.add_argument(
+        "--official",
+        action="store_true",
+        help="Require a connected Official Live Panel instead of illustrative practice judges.",
+    )
     p_workshop.add_argument("--yes", action="store_true", help="Run non-interactively with defaults.")
     p_workshop.add_argument("--configure", action="store_true", help="Ask advanced setup questions before the show.")
     p_workshop.add_argument("--manual-confirm", action="store_true", dest="manual_confirm",
@@ -6965,7 +7031,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_val.add_argument("bundle", help="Run ID or path to bundle directory.")
 
     # doctor
-    p_doc = sub.add_parser("doctor", help="Diagnose config, model gate, and bundle health.")
+    p_doc = sub.add_parser("doctor", help="Check setup, judge-panel connection, and bundle health.")
     p_doc.add_argument("run_id", nargs="?", help="Optional run ID to inspect.")
 
     return parser

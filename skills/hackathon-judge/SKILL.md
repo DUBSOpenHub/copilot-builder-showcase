@@ -1,24 +1,23 @@
 ---
 name: hackathon-judge
 description: >
-  Turn bulk project links into one single-screen, replayable Hackathon Judge
-  Live Show. Every project gets a spotlight, scores stay sealed, the audience
-  joins one suspenseful final-reveal moment, and the run is preserved.
-  Say "run hackathon judging" to start.
+  Turn project links into one single-screen, replayable Hackathon Judge Live
+  Show. Every project gets a spotlight, results stay sealed, the audience joins
+  the final reveal, and the run is preserved. Say "hackathon" to start.
 tools:
   - bash
   - ask_user
-  - slack
 ---
 
 # Hackathon Judge
 
-Use `hackathon_judge.py` as the source of truth for intake, judging, score
-visibility, awards, sealing, replay, and validation. Never invent an outcome in
-prose.
+The primary experience is one Live Show. Use the installed `hackathon` command;
+never ask a beginner to run Python or know the internal `workshop` subcommand.
+Never invent an outcome in prose.
 
 ## Triggers
 
+- `hackathon`
 - `hackathon judge`
 - `run hackathon judging`
 - `judge these projects`
@@ -26,82 +25,106 @@ prose.
 - `run the panel`
 - `run a hackathon judge demo`
 
-## One experience
+## First-run setup
 
-Hackathon Judge has one primary user experience: the **Live Show**.
+Before collecting projects, check for the command:
+
+```bash
+command -v hackathon
+```
+
+If it is missing:
+
+1. Explain in one sentence that installation downloads this repository into
+   `~/.local/share/hackathon-judge` and creates commands in `~/.local/bin`.
+2. Use `ask_user` to request installation permission.
+3. Do not install unless the user explicitly approves.
+4. When approved, run:
+
+   ```bash
+   gh api -H "Accept: application/vnd.github.raw" \
+     repos/DUBSOpenHub/hackathon-judge/contents/install.sh | bash
+   ```
+
+5. Use `~/.local/bin/hackathon` for the current run even if the shell has not
+   reloaded its PATH.
+6. Run `~/.local/bin/hackathon doctor`. If it fails, stop and report the
+   specific setup issue before accepting projects.
+
+If installation is declined, provide the install command and stop. Never change
+shell profiles automatically.
+
+## One experience
 
 - Do not offer Live, Quick, or Slack judging as mode choices.
 - If project links or an uploaded submissions file are already present, start
   the Live Show immediately.
 - If no project links are present, ask only for the links.
+- Accept plain GitHub URLs or `owner/repo` entries.
 - If the organizer says `run again` or `start over`, reuse the previous project
   entries with a fresh run ID.
-- If the organizer asks for a demo without providing links, run the bundled
-  practice demo with `--demo`.
+- If the organizer asks for a demo without links, use `hackathon --demo`.
 
-Quick judging and Slack intake may remain internal utilities, but do not surface
-them as alternate product experiences.
+Plain links are enough. Hackathon Judge automatically uses public repository
+context and labels an unnamed entry as `<repository owner> team`. Never infer
+Copilot or frontier use from a link, code, metadata, or a judge impression.
+Missing evidence stays `not provided`.
 
-## Project-entry format
+## Result status
 
-Accept plain GitHub URLs or `owner/repo` entries. For team attribution and richer
-feedback, prefer one entry per line:
+Keep the show's result status explicit:
 
-```text
-https://github.com/example/project | Team Aurora | Used Copilot Chat to design the API contract | Built an agent workflow with retrieval | Reduce missed follow-ups | Account executives | https://demo.example/aurora | Daily workflow demo
-```
+- `PRACTICE SHOW — ILLUSTRATIVE RESULTS` means local practice judges are active.
+- `OFFICIAL LIVE PANEL` means a host connected live judges.
 
-The optional fields after the URL are: `team or builder`, `Copilot evidence`,
-`frontier evidence`, `problem statement`, `intended user`, `demo or artifact`,
-and `builder notes`.
-
-Never infer Copilot or frontier use from a link, code, repository metadata, or a
-model impression. Missing evidence must remain `not provided`.
+Installed local runs are Practice Shows unless an official host integration is
+connected. If the organizer requires an official event, add `--official`; the
+command must block rather than silently produce practice results.
 
 ## Start the Live Show
 
-Write supplied entries to a temporary file, then open exactly one real terminal:
+Write supplied links to a temporary file. Use the absolute command path when
+needed:
 
 ```bash
-python3 hackathon_judge.py workshop \
+~/.local/bin/hackathon \
   --file <temporary-submissions-file> \
   --run-id <safe-event-run-id> \
   --require-live-terminal \
   --yes
 ```
 
-On macOS:
+On macOS, open exactly one real Terminal using that command:
 
 ```bash
 osascript \
-  -e 'tell application "Terminal" to do script "cd <hackathon-judge-repo> && python3 hackathon_judge.py workshop --file <temporary-submissions-file> --run-id <safe-event-run-id> --require-live-terminal --yes"' \
+  -e 'tell application "Terminal" to do script "<shell-quoted-absolute-hackathon-command>"' \
   -e 'tell application "Terminal" to activate'
 ```
 
-The terminal labeled **LIVE SHOW — SHARE THIS WINDOW** contains the complete run
-of show and commentary. Share that one window. Never auto-open the Textual
-monitor or a second Terminal.
+Shell-quote every generated path and argument. Never place untrusted project
+text directly into the AppleScript command; pass it through the temporary file.
 
-If no real terminal can be opened, stop before judging and provide the exact
-manual command. Captured tool output is not the audience experience.
+The new Terminal contains the complete audience experience. Share that one
+window. Never auto-open the optional Textual monitor or a second Terminal.
+Captured tool output is not the audience show; if a real Terminal cannot be
+opened, stop before judging and provide the exact manual `hackathon` command.
 
 ## Run the two-minute practice demo
 
-Use the same Live Show, not a separate experience:
+Use the same Live Show:
 
 ```bash
-python3 hackathon_judge.py workshop \
+~/.local/bin/hackathon \
   --demo \
   --run-id <safe-demo-run-id> \
   --require-live-terminal \
   --yes
 ```
 
-The bundled demo is deterministic, avoids network metadata calls, exercises the
-full intake-to-replay flow, and targets completion within 120 seconds when the
-operator promptly confirms the audience cue. Use `--no-suspense` only for
-unattended smoke automation. It must be described as an illustrative practice
-demo, never an official competition result.
+The demo is deterministic, avoids network metadata calls, exercises the full
+intake-to-replay flow, and targets completion within 120 seconds. It is always
+illustrative and never an official competition result.
 
 ## Show direction
 
@@ -115,49 +138,32 @@ The Live Show should feel like a punchy startup demo day:
    ask the operator to confirm the room is participating, then reveal.
 6. Finish with a concise moment of joy, recap, export, validation, and replay.
 
-Use suspense without adding a named host personality or imitating a specific
-publication. Keep commentary event-neutral and concise enough for a two-minute
-demo.
-
-## Awards and ties
-
-The default reveal is a project-first bronze → silver → gold podium. A supplied
-EventSpec may define custom awards.
-
-Exact ties follow the EventSpec policy:
-
-- `shared-podium` is the default.
-- `sealed-tiebreaker` uses predeclared rubric dimensions.
-- `human-resolution` requires
-  `--tie-resolution rank:<place>=<submission-id>`.
-
-Never use entry order to break a tie. If a required human decision is missing,
-stop at the award stage.
+Use suspense without a named host personality or publication imitation. Keep
+the ceremony concise enough for a two-minute demo.
 
 ## Audience safety
 
-- Use only the single Live Show terminal for the audience.
 - Never expose numeric scores, ranks, judge prompts, unrevealed awards, or the
   sealed Shadow Spec before awards.
-- Every accepted project must appear before the award ceremony.
-- The optional `tui` command is a monitor for diagnostics only; it is not part of
-  the primary show and must never auto-launch.
-- Use `present <run-id> --operator` only after awards when numeric scores are
-  needed privately.
+- Every accepted project must appear before the ceremony.
+- Keep Practice or Official status visible throughout.
+- The optional `tui` command is diagnostic-only and must never auto-launch.
+- Use `present <run-id> --operator` only after awards when scores are needed
+  privately.
 
-## Event pack and feedback
+## Awards, ties, and feedback
 
-Use `config/event.example.json` for event name, rubric, review lenses, awards,
-privacy, accessibility, model policy, and tone policy. Do not add personal host
-branding or confidential defaults.
+The default reveal is project-first bronze → silver → gold. Exact ties follow
+the EventSpec policy: shared podium, a predeclared sealed tiebreaker, or a logged
+human decision. Never use entry order as a tiebreaker.
 
-After the show, private feedback may include award rationale, what judges liked,
-one actionable next step, a Copilot next move, a bounded frontier experiment,
-and explicit evidence status. Project-specific feedback must cite supplied
-context; unsupported suggestions must be labeled hypotheses.
+Private feedback may include award rationale, what judges liked, one actionable
+next step, a Copilot next move, a bounded frontier experiment, and explicit
+evidence status. Project-specific claims must use supplied context; unsupported
+suggestions must be labeled hypotheses.
 
 ## After the run
 
-Report the run ID, bundle path, private feedback proposal path, award names and
+Report the result status, run ID, bundle path, private feedback path, awards and
 winners, replay command, and validation status. Keep run bundles internal unless
 a human approves external publishing.

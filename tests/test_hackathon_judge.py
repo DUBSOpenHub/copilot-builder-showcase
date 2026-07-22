@@ -373,6 +373,17 @@ class TestShowtimeDelight:
         assert "sealed and replayable" not in output
         assert "before treating this result as tamper-evident" in output
 
+    def test_legacy_receipt_derives_official_status_from_provenance(self, tmp_path, capsys):
+        bundle_path = make_run(tmp_path, "legacy-official")
+        cbp.write_once_json(
+            bundle_path / "freshness_gate.json",
+            {"evaluation_provenance": {"mode": "live"}},
+        )
+
+        cbp._print_workshop_receipt(bundle_path, "legacy-official")
+
+        assert "OFFICIAL LIVE PANEL" in capsys.readouterr().out
+
     def test_workshop_caps_total_showtime_animation(self, tmp_path):
         env = {
             "HJ_RUNS_DIR": str(tmp_path / "runs"),
@@ -915,7 +926,20 @@ class TestBulkUrlImport:
         assert all(s["builder_name"] == "Workshop Room" for s in submissions)
         assert {s["repo_url"] for s in submissions} == set(urls)
 
-    def test_workshop_yes_runs_full_guided_flow(self, tmp_path):
+    def test_links_only_import_uses_repository_owner_as_team_name(self, tmp_path):
+        bundle_path = make_run(tmp_path, "owner-team")
+        url = "https://github.com/DUBSOpenHub/terminal-stampede"
+
+        created = cbp.import_url_submissions(
+            bundle_path,
+            [url],
+            clock=fixed_clock,
+            metadata_provider=lambda _: cbp._fallback_repo_metadata(url),
+        )
+
+        assert created[0]["builder_name"] == "DUBSOpenHub team"
+
+    def test_workshop_yes_runs_full_guided_flow(self, tmp_path, capsys):
         env = {
             "HJ_RUNS_DIR": str(tmp_path / "runs"),
             "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
@@ -985,15 +1009,18 @@ class TestBulkUrlImport:
                 "Demo Day Grand Prize",
             ]
             assert manifest["event"]["name"] == "Demo Day"
+            assert manifest["result_status"] == "OFFICIAL LIVE PANEL"
+            assert manifest["results_are_illustrative"] is False
+            assert manifest["official_live_panel_connected"] is True
             awards = cbp.load_json(bundle / "winner" / "awards.json")
-            assert [a["award_name"] for a in awards["awards"]] == [
-                "Audience Choice",
-                "Demo Day Grand Prize",
-            ]
+            award_names = [a["award_name"] for a in awards["awards"]]
+            assert set(award_names) == {"Audience Choice", "Demo Day Grand Prize"}
+            assert award_names[-1] == "Demo Day Grand Prize"
             assert (bundle / "recap.md").exists()
             assert (bundle / "HASHES").exists()
             assert (bundle / "SEAL").exists()
             assert len(list((bundle / "inputs").glob("*.json"))) == 2
+        assert capsys.readouterr().out.count("OFFICIAL LIVE PANEL") >= 5
 
     def test_workshop_showtime_defaults_to_audience_autopilot(self, tmp_path, capsys):
         env = {
@@ -1211,14 +1238,30 @@ class TestCommandFlows:
         output = capsys.readouterr().out
         manifest = cbp.load_manifest(tmp_path / "practice-show")
         elapsed = re.search(r"Practice Live Show complete in ([0-9.]+)s", output)
-        assert "LIVE SHOW — SHARE THIS WINDOW" in output
-        assert "Practice demo" in output
+        assert output.count("PRACTICE SHOW — ILLUSTRATIVE RESULTS") >= 5
         assert "Audience check ready" in output
         assert elapsed is not None
         assert float(elapsed.group(1)) < cbp.DEMO_TIME_BUDGET_SECONDS
+        assert manifest["result_status"] == "PRACTICE SHOW — ILLUSTRATIVE RESULTS"
+        assert manifest["results_are_illustrative"] is True
+        assert manifest["official_live_panel_connected"] is False
         assert manifest["workshop_choices"]["display_surface"] == "single-terminal"
         assert manifest["workshop_choices"]["optional_monitor_auto_launched"] is False
         assert len(cbp._load_submissions(tmp_path / "practice-show")) == 3
+
+    def test_official_show_blocks_without_connected_panel(self, tmp_path, capsys):
+        args = build_args(
+            "workshop",
+            run_id="official-show",
+            urls=["DUBSOpenHub/project-one"],
+            official=True,
+        )
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            assert cbp.cmd_workshop(args, None, fixed_clock) == 7
+
+        assert "Official judging is not connected" in capsys.readouterr().err
+        assert not (tmp_path / "official-show").exists()
 
     def test_projector_tui_refuses_captured_output(self, capsys):
         args = argparse.Namespace(
@@ -1541,13 +1584,13 @@ class TestCommandFlows:
 
         output = capsys.readouterr().out
         assert "Quick judging complete" in output
-        assert "Evaluation mode: simulated — practice demo only" in output
+        assert "Results status: PRACTICE SHOW — ILLUSTRATIVE RESULTS" in output
         assert "Panel chatter:" not in output
         assert "🥁" not in output
         assert "Score:" not in output
         assert "Private project feedback:" in output
         assert "Validation: passed" in output
-        assert "Replay: python3 hackathon_judge.py replay quick-flow" in output
+        assert "Replay: hackathon replay quick-flow" in output
         assert cbp.load_manifest(tmp_path / run_id)["engagement_mode"] == "quick"
         assert cbp.load_manifest(tmp_path / run_id)["status"] == "exported"
         assert (tmp_path / run_id / "HASHES").exists()
@@ -1947,7 +1990,7 @@ class TestCommandFlows:
         assert card["innovation_signal"]["status"] == "assessed"
         assert card["tone_checked"] is True
 
-    def test_doctor_passes_clean_env(self, tmp_path):
+    def test_doctor_passes_clean_env(self, tmp_path, capsys):
         """DF-04: doctor self-test passes on clean environment."""
         env = self._env(tmp_path)
         with patch.dict(os.environ, env):
@@ -1955,6 +1998,7 @@ class TestCommandFlows:
                 args = build_args("doctor", run_id=None)
                 rc = cbp.cmd_doctor(args, None, fixed_clock)
         assert rc == 0
+        assert "Judge panel: Practice Show ready" in capsys.readouterr().out
 
     def test_doctor_reports_missing_textual(self, tmp_path, capsys):
         env = self._env(tmp_path)
