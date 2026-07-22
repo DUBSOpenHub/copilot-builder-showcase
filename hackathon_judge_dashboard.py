@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-Hackathon Judge: Live Dashboard (Textual TUI)
+Hackathon Judge: Optional Run Monitor (Textual TUI)
 
-A real-time terminal dashboard for Hackathon Judge. Shows
+A real-time optional terminal monitor for Hackathon Judge. Shows
 submissions, review progress, spotlight cards, and award reveals with
-animated in-place rendering.
+animated in-place rendering. The primary Live Show never auto-launches it.
 
 The dashboard reads bundles through ``bundle_reader.BundleReader`` and, by
 default, only ever sees the audience-safe projection: no scores or ranks
@@ -45,7 +45,7 @@ from rich.console import Group
 from rich.columns import Columns
 
 from bundle_reader import BundleReader, BundleView
-from hackathon_judge import get_bundle_path
+from hackathon_judge import get_bundle_path, project_showcase_badges
 
 DEFAULT_RUNS_DIR = Path.home() / ".hackathon_judge" / "runs"
 
@@ -71,6 +71,63 @@ def _score_bar_rich(score: float, max_score: float = 10.0, width: int = 20) -> T
     return bar
 
 
+def _verdict_cell(
+    verdict: Dict, *, show_scores: bool, revealed: bool
+) -> Text:
+    """Render a row's score state without implying completed judging is pending."""
+    if not verdict:
+        return Text("✓ entered", style="cyan")
+    if show_scores and revealed and "total_score" in verdict:
+        score = float(verdict["total_score"])
+        cell = Text(f"{score:.1f} ")
+        cell.append_text(_score_bar_rich(score, width=10))
+        return cell
+    if revealed:
+        return Text("✓ reviewed", style="green")
+    return Text("🕒 in review", style="dim")
+
+
+def _progress_label(progress: Optional[Dict], default_total: int) -> str:
+    """Render only aggregate evaluator state for the shared dashboard."""
+    if not isinstance(progress, dict):
+        return ""
+    if progress.get("status") == "failed":
+        return "⚠ evaluation paused"
+    submissions = progress.get("submissions", {})
+    if not isinstance(submissions, dict):
+        submissions = {}
+    stage = str(progress.get("stage", "pending")).replace("-", " ")
+    return (
+        f"{stage} {submissions.get('completed', 0)}/"
+        f"{submissions.get('total', default_total)}"
+    )
+
+
+def _submission_table_rows(
+    submissions: List[Dict],
+    verdict_map: Dict[str, Dict],
+    *,
+    show_scores: bool,
+    revealed: bool,
+) -> List[tuple[str, str, str, Text]]:
+    """Build arrival-ordered rows so projects appear before judging starts."""
+    rows: List[tuple[str, str, str, Text]] = []
+    for index, submission in enumerate(submissions, start=1):
+        submission_id = submission.get("submission_id")
+        verdict = verdict_map.get(submission_id, {})
+        rows.append((
+            f"{index}.",
+            str(submission.get("project_name", "Unknown"))[:28],
+            str(submission.get("builder_name", "Unknown"))[:20],
+            _verdict_cell(
+                verdict,
+                show_scores=show_scores,
+                revealed=revealed,
+            ),
+        ))
+    return rows
+
+
 def _time_ago(iso_str: str) -> str:
     try:
         dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
@@ -90,9 +147,9 @@ def _time_ago(iso_str: str) -> str:
 class BundleState:
     """Wraps a BundleReader and holds the most recently loaded projection.
 
-    Defaults to the audience-safe projection (no scores/ranks until a run
-    is awarded or exported). Pass ``operator=True`` for the full,
-    unredacted facilitator view.
+    Defaults to the audience-safe projection. ``operator=True`` unlocks the
+    full facilitator view only after a run is awarded or exported; before
+    reveal it remains audience-safe.
     """
 
     def __init__(self, run_id: str, runs_dir: Optional[Path] = None,
@@ -109,7 +166,9 @@ class BundleState:
 
     def refresh(self) -> None:
         self.view = (
-            self.reader.operator_view() if self.operator else self.reader.audience_view()
+            self.reader.operator_view()
+            if self.operator and self.reader.is_revealed()
+            else self.reader.audience_view()
         )
 
     @property
@@ -141,12 +200,20 @@ class BundleState:
         return self.view.shadow_score
 
     @property
+    def shadow_assessment(self) -> Optional[Dict]:
+        return self.view.shadow_assessment
+
+    @property
     def awards(self) -> Optional[Dict]:
         return self.view.awards
 
     @property
     def gate(self) -> Optional[Dict]:
         return self.view.freshness_gate
+
+    @property
+    def evaluation_progress(self) -> Optional[Dict]:
+        return self.view.evaluation_progress
 
     @property
     def command_log(self) -> List[Dict]:
@@ -167,6 +234,9 @@ class BundleState:
     @property
     def model_name(self) -> str:
         if self.gate:
+            selected_models = self.gate.get("selected_models")
+            if isinstance(selected_models, list) and selected_models:
+                return f"{len(selected_models)}-model panel"
             return self.gate.get("selected_model", "unknown")
         return "pending"
 
@@ -313,6 +383,7 @@ class StatusStrip(Static):
     scored = reactive(0)
     model = reactive("pending")
     sealed = reactive(False)
+    progress = reactive("")
 
     def render(self) -> Text:
         t = Text()
@@ -334,6 +405,9 @@ class StatusStrip(Static):
         t.append("  │  ", style="dim")
         # Model
         t.append(f"🧠 {self.model}", style="cyan")
+        if self.progress:
+            t.append("  │  ", style="dim")
+            t.append(f"⏱ {self.progress}", style="yellow")
         if self.sealed:
             t.append("  │  ", style="dim")
             t.append("🔒 SEALED", style="bold green")
@@ -348,12 +422,14 @@ class SpotlightCard(Static):
         self._data: Optional[Dict] = None
         self._verdict: Optional[Dict] = None
         self._fb: Optional[Dict] = None
+        self._show_scores = False
 
     def set_spotlight(self, sub: Dict, verdict: Optional[Dict] = None,
-                      fb: Optional[Dict] = None) -> None:
+                      fb: Optional[Dict] = None, show_scores: bool = False) -> None:
         self._data = sub
         self._verdict = verdict
         self._fb = fb
+        self._show_scores = show_scores
         self.refresh()
 
     def render(self) -> Panel | Text:
@@ -367,33 +443,31 @@ class SpotlightCard(Static):
         sub = self._data
         meta = sub.get("repo_metadata", {})
         lines = Text()
-        revealed = bool(self._verdict) and "total_score" in self._verdict
+        awards_revealed = bool(self._verdict) and "total_score" in self._verdict
+        show_scores = self._show_scores and awards_revealed
 
         # Project name
         lines.append(f"🌟 {sub.get('project_name', 'Unknown')}\n", style="bold bright_white")
-        lines.append(f"   Builder: {sub.get('builder_name', 'Unknown')}\n", style="cyan")
+        lines.append(f"   Built by: {sub.get('builder_name', 'Unknown')}\n", style="cyan")
 
         if meta.get("description"):
-            lines.append(f"   {meta['description'][:90]}\n", style="dim")
+            lines.append(f"   What it does: {meta['description'][:82]}\n", style="dim")
 
-        # Metadata badges
-        badges = []
-        if meta.get("language"):
-            badges.append(f"📝 {meta['language']}")
-        if meta.get("stars") is not None:
-            badges.append(f"⭐ {meta['stars']}")
+        badges = project_showcase_badges(meta)
         if meta.get("contributors"):
             badges.append(f"👥 {meta['contributors']}")
         if meta.get("open_issues") is not None:
             badges.append(f"📌 {meta['open_issues']} issues")
         if badges:
-            lines.append(f"   {' · '.join(badges)}\n", style="bright_white")
+            lines.append(f"   Project signals: {' · '.join(badges)}\n", style="bright_white")
+        if meta.get("homepage"):
+            lines.append(f"   Explore: {str(meta['homepage'])[:84]}\n", style=LINK)
 
         # Verdict — score bar only appears once the run is revealed
         # (audience_view() withholds total_score until then).
         if self._verdict:
             lines.append("\n")
-            if revealed:
+            if show_scores:
                 lines.append("   Score: ", style="bold")
                 lines.append_text(_score_bar_rich(float(self._verdict.get("total_score", 0))))
                 lines.append("\n")
@@ -401,19 +475,42 @@ class SpotlightCard(Static):
             # Before awards, show one concise, score-safe panel take rather
             # than a wall of judge notes. The audience projection has already
             # removed score-like prose.
-            if not revealed:
+            if not awards_revealed:
                 reactions = reactions[:1]
             for av in reactions:
-                label = av.get("archetype_name", "") if revealed else "Panel take"
+                label = av.get("archetype_name", "") if awards_revealed else "Panel take"
                 lines.append(f"   🎙️ {label}: ", style="bright_magenta")
                 lines.append(f"{av.get('bright_spot', av.get('perspective', ''))[:80]}\n", style="green")
 
         # Feedback
         if self._fb:
+            for label, field, icon in (
+                ("Copilot", "copilot_use", "🧠"),
+                ("Frontier", "frontier_use", "🧭"),
+            ):
+                assessment = self._fb.get(field, {})
+                if isinstance(assessment, dict) and assessment.get("status") == "evidenced":
+                    lines.append(
+                        f"   {icon} {label}: {str(assessment.get('summary', ''))[:86]}\n",
+                        style=LINK,
+                    )
             if self._fb.get("bright_spot"):
                 lines.append(f"\n   ✨ {self._fb['bright_spot'][:90]}\n", style="green")
-            if self._fb.get("next_commit") and revealed:
+            if self._fb.get("next_commit") and awards_revealed:
                 lines.append(f"   🔜 {self._fb['next_commit'][:90]}\n", style="yellow")
+            if awards_revealed:
+                copilot_moves = self._fb.get("copilot_next_moves", [])
+                if isinstance(copilot_moves, list) and copilot_moves:
+                    lines.append(
+                        f"   🧠 Copilot next: {str(copilot_moves[0])[:84]}\n",
+                        style=LINK,
+                    )
+                frontier_ideas = self._fb.get("frontier_experiments", [])
+                if isinstance(frontier_ideas, list) and frontier_ideas:
+                    lines.append(
+                        f"   🧭 Frontier idea: {str(frontier_ideas[0])[:84]}\n",
+                        style=LINK,
+                    )
 
         border = ACCENT if self._verdict else MUTED
         return Panel(lines, title="🌟 Spotlight", border_style=border)
@@ -439,13 +536,53 @@ class AwardReveal(Static):
             )
 
         lines = Text()
-        for award in self._awards.get("awards", []):
+        tie_ceremony = self._awards.get("tie_ceremony", {})
+        if isinstance(tie_ceremony, dict):
+            policy = tie_ceremony.get("policy", {})
+            if isinstance(policy, dict):
+                mode = str(policy.get("mode", "shared-podium")).replace("-", " ")
+                lines.append(f"\n ⚖ Tie policy: {mode}\n", style="dim italic")
+            award_tie_resolutions = tie_ceremony.get("award_tie_resolutions", [])
+            if not isinstance(award_tie_resolutions, list):
+                award_tie_resolutions = []
+            for event in award_tie_resolutions:
+                if not isinstance(event, dict):
+                    continue
+                if event.get("resolution") == "shared-podium":
+                    selected_submission_ids = event.get("selected_submission_ids")
+                    if not isinstance(selected_submission_ids, list):
+                        continue
+                    recipient_count = len(selected_submission_ids)
+                    lines.append(
+                        f"    Shared podium: {recipient_count} projects share "
+                        f"{event.get('award_name', 'this placement')}.\n",
+                        style="bold yellow",
+                    )
+                elif event.get("resolution") == "human-declared":
+                    lines.append(
+                        "    Tied placement resolved by logged human decision.\n",
+                        style="yellow",
+                    )
+                elif event.get("resolution") == "human-resolution-derived":
+                    lines.append(
+                        "    Remaining tied project advanced by that decision.\n",
+                        style="yellow",
+                    )
+        awards = self._awards.get("awards", [])
+        if not isinstance(awards, list):
+            awards = []
+        for award in awards:
+            if not isinstance(award, dict):
+                continue
             emoji = award.get("emoji", "🏆")
             name = award.get("award_name", "Award")
+            if award.get("shared_placement"):
+                name = f"{name} — SHARED PODIUM"
             winner = award.get("winner_builder_name", "Unknown")
             project = award.get("project_name", "Unknown")
             lines.append(f"\n {emoji} {name}\n", style="bold bright_magenta")
-            lines.append(f"    → {winner} · {project}\n", style="bold bright_white")
+            lines.append(f"    → {project}\n", style="bold bright_white")
+            lines.append(f"      Built by {winner}\n", style="cyan")
             reason = award.get("reason", "")
             if reason:
                 lines.append(f"    {reason[:90]}\n", style="green")
@@ -481,16 +618,46 @@ class SidePanel(Static):
         lines.append(f"\n  Model:  {s.model_name}\n", style="bright_magenta")
 
         if s.shadow:
-            lines.append(f"\n🔒 Shadow Score\n", style="bold underline bright_white")
-            lines.append(f"  Hash: {str(s.shadow.get('sealed_hash', ''))[:16]}…\n", style="dim")
-            lines.append(f"  Sealed: {s.shadow.get('sealed_at', 'n/a')[:19]}\n", style="green")
+            lines.append(f"\n🔒 Ranking Envelope\n", style="bold underline bright_white")
+            lines.append(
+                f"  Locked: {str(s.shadow.get('locked_at', 'n/a'))[:19]}\n",
+                style="green",
+            )
+
+        progress = s.evaluation_progress
+        if isinstance(progress, dict):
+            lines.append("\n⏱ Room Progress\n", style="bold underline bright_white")
+            if progress.get("status") == "failed":
+                lines.append(
+                    "  ⚠ Evaluation paused — facilitator action needed.\n",
+                    style="bold red",
+                )
+            else:
+                lines.append(
+                    f"  {_progress_label(progress, s.sub_count)} projects\n",
+                    style="yellow",
+                )
+            eta = progress.get("estimated_remaining_seconds")
+            if isinstance(eta, int) and progress.get("status") == "running":
+                lines.append(f"  ETA: about {eta}s\n", style="dim")
+
+        if s.is_revealed and s.shadow_assessment:
+            assessment = s.shadow_assessment
+            status = str(assessment.get("status", "clear")).upper()
+            style = "green" if status == "CLEAR" else "yellow"
+            lines.append("\n🔍 Shadow Analysis\n", style="bold underline bright_white")
+            lines.append(
+                f"  Diagnostic status: {status}\n",
+                style=f"bold {style}",
+            )
+            lines.append("  Podium impact: none\n", style="dim")
 
         # Score distribution — withheld until the run is revealed (awarded
         # or exported); the audience-safe view has no total_score before
         # then, and even the operator view avoids showing a leaderboard
         # ahead of the ceremony.
         scored_verdicts = [v for v in s.verdicts if "total_score" in v]
-        if s.is_revealed and scored_verdicts:
+        if s.operator and s.is_revealed and scored_verdicts:
             lines.append(f"\n📊 Final Scores\n", style="bold underline bright_white")
             scores = sorted((float(v["total_score"]) for v in scored_verdicts), reverse=True)
             for i, sc in enumerate(scores):
@@ -502,14 +669,26 @@ class SidePanel(Static):
         # Awards
         if s.awards:
             lines.append(f"\n🏆 Awards\n", style="bold underline bright_white")
+            tie_ceremony = s.awards.get("tie_ceremony", {})
+            if isinstance(tie_ceremony, dict):
+                policy = tie_ceremony.get("policy", {})
+                if isinstance(policy, dict):
+                    mode = str(policy.get("mode", "shared-podium")).replace("-", " ")
+                    lines.append(f"  ⚖ Tie policy: {mode}\n", style="dim")
             for a in s.awards.get("awards", []):
-                lines.append(f"  {a.get('emoji', '🏆')} {a.get('award_name', '')}\n", style="bright_magenta")
+                name = a.get("award_name", "")
+                if a.get("shared_placement"):
+                    name = f"{name} — SHARED"
+                lines.append(
+                    f"  {a.get('emoji', '🏆')} {name}\n",
+                    style="bright_magenta",
+                )
 
         return Panel(lines, title="📊 Panel Info", border_style=MUTED)
 
 
 class BuilderDashboard(App):
-    """Hackathon Judge Live Dashboard."""
+    """Hackathon Judge optional run monitor."""
 
     CSS = DASHBOARD_CSS
     BINDINGS = [
@@ -524,11 +703,26 @@ class BuilderDashboard(App):
         super().__init__(**kwargs)
         self.run_id = run_id
         self.projector = projector
+        self.operator = operator
         self.state = BundleState(run_id, operator=operator)
         self._auto_refresh: Optional[Timer] = None
+        self.title = (
+            "Hackathon Judge — Optional Operator Monitor"
+            if operator
+            else "Hackathon Judge — Optional Run Monitor"
+        )
+
+    @property
+    def surface_label(self) -> str:
+        return (
+            "OPTIONAL OPERATOR MONITOR — KEEP PRIVATE"
+            if self.operator
+            else "OPTIONAL RUN MONITOR — NOT PART OF THE LIVE SHOW"
+        )
 
     def compose(self) -> ComposeResult:
         yield Static(
+            f"{self.surface_label}\n"
             f"🏟️  {self.state.event_name}  🏟️\n"
             f"Run: {self.run_id}",
             id="header-bar",
@@ -549,12 +743,12 @@ class BuilderDashboard(App):
             self.screen.add_class("projector")
 
         table = self.query_one("#scores-table", DataTable)
-        table.add_columns("#", "Project", "Builder", "Verdict")
+        table.add_columns("#", "Project", "Team", "Verdict")
         table.cursor_type = "row"
 
         self._update_all()
         self._auto_refresh = self.set_interval(3.0, self._poll_refresh)
-        self._log("🏟️  Dashboard connected. Watching for updates…")
+        self._log(f"🏟️  {self.surface_label} connected. Watching for updates…")
 
     def _log(self, msg: str) -> None:
         log = self.query_one("#activity-log", RichLog)
@@ -580,6 +774,8 @@ class BuilderDashboard(App):
         strip.scored = len(s.verdicts)
         strip.model = s.model_name
         strip.sealed = s.is_sealed
+        progress = s.evaluation_progress
+        strip.progress = _progress_label(progress, s.sub_count)
 
         # Submissions table — presented in arrival order, never by score
         # or rank. The "Verdict" column only shows a score once the run
@@ -587,20 +783,13 @@ class BuilderDashboard(App):
         # review status.
         table = self.query_one("#scores-table", DataTable)
         table.clear()
-        for i, v in enumerate(s.verdicts, start=1):
-            verdict_cell: Text
-            if "total_score" in v:
-                score = float(v["total_score"])
-                verdict_cell = Text(f"{score:.1f} ")
-                verdict_cell.append_text(_score_bar_rich(score, width=10))
-            else:
-                verdict_cell = Text("🕒 in review", style="dim")
-            table.add_row(
-                f"{i}.",
-                v.get("project_name", "Unknown")[:28],
-                v.get("builder_name", "Unknown")[:20],
-                verdict_cell,
-            )
+        for row in _submission_table_rows(
+            s.submissions,
+            s.verdict_map,
+            show_scores=s.operator and s.is_revealed,
+            revealed=s.is_revealed,
+        ):
+            table.add_row(*row)
 
         # Spotlight
         self._update_spotlight()
@@ -624,7 +813,12 @@ class BuilderDashboard(App):
         sid = sub.get("submission_id")
         verdict = s.verdict_map.get(sid)
         fb = s.feedback_map.get(sid)
-        widget.set_spotlight(sub, verdict, fb)
+        widget.set_spotlight(
+            sub,
+            verdict,
+            fb,
+            show_scores=s.operator and s.is_revealed,
+        )
 
     def action_refresh(self) -> None:
         self.state.refresh()
@@ -644,7 +838,7 @@ class BuilderDashboard(App):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Hackathon Judge: Live Dashboard",
+        description="Hackathon Judge: Optional Run Monitor",
     )
     parser.add_argument("run_id", help="Run ID to display")
     parser.add_argument("--projector", action="store_true",

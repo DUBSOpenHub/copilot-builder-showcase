@@ -9,7 +9,9 @@ Reads the current primary bundle layout:
     inputs/<submission_id>.json write-once submission records
     verdicts/<submission_id>.json per-submission panel verdicts
     feedback/<submission_id>.json per-submission feedback cards
-    sealed/shadow_score.json    write-once sealed scoring vault
+    sealed/shadow_score.json    write-once public-ranking scoring vault
+    sealed/shadow_spec.json     hidden diagnostic criteria
+    sealed/shadow_assessment.json  hidden diagnostic results
     winner/awards.json          declared award slate
     freshness_gate.json         model freshness check result
 
@@ -34,9 +36,12 @@ from typing import Any, Dict, List, Optional, Union
 # Manifest statuses at which scores/awards become safe to reveal.
 REVEALED_STATUSES = frozenset({"awarded", "exported"})
 
-# Verdict fields that must stay hidden from the audience projection until
-# the run has reached a revealed status.
-_SCORE_FIELDS = ("total_score", "dimension_scores")
+_PRIVATE_PROJECT_CONTEXT_FIELDS = (
+    "problem_statement",
+    "intended_user",
+    "demo_url",
+    "builder_notes",
+)
 _NARRATIVE_SPOILER_RE = re.compile(
     r"\b(?:score(?:s|d)?|rank(?:s|ed|ing)?|leaderboard|winners?|winning|"
     r"finalists?|(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|"
@@ -51,6 +56,21 @@ _NARRATIVE_SPOILER_RE = re.compile(
     r"\s+out\s+of\s+"
     r"(?:one|two|three|four|five|six|seven|eight|nine|ten)\b",
     re.IGNORECASE,
+)
+_PROGRESS_STATUSES = frozenset({"running", "complete", "failed"})
+_PROGRESS_STAGES = frozenset(
+    {
+        "shadow-spec",
+        "public-scoring",
+        "shadow-analysis",
+        "ranking-seal",
+        "verdicts",
+        "feedback",
+        "complete",
+    }
+)
+_ISO_TIMESTAMP_RE = re.compile(
+    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 )
 
 
@@ -89,46 +109,168 @@ def _load_json_dir(dir_path: Path) -> List[Dict[str, Any]]:
 
 
 def _redact_verdict(verdict: Dict[str, Any]) -> Dict[str, Any]:
-    """Return an audience-safe verdict with scores and score-like prose removed."""
-    redacted = dict(verdict)
-    for score_field in _SCORE_FIELDS:
-        redacted.pop(score_field, None)
-    reactions = redacted.get("archetype_verdicts")
-    if isinstance(reactions, list):
+    """Return an audience-safe verdict without model-derived intake echoes."""
+    redacted = {
+        field: verdict[field]
+        for field in ("submission_id", "project_name", "builder_name", "verdict_at")
+        if field in verdict
+    }
+    source_reactions = verdict.get("archetype_verdicts")
+    if isinstance(source_reactions, list):
         redacted["archetype_verdicts"] = [
             {
-                **reaction,
-                "perspective": redact_audience_narrative(
-                    reaction.get("perspective"),
-                    "The panel found a thoughtful detail worth celebrating.",
-                ),
-                "bright_spot": redact_audience_narrative(
-                    reaction.get("bright_spot"),
-                    "This project gave the panel a thoughtful detail to celebrate.",
-                ),
+                "archetype_id": reaction.get("archetype_id", ""),
+                "archetype_name": reaction.get("archetype_name", "Panel"),
+                "perspective": "The panel found a thoughtful detail worth celebrating.",
+                "bright_spot": "This project gave the panel a thoughtful detail to celebrate.",
             }
             if isinstance(reaction, dict)
-            else reaction
-            for reaction in reactions
+            else {
+                "archetype_id": "",
+                "archetype_name": "Panel",
+                "perspective": "The panel found a thoughtful detail worth celebrating.",
+                "bright_spot": "This project gave the panel a thoughtful detail to celebrate.",
+            }
+            for reaction in source_reactions
         ]
+    return redacted
+
+
+def _redact_submission(submission: Dict[str, Any]) -> Dict[str, Any]:
+    """Hide detailed builder intake from the shared screen until awards."""
+    redacted = dict(submission)
+    for field in _PRIVATE_PROJECT_CONTEXT_FIELDS:
+        redacted.pop(field, None)
+    return redacted
+
+
+def _safe_progress_int(value: Any, maximum: int) -> int:
+    """Return bounded telemetry counts without coercing untrusted values."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        return 0
+    return max(0, min(value, maximum))
+
+
+def _audience_safe_progress(progress: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    """Whitelist live telemetry so a malformed progress file cannot leak results."""
+    if not isinstance(progress, dict):
+        return None
+    submissions = progress.get("submissions", {})
+    if not isinstance(submissions, dict):
+        submissions = {}
+    total = _safe_progress_int(submissions.get("total"), 100_000)
+    completed = min(
+        _safe_progress_int(submissions.get("completed"), total),
+        total,
+    )
+    status = progress.get("status")
+    stage = progress.get("stage")
+    updated_at = progress.get("updated_at")
+    safe: Dict[str, Any] = {
+        "schema_version": "1.0",
+        "status": status if status in _PROGRESS_STATUSES else "pending",
+        "stage": stage if stage in _PROGRESS_STAGES else "pending",
+        "submissions": {
+            "completed": completed,
+            "total": total,
+        },
+        "max_parallel_calls": _safe_progress_int(
+            progress.get("max_parallel_calls"), 32
+        ),
+        "remaining_model_calls": _safe_progress_int(
+            progress.get("remaining_model_calls"), 1_000_000
+        ),
+    }
+    if isinstance(updated_at, str) and _ISO_TIMESTAMP_RE.fullmatch(updated_at):
+        safe["updated_at"] = updated_at
+    if "estimated_remaining_seconds" in progress:
+        safe["estimated_remaining_seconds"] = _safe_progress_int(
+            progress.get("estimated_remaining_seconds"), 3_600
+        )
+    return safe
+
+
+def _redact_feedback_assessment(value: Any, fallback: str) -> Any:
+    """Hide model-authored assessment text until the audience reveal."""
+    if not isinstance(value, dict):
+        return {}
+    redacted = {
+        field: value[field]
+        for field in ("status", "source")
+        if field in value
+    }
+    for field in ("summary", "evidence"):
+        if field in value:
+            redacted[field] = fallback
     return redacted
 
 
 def _redact_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
     """Return feedback safe for an unrevealed audience projection."""
-    redacted = dict(feedback)
-    redacted["bright_spot"] = redact_audience_narrative(
-        feedback.get("bright_spot"),
-        "This project brought a thoughtful moment to the room.",
-    )
-    redacted["next_commit"] = redact_audience_narrative(
-        feedback.get("next_commit"),
-        "A helpful next step will be shared after the reveal.",
-    )
-    redacted["panel_notes"] = redact_audience_narrative(
-        feedback.get("panel_notes"),
-        "The panel has a supportive note ready for this project.",
-    )
+    redacted = {
+        field: feedback[field]
+        for field in (
+            "submission_id",
+            "builder_name",
+            "project_name",
+            "tone_checked",
+            "delivered_at",
+        )
+        if field in feedback
+    }
+    redacted["bright_spot"] = "This project brought a thoughtful moment to the room."
+    redacted["next_commit"] = "A helpful next step will be shared after the reveal."
+    redacted["panel_notes"] = "The panel has a supportive note ready for this project."
+    highlights = feedback.get("judges_liked")
+    if isinstance(highlights, list):
+        redacted["judges_liked"] = [
+            {
+                "lens": "Panel lens",
+                "highlight": "The panel found a thoughtful detail worth celebrating.",
+            }
+            if isinstance(highlight, dict)
+            else {
+                "lens": "Panel lens",
+                "highlight": "The panel found a thoughtful detail worth celebrating.",
+            }
+            for highlight in highlights
+        ]
+    if "copilot_use" in feedback:
+        redacted["copilot_use"] = _redact_feedback_assessment(
+            feedback.get("copilot_use"),
+            "Copilot-use context will be shared after the reveal.",
+        )
+    if "innovation_signal" in feedback:
+        redacted["innovation_signal"] = _redact_feedback_assessment(
+            feedback.get("innovation_signal"),
+            "Innovation context will be shared after the reveal.",
+        )
+    if "frontier_use" in feedback:
+        redacted["frontier_use"] = _redact_feedback_assessment(
+            feedback.get("frontier_use"),
+            "Frontier-use context will be shared after the reveal.",
+        )
+    grounding = feedback.get("grounding")
+    if isinstance(grounding, dict):
+        sources = grounding.get("sources")
+        redacted["grounding"] = {
+            "status": grounding.get("status", "pending"),
+            "policy": "Project-context evidence references will be shared after the reveal.",
+            "source_count": len(sources) if isinstance(sources, list) else 0,
+        }
+    for field, fallback in (
+        (
+            "copilot_next_moves",
+            "A Copilot improvement idea will be shared after the reveal.",
+        ),
+        (
+            "frontier_experiments",
+            "A frontier experiment idea will be shared after the reveal.",
+        ),
+    ):
+        values = feedback.get(field)
+        if isinstance(values, list):
+            redacted[field] = [fallback for _ in values]
     return redacted
 
 
@@ -153,8 +295,11 @@ class BundleView:
     verdicts: List[Dict[str, Any]] = field(default_factory=list)
     feedback: List[Dict[str, Any]] = field(default_factory=list)
     shadow_score: Optional[Dict[str, Any]] = None
+    shadow_spec: Optional[Dict[str, Any]] = None
+    shadow_assessment: Optional[Dict[str, Any]] = None
     awards: Optional[Dict[str, Any]] = None
     freshness_gate: Optional[Dict[str, Any]] = None
+    evaluation_progress: Optional[Dict[str, Any]] = None
     command_log: List[Dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -214,11 +359,22 @@ class BundleReader:
     def shadow_score(self) -> Optional[Dict[str, Any]]:
         return _load_json_or_none(self.bundle_path / "sealed" / "shadow_score.json")
 
+    def shadow_spec(self) -> Optional[Dict[str, Any]]:
+        return _load_json_or_none(self.bundle_path / "sealed" / "shadow_spec.json")
+
+    def shadow_assessment(self) -> Optional[Dict[str, Any]]:
+        return _load_json_or_none(
+            self.bundle_path / "sealed" / "shadow_assessment.json"
+        )
+
     def awards(self) -> Optional[Dict[str, Any]]:
         return _load_json_or_none(self.bundle_path / "winner" / "awards.json")
 
     def freshness_gate(self) -> Optional[Dict[str, Any]]:
         return _load_json_or_none(self.bundle_path / "freshness_gate.json")
+
+    def evaluation_progress(self) -> Optional[Dict[str, Any]]:
+        return _load_json_or_none(self.bundle_path / "eval" / "progress.json")
 
     # -- derived state --------------------------------------------------------
 
@@ -244,8 +400,11 @@ class BundleReader:
             verdicts=self.verdicts(),
             feedback=self.feedback(),
             shadow_score=self.shadow_score(),
+            shadow_spec=self.shadow_spec(),
+            shadow_assessment=self.shadow_assessment(),
             awards=self.awards(),
             freshness_gate=self.freshness_gate(),
+            evaluation_progress=self.evaluation_progress(),
             command_log=self.command_log(),
         )
 
@@ -266,11 +425,14 @@ class BundleReader:
         revealed = self.is_revealed()
         verdicts = self.verdicts()
         feedback = self.feedback()
+        submissions = self.submissions()
+        progress = _audience_safe_progress(self.evaluation_progress())
         if not revealed:
+            submissions = [_redact_submission(s) for s in submissions]
             verdicts = [_redact_verdict(v) for v in verdicts]
             feedback = [_redact_feedback(f) for f in feedback]
 
-        submissions = sorted(self.submissions(), key=_arrival_key)
+        submissions = sorted(submissions, key=_arrival_key)
         arrival_index = {
             sub.get("submission_id"): i for i, sub in enumerate(submissions)
         }
@@ -300,7 +462,10 @@ class BundleReader:
             verdicts=verdicts,
             feedback=feedback,
             shadow_score=self.shadow_score() if revealed else None,
+            shadow_spec=self.shadow_spec() if revealed else None,
+            shadow_assessment=self.shadow_assessment() if revealed else None,
             awards=self.awards() if revealed else None,
             freshness_gate=self.freshness_gate(),
+            evaluation_progress=progress,
             command_log=self.command_log(),
         )

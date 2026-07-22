@@ -65,30 +65,37 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
     ],
     "awards": [
         {
-            "id": "innovation",
-            "name": "Innovation Award",
-            "emoji": "✨",
-            "tagline": "For a project with a memorable new idea.",
-            "dimensions": ["innovation"],
-            "reason": "This project paired a distinctive idea with a compelling problem to solve.",
+            "id": "bronze",
+            "name": "Bronze — Third Place",
+            "emoji": "🥉",
+            "tagline": "A podium finish for a project with a strong overall story.",
+            "dimensions": [],
+            "rank": 3,
+            "reason": "This project earned the third-highest overall result across the event rubric.",
         },
         {
-            "id": "craft",
-            "name": "Build Quality Award",
-            "emoji": "🛠️",
-            "tagline": "For thoughtful execution and a strong working experience.",
-            "dimensions": ["execution", "presentation"],
-            "reason": "This project showed care in its implementation and the way it was presented.",
+            "id": "silver",
+            "name": "Silver — Second Place",
+            "emoji": "🥈",
+            "tagline": "A podium finish for a project with impact and craft.",
+            "dimensions": [],
+            "rank": 2,
+            "reason": "This project earned the second-highest overall result across the event rubric.",
         },
         {
             "id": "grand-prize",
-            "name": "Hackathon Grand Prize",
-            "emoji": "🏆",
-            "tagline": "For the strongest overall project story.",
+            "name": "Gold — First Place",
+            "emoji": "🥇",
+            "tagline": "The top project across the event rubric.",
             "dimensions": [],
-            "reason": "This project delivered the strongest overall result across the event rubric.",
+            "rank": 1,
+            "reason": "This project earned the highest overall result across the event rubric.",
         },
     ],
+    "tie_policy": {
+        "mode": "shared-podium",
+        "tiebreaker_dimensions": [],
+    },
     "presentation": {
         "audience_view": "masked-until-awards",
         "screen_share": {
@@ -110,6 +117,22 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
         "preferred_model": "claude-opus-4.8",
         "required_tier": "premium",
         "required_reasoning": "high",
+        "panel_models": [
+            "claude-opus-4.8",
+            "gpt-5.6-terra",
+            "gemini-3.1-pro-preview",
+        ],
+        "minimum_panel_size": 3,
+        "minimum_distinct_providers": 3,
+        "consensus_method": "median",
+        "max_parallel_calls": 6,
+        "live_time_budget_seconds": 120,
+        "live_time_budget_policy": "warn-only",
+    },
+    "shadow_spec": {
+        "enabled": True,
+        "criteria_count": 6,
+        "ranking_effect": "diagnostic-only",
     },
     "tone_policy": {
         "banned_phrases": [],
@@ -140,6 +163,18 @@ def _merge(default: Any, override: Any) -> Any:
 def _require_string(value: Any, field: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise EventSpecValidationError(f"EventSpec field '{field}' must be a non-empty string.")
+
+
+def _model_provider(model_id: str) -> str:
+    """Classify model IDs using the same family rule as the freshness gate."""
+    normalized = model_id.lower()
+    if normalized.startswith("claude"):
+        return "anthropic"
+    if normalized.startswith("gpt"):
+        return "openai"
+    if normalized.startswith("gemini"):
+        return "google"
+    return normalized.split("-", 1)[0]
 
 
 def _validate_unique_ids(items: Iterable[Mapping[str, Any]], field: str) -> None:
@@ -200,6 +235,140 @@ def validate_event_spec(spec: Mapping[str, Any]) -> None:
         _require_string(award.get("tagline"), "awards[].tagline")
         if not isinstance(award.get("dimensions"), list):
             raise EventSpecValidationError("EventSpec awards[].dimensions must be a list.")
+        rank = award.get("rank")
+        if rank is not None and (
+            not isinstance(rank, int) or isinstance(rank, bool) or rank < 1
+        ):
+            raise EventSpecValidationError(
+                "EventSpec awards[].rank must be a positive integer when provided."
+            )
+
+    tie_policy = spec.get("tie_policy")
+    if not isinstance(tie_policy, Mapping):
+        raise EventSpecValidationError("EventSpec requires a 'tie_policy' object.")
+    tie_mode = tie_policy.get("mode")
+    allowed_tie_modes = {
+        "shared-podium",
+        "sealed-tiebreaker",
+        "human-resolution",
+    }
+    if tie_mode not in allowed_tie_modes:
+        raise EventSpecValidationError(
+            "EventSpec tie_policy.mode must be 'shared-podium', "
+            "'sealed-tiebreaker', or 'human-resolution'."
+        )
+    tiebreaker_dimensions = tie_policy.get("tiebreaker_dimensions")
+    if not isinstance(tiebreaker_dimensions, list):
+        raise EventSpecValidationError(
+            "EventSpec tie_policy.tiebreaker_dimensions must be a list."
+        )
+    if len(set(tiebreaker_dimensions)) != len(tiebreaker_dimensions):
+        raise EventSpecValidationError(
+            "EventSpec tie_policy.tiebreaker_dimensions must not contain duplicates."
+        )
+    dimension_ids = {str(dimension["id"]) for dimension in dimensions}
+    for dimension_id in tiebreaker_dimensions:
+        _require_string(dimension_id, "tie_policy.tiebreaker_dimensions[]")
+        if dimension_id not in dimension_ids:
+            raise EventSpecValidationError(
+                "EventSpec tie_policy.tiebreaker_dimensions must reference "
+                "configured rubric dimensions."
+            )
+    if tie_mode == "sealed-tiebreaker" and not tiebreaker_dimensions:
+        raise EventSpecValidationError(
+            "EventSpec sealed-tiebreaker policy requires at least one "
+            "tiebreaker dimension."
+        )
+    if tie_mode != "sealed-tiebreaker" and tiebreaker_dimensions:
+        raise EventSpecValidationError(
+            "EventSpec tiebreaker dimensions are only valid with "
+            "tie_policy.mode='sealed-tiebreaker'."
+        )
+
+    model_policy = spec.get("model_policy")
+    if not isinstance(model_policy, Mapping):
+        raise EventSpecValidationError("EventSpec requires a 'model_policy' object.")
+    panel_models = model_policy.get("panel_models")
+    if not isinstance(panel_models, list) or not panel_models:
+        raise EventSpecValidationError(
+            "EventSpec model_policy.panel_models must contain at least one model id."
+        )
+    if len(set(panel_models)) != len(panel_models):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.panel_models must not contain duplicate model ids."
+        )
+    for model_id in panel_models:
+        _require_string(model_id, "model_policy.panel_models[]")
+    minimum_panel_size = model_policy.get("minimum_panel_size", 1)
+    if (
+        not isinstance(minimum_panel_size, int)
+        or isinstance(minimum_panel_size, bool)
+        or minimum_panel_size < 1
+        or minimum_panel_size > len(panel_models)
+    ):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.minimum_panel_size must be a positive integer "
+            "no larger than the configured panel."
+        )
+    minimum_distinct_providers = model_policy.get("minimum_distinct_providers", 1)
+    if (
+        not isinstance(minimum_distinct_providers, int)
+        or isinstance(minimum_distinct_providers, bool)
+        or minimum_distinct_providers < 1
+        or minimum_distinct_providers
+        > len({_model_provider(model_id) for model_id in panel_models})
+    ):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.minimum_distinct_providers must be a positive "
+            "integer no larger than the configured provider-family count."
+        )
+    if model_policy.get("consensus_method", "median") != "median":
+        raise EventSpecValidationError(
+            "EventSpec model_policy.consensus_method currently supports only 'median'."
+        )
+    max_parallel_calls = model_policy.get("max_parallel_calls", 1)
+    if (
+        not isinstance(max_parallel_calls, int)
+        or isinstance(max_parallel_calls, bool)
+        or not 1 <= max_parallel_calls <= 32
+    ):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.max_parallel_calls must be an integer from 1 through 32."
+        )
+    live_time_budget_seconds = model_policy.get("live_time_budget_seconds", 30)
+    if (
+        not isinstance(live_time_budget_seconds, int)
+        or isinstance(live_time_budget_seconds, bool)
+        or not 30 <= live_time_budget_seconds <= 3600
+    ):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.live_time_budget_seconds must be an integer "
+            "from 30 through 3600."
+        )
+    if model_policy.get("live_time_budget_policy", "warn-only") != "warn-only":
+        raise EventSpecValidationError(
+            "EventSpec model_policy.live_time_budget_policy currently supports only "
+            "'warn-only' so strict panels are never silently reduced."
+        )
+
+    shadow_spec = spec.get("shadow_spec")
+    if not isinstance(shadow_spec, Mapping):
+        raise EventSpecValidationError("EventSpec requires a 'shadow_spec' object.")
+    if not isinstance(shadow_spec.get("enabled"), bool):
+        raise EventSpecValidationError("EventSpec shadow_spec.enabled must be a boolean.")
+    criteria_count = shadow_spec.get("criteria_count", 6)
+    if (
+        not isinstance(criteria_count, int)
+        or isinstance(criteria_count, bool)
+        or not 6 <= criteria_count <= 8
+    ):
+        raise EventSpecValidationError(
+            "EventSpec shadow_spec.criteria_count must be an integer from 6 through 8."
+        )
+    if shadow_spec.get("ranking_effect") != "diagnostic-only":
+        raise EventSpecValidationError(
+            "EventSpec shadow_spec.ranking_effect must be 'diagnostic-only'."
+        )
 
 
 def event_spec_to_rubric(spec: Mapping[str, Any]) -> Dict[str, Any]:
@@ -208,8 +377,10 @@ def event_spec_to_rubric(spec: Mapping[str, Any]) -> Dict[str, Any]:
         "version": str(spec.get("schema_version", EVENT_SPEC_VERSION)),
         "rubric": copy.deepcopy(spec["rubric"]),
         "judge_archetypes": copy.deepcopy(spec["review_lenses"]),
+        "tie_policy": copy.deepcopy(spec["tie_policy"]),
         "tone_policy": copy.deepcopy(spec["tone_policy"]),
         "freshness_gate": copy.deepcopy(spec["model_policy"]),
+        "shadow_spec": copy.deepcopy(spec["shadow_spec"]),
         "submission_size_cap_bytes": spec["submission_size_cap_bytes"],
     }
 
@@ -222,7 +393,15 @@ def legacy_rubric_to_event_spec(rubric: Mapping[str, Any]) -> Dict[str, Any]:
         rubric.get("judge_archetypes", spec["review_lenses"])
     )
     spec["tone_policy"] = copy.deepcopy(rubric.get("tone_policy", spec["tone_policy"]))
-    spec["model_policy"] = copy.deepcopy(rubric.get("freshness_gate", spec["model_policy"]))
+    legacy_model_policy = rubric.get("freshness_gate")
+    if isinstance(legacy_model_policy, Mapping):
+        spec["model_policy"] = _merge(spec["model_policy"], legacy_model_policy)
+    legacy_shadow_spec = rubric.get("shadow_spec")
+    if isinstance(legacy_shadow_spec, Mapping):
+        spec["shadow_spec"] = _merge(spec["shadow_spec"], legacy_shadow_spec)
+    legacy_tie_policy = rubric.get("tie_policy")
+    if isinstance(legacy_tie_policy, Mapping):
+        spec["tie_policy"] = _merge(spec["tie_policy"], legacy_tie_policy)
     spec["submission_size_cap_bytes"] = rubric.get(
         "submission_size_cap_bytes", spec["submission_size_cap_bytes"]
     )

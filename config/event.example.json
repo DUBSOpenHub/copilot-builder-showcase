@@ -55,30 +55,37 @@
   ],
   "awards": [
     {
-      "id": "innovation",
-      "name": "Innovation Award",
-      "emoji": "*",
-      "tagline": "For a project with a memorable new idea.",
-      "dimensions": ["innovation"],
-      "reason": "This project paired a distinctive idea with a compelling problem to solve."
+      "id": "bronze",
+      "name": "Bronze — Third Place",
+      "emoji": "🥉",
+      "tagline": "A podium finish for a project with a strong overall story.",
+      "dimensions": [],
+      "rank": 3,
+      "reason": "This project earned the third-highest overall result across the event rubric."
     },
     {
-      "id": "craft",
-      "name": "Build Quality Award",
-      "emoji": "+",
-      "tagline": "For thoughtful execution and a strong working experience.",
-      "dimensions": ["execution", "presentation"],
-      "reason": "This project showed care in its implementation and the way it was presented."
+      "id": "silver",
+      "name": "Silver — Second Place",
+      "emoji": "🥈",
+      "tagline": "A podium finish for a project with impact and craft.",
+      "dimensions": [],
+      "rank": 2,
+      "reason": "This project earned the second-highest overall result across the event rubric."
     },
     {
       "id": "grand-prize",
-      "name": "Spring Product Hackathon Grand Prize",
-      "emoji": "#",
-      "tagline": "For the strongest overall project story.",
+      "name": "Gold — First Place",
+      "emoji": "🥇",
+      "tagline": "The top project across the event rubric.",
       "dimensions": [],
-      "reason": "This project delivered the strongest overall result across the event rubric."
+      "rank": 1,
+      "reason": "This project earned the highest overall result across the event rubric."
     }
   ],
+  "tie_policy": {
+    "mode": "shared-podium",
+    "tiebreaker_dimensions": []
+  },
   "presentation": {
     "audience_view": "masked-until-awards",
     "screen_share": {
@@ -99,6 +106,22 @@
     "policy_mode": "strict",
     "preferred_model": "claude-opus-4.8",
     "required_tier": "premium",
-    "required_reasoning": "high"
+    "required_reasoning": "high",
+    "panel_models": [
+      "claude-opus-4.8",
+      "gpt-5.6-terra",
+      "gemini-3.1-pro-preview"
+    ],
+    "minimum_panel_size": 3,
+    "minimum_distinct_providers": 3,
+    "consensus_method": "median",
+    "max_parallel_calls": 6,
+    "live_time_budget_seconds": 120,
+    "live_time_budget_policy": "warn-only"
+  },
+  "shadow_spec": {
+    "enabled": true,
+    "criteria_count": 6,
+    "ranking_effect": "diagnostic-only"
   }
 }

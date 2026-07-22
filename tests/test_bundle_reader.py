@@ -74,8 +74,12 @@ def _run_full_judge(bundle_path: Path, rubric: Dict, submissions: List[Dict],
     and feedback — leaving status at 'sealed', mirroring `judge`."""
     gw = gateway or MockGateway()
     gate = cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
-    selected = gate["selected_model"]
+    selected = gate["selected_models"]
+    shadow_spec = cbp.generate_shadow_spec(bundle_path, rubric, selected, gw, fixed_clock)
     scored = cbp.score_submissions(submissions, rubric, selected, bundle_path, gw, fixed_clock)
+    cbp.assess_shadow_spec(
+        scored, submissions, shadow_spec, selected, bundle_path, gw, fixed_clock
+    )
     shadow = cbp.compute_shadow_score(scored, rubric, fixed_clock)
     cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
     cbp.build_panel_verdicts(scored, submissions, rubric, selected, bundle_path, gw, fixed_clock)
@@ -106,8 +110,11 @@ class TestCurrentBundlePaths:
         assert reader.verdicts() == []
         assert reader.feedback() == []
         assert reader.shadow_score() is None
+        assert reader.shadow_spec() is None
+        assert reader.shadow_assessment() is None
         assert reader.awards() is None
         assert reader.freshness_gate() is None
+        assert reader.evaluation_progress() is None
         assert reader.command_log() == []
 
     def test_reads_manifest_and_command_log(self, tmp_path):
@@ -161,6 +168,126 @@ class TestCurrentBundlePaths:
         assert awards is not None
         assert awards["awards"]
 
+    def test_exposes_score_safe_evaluation_progress_to_audience(self, tmp_path):
+        bundle_path = tmp_path / "run-progress"
+        _init_collecting_bundle(bundle_path, "run-progress", [])
+        progress = {
+            "schema_version": "1.0",
+            "updated_at": FIXED_TS,
+            "status": "running",
+            "stage": "public-scoring",
+            "submissions": {"completed": 1, "total": 3},
+            "max_parallel_calls": 6,
+            "remaining_model_calls": 24,
+            "score": 9,
+        }
+        cbp._atomic_write(
+            bundle_path / "eval" / "progress.json",
+            json.dumps(progress, indent=2),
+        )
+
+        reader = BundleReader(bundle_path)
+        audience = reader.audience_view()
+
+        assert reader.evaluation_progress() == progress
+        assert audience.evaluation_progress == {
+            key: value for key, value in progress.items() if key != "score"
+        }
+        assert "score" not in json.dumps(audience.evaluation_progress).lower()
+
+    def test_progress_projection_rejects_spoiler_text_and_invalid_values(self, tmp_path):
+        bundle_path = tmp_path / "run-malformed-progress"
+        _init_collecting_bundle(bundle_path, "run-malformed-progress", [])
+        progress = {
+            "schema_version": "winner: 10/10",
+            "updated_at": "first-place locked",
+            "status": "winner announced",
+            "stage": "first-place locked",
+            "submissions": {"completed": "9/10", "total": -1},
+            "max_parallel_calls": "winner",
+            "remaining_model_calls": True,
+            "estimated_remaining_seconds": "perfect ten",
+        }
+        cbp._atomic_write(
+            bundle_path / "eval" / "progress.json",
+            json.dumps(progress, indent=2),
+        )
+
+        progress_view = BundleReader(bundle_path).audience_view().evaluation_progress
+
+        assert progress_view == {
+            "schema_version": "1.0",
+            "status": "pending",
+            "stage": "pending",
+            "submissions": {"completed": 0, "total": 0},
+            "max_parallel_calls": 0,
+            "remaining_model_calls": 0,
+            "estimated_remaining_seconds": 0,
+        }
+        assert "first-place" not in json.dumps(progress_view).lower()
+        assert "10/10" not in json.dumps(progress_view).lower()
+
+    def test_progress_projection_preserves_known_failure_state(self, tmp_path):
+        bundle_path = tmp_path / "run-failed-progress"
+        _init_collecting_bundle(bundle_path, "run-failed-progress", [])
+        cbp._atomic_write(
+            bundle_path / "eval" / "progress.json",
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "updated_at": FIXED_TS,
+                    "status": "failed",
+                    "stage": "ranking-seal",
+                    "submissions": {"completed": 3, "total": 3},
+                    "max_parallel_calls": 6,
+                    "remaining_model_calls": 0,
+                }
+            ),
+        )
+
+        progress_view = BundleReader(bundle_path).audience_view().evaluation_progress
+
+        assert progress_view["status"] == "failed"
+        assert progress_view["stage"] == "ranking-seal"
+
+    def test_revealed_progress_remains_aggregate_only(self, tmp_path):
+        bundle_path = tmp_path / "run-revealed-progress"
+        submissions = [_make_submission("Alice Chen", "Compass", "Navigation tool.")]
+        rubric = _init_collecting_bundle(
+            bundle_path,
+            "run-revealed-progress",
+            submissions,
+        )
+        shadow = _run_full_judge(bundle_path, rubric, submissions)
+        _award(bundle_path, shadow["ranking"][0])
+        cbp._atomic_write(
+            bundle_path / "eval" / "progress.json",
+            json.dumps(
+                {
+                    "schema_version": "1.0",
+                    "updated_at": FIXED_TS,
+                    "status": "running",
+                    "stage": "public-scoring",
+                    "submissions": {"completed": 1, "total": 1},
+                    "max_parallel_calls": 6,
+                    "remaining_model_calls": 0,
+                    "model_response": "The winner scored 10/10.",
+                    "submission_result": {"rank": 1},
+                }
+            ),
+        )
+
+        reader = BundleReader(bundle_path)
+        audience_progress = reader.audience_view().evaluation_progress
+        operator_progress = reader.operator_view().evaluation_progress
+
+        assert audience_progress is not None
+        assert audience_progress["stage"] == "public-scoring"
+        assert "model_response" not in audience_progress
+        assert "submission_result" not in audience_progress
+        assert "winner" not in json.dumps(audience_progress).lower()
+        assert operator_progress["model_response"] == "The winner scored 10/10."
+
 
 # ---------------------------------------------------------------------------
 # Audience-safe projection
@@ -193,6 +320,8 @@ class TestAudienceProjection:
         # The shadow score vault holds the full ranking, so it must be
         # withheld pre-reveal too.
         assert view.shadow_score is None
+        assert view.shadow_spec is None
+        assert view.shadow_assessment is None
         assert view.awards is None
 
     def test_score_like_narrative_is_redacted_before_award(self, tmp_path):
@@ -212,7 +341,49 @@ class TestAudienceProjection:
         feedback = json.loads(feedback_path.read_text())
         feedback["bright_spot"] = "The winner earned 9/10."
         feedback["next_commit"] = "Keep this first-place score."
+        feedback["judges_liked"] = [{
+            "lens": "Innovation lens",
+            "highlight": "This leading project earned 9/10.",
+        }]
+        feedback["copilot_use"] = {
+            "status": "evidenced",
+            "summary": "The winning project used Copilot for a perfect ten.",
+            "evidence": "First-place Copilot workflow, 9/10.",
+        }
+        feedback["innovation_signal"] = {
+            "status": "assessed",
+            "summary": "Top score: 9/10.",
+        }
+        feedback["frontier_use"] = {
+            "status": "evidenced",
+            "summary": "The first-place project used frontier agents.",
+        }
+        feedback["grounding"] = {
+            "status": "specific",
+            "policy": "Project-specific feedback is source-grounded.",
+            "sources": [
+                {
+                    "id": "builder.problem_statement",
+                    "label": "Builder-provided problem statement",
+                    "value": "Replace the manual incident escalation process.",
+                    "origin": "builder-provided",
+                }
+            ],
+            "used_source_ids": ["builder.problem_statement"],
+        }
+        feedback["copilot_next_moves"] = ["Protect that winning score of 9/10."]
+        feedback["frontier_experiments"] = ["Build the #1 project in the room."]
         feedback_path.write_text(json.dumps(feedback))
+
+        submission_path = next((bundle_path / "inputs").glob("*.json"))
+        submission = json.loads(submission_path.read_text())
+        submission.update({
+            "problem_statement": "Replace the manual incident escalation process.",
+            "intended_user": "Incident managers",
+            "demo_url": "https://internal.example.test/demo",
+            "builder_notes": "Contains the escalation workflow walkthrough.",
+        })
+        submission_path.write_text(json.dumps(submission))
 
         reader = BundleReader(bundle_path)
         audience = reader.audience_view()
@@ -227,9 +398,71 @@ class TestAudienceProjection:
         assert "first-place" not in rendered
         assert "nine out of ten" not in rendered
         assert '"total_score"' not in rendered
+        assert "perfect ten" not in rendered
+        assert "frontier agents" not in rendered
+        assert "protect that winning score" not in rendered
+        assert "#1 project" not in rendered
+        assert "manual incident escalation" not in rendered
+        assert audience.feedback[0]["copilot_use"]["summary"] == (
+            "Copilot-use context will be shared after the reveal."
+        )
+        assert audience.feedback[0]["frontier_use"]["summary"] == (
+            "Frontier-use context will be shared after the reveal."
+        )
+        assert audience.feedback[0]["grounding"]["source_count"] == 1
+        assert "problem_statement" not in audience.submissions[0]
+        assert "demo_url" not in audience.submissions[0]
 
         operator = reader.operator_view()
         assert "Top score: 9/10." in operator.verdicts[0]["archetype_verdicts"][0]["bright_spot"]
+        assert operator.feedback[0]["copilot_use"]["evidence"] == "First-place Copilot workflow, 9/10."
+        assert (
+            operator.feedback[0]["grounding"]["sources"][0]["value"]
+            == "Replace the manual incident escalation process."
+        )
+        assert operator.submissions[0]["builder_notes"] == (
+            "Contains the escalation workflow walkthrough."
+        )
+
+    def test_model_narratives_hide_private_context_before_award(self, tmp_path):
+        private_context = "Use the confidential northstar renewal plan."
+        bundle_path = tmp_path / "run-private-narrative"
+        submissions = [_make_submission("Alice Chen", "Compass", "Navigation tool.")]
+        rubric = _init_collecting_bundle(
+            bundle_path,
+            "run-private-narrative",
+            submissions,
+        )
+        _run_full_judge(bundle_path, rubric, submissions)
+        verdict_path = next((bundle_path / "verdicts").glob("*.json"))
+        verdict = json.loads(verdict_path.read_text())
+        for reaction in verdict["archetype_verdicts"]:
+            reaction["perspective"] = private_context
+            reaction["bright_spot"] = private_context
+        verdict_path.write_text(json.dumps(verdict))
+        feedback_path = next((bundle_path / "feedback").glob("*.json"))
+        feedback = json.loads(feedback_path.read_text())
+        feedback.update(
+            {
+                "bright_spot": private_context,
+                "next_commit": private_context,
+                "panel_notes": private_context,
+                "judges_liked": [{"lens": "Innovation", "highlight": private_context}],
+                "copilot_next_moves": [private_context],
+                "frontier_experiments": [private_context],
+            }
+        )
+        feedback_path.write_text(json.dumps(feedback))
+
+        audience = BundleReader(bundle_path).audience_view()
+        rendered = json.dumps(
+            {"verdicts": audience.verdicts, "feedback": audience.feedback}
+        ).lower()
+
+        assert "confidential northstar renewal plan" not in rendered
+        assert audience.feedback[0]["bright_spot"] == (
+            "This project brought a thoughtful moment to the room."
+        )
 
     @pytest.mark.parametrize(
         "spoiler",
@@ -260,6 +493,8 @@ class TestAudienceProjection:
             assert "total_score" in verdict
             assert "dimension_scores" in verdict
         assert view.shadow_score is not None
+        assert view.shadow_spec is not None
+        assert view.shadow_assessment is not None
 
     def test_scores_revealed_after_award(self, tmp_path):
         bundle_path = tmp_path / "run-6"
@@ -280,6 +515,8 @@ class TestAudienceProjection:
             assert "total_score" in verdict
             assert "dimension_scores" in verdict
         assert view.shadow_score is not None
+        assert view.shadow_spec is not None
+        assert view.shadow_assessment is not None
         assert view.awards is not None
 
     def test_ordering_is_not_ranking_based(self, tmp_path):

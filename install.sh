@@ -23,6 +23,8 @@ REPOSITORY_URL="${HJ_REPOSITORY_URL:-}"
 INSTALL_DIR="${HJ_INSTALL_DIR:-$HOME/.local/share/hackathon-judge}"
 BIN_DIR="${HJ_BIN_DIR:-$HOME/.local/bin}"
 COMMAND_PATH="$BIN_DIR/hackathon-judge"
+VENV_DIR="${HJ_VENV_DIR:-$INSTALL_DIR/.venv}"
+TEXTUAL_REQUIREMENT="${HJ_TEXTUAL_REQUIREMENT:-textual>=8,<9}"
 
 require_command git
 require_command python3
@@ -66,13 +68,29 @@ fi
 
 [[ -f "$INSTALL_DIR/hackathon_judge.py" ]] || die "Installed checkout is missing hackathon_judge.py."
 
+if [[ -L "$VENV_DIR" ]]; then
+  die "Virtual environment directory must not be a symbolic link: $VENV_DIR"
+fi
+
+printf 'Preparing the audience projector dashboard...\n'
+if ! "$PYTHON_BIN" -m venv "$VENV_DIR"; then
+  die "Could not create the Python virtual environment at $VENV_DIR."
+fi
+VENV_PYTHON="$VENV_DIR/bin/python"
+if ! "$VENV_PYTHON" -m pip install --quiet --disable-pip-version-check "$TEXTUAL_REQUIREMENT"; then
+  die "Could not install the Textual audience dashboard dependency."
+fi
+if ! "$VENV_PYTHON" -c 'import textual'; then
+  die "Textual installed but could not be imported by $VENV_PYTHON."
+fi
+
 mkdir -p "$BIN_DIR"
 if [[ -L "$COMMAND_PATH" || (-e "$COMMAND_PATH" && ! -f "$COMMAND_PATH") ]]; then
   die "Command path must be a regular file: $COMMAND_PATH"
 fi
 
 printf '#!/usr/bin/env bash\nexec %q %q "$@"\n' \
-  "$PYTHON_BIN" "$INSTALL_DIR/hackathon_judge.py" > "$COMMAND_PATH"
+  "$VENV_PYTHON" "$INSTALL_DIR/hackathon_judge.py" > "$COMMAND_PATH"
 chmod 0755 "$COMMAND_PATH"
 
 printf '\n🏆 Hackathon Judge is ready.\n'

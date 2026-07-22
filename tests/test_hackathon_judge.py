@@ -9,8 +9,10 @@ Run with: python -m pytest tests/test_hackathon_judge.py -v
 import argparse
 import copy
 import hashlib
+import io
 import json
 import os
+import re
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -85,9 +87,13 @@ def full_judge_run(bundle_path: Path, gateway: Optional[MockGateway] = None) -> 
     submissions = cbp._load_submissions(bundle_path)
 
     gate = cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
-    selected = gate["selected_model"]
+    selected = gate["selected_models"]
 
+    shadow_spec = cbp.generate_shadow_spec(bundle_path, rubric, selected, gw, fixed_clock)
     scored = cbp.score_submissions(submissions, rubric, selected, bundle_path, gw, fixed_clock)
+    cbp.assess_shadow_spec(
+        scored, submissions, shadow_spec, selected, bundle_path, gw, fixed_clock
+    )
     shadow = cbp.compute_shadow_score(scored, rubric, fixed_clock)
     cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
     cbp.build_panel_verdicts(scored, submissions, rubric, selected, bundle_path, gw, fixed_clock)
@@ -174,6 +180,38 @@ class TestToneSafety:
         result = cbp.check_feedback_card_tone(card)
         assert result["passed"] is True
 
+    def test_feedback_card_checks_recommendation_tone(self):
+        card = {
+            "bright_spot": "This project demonstrates outstanding creativity and excellent execution.",
+            "next_commit": "Consider adding automated tests to extend reliability.",
+            "panel_notes": "Inspiring work from a strong builder.",
+            "copilot_next_moves": ["This approach is disappointing."],
+            "frontier_experiments": ["Prototype a human-reviewed workflow."],
+        }
+
+        result = cbp.check_feedback_card_tone(card)
+
+        assert result["passed"] is False
+        assert "disappointing" in result["banned_phrases"]
+
+    def test_feedback_card_checks_judge_highlight_tone(self):
+        card = {
+            "bright_spot": "This project demonstrates strong product focus.",
+            "next_commit": "Consider adding a focused user test.",
+            "panel_notes": "The project has a clear story.",
+            "judges_liked": [
+                {
+                    "lens": "Impact lens",
+                    "highlight": "This project is disappointing.",
+                }
+            ],
+        }
+
+        result = cbp.check_feedback_card_tone(card)
+
+        assert result["passed"] is False
+        assert "disappointing" in result["banned_phrases"]
+
     def test_assert_tone_raises_on_failure(self):
         tone_result = {"passed": False, "banned_phrases": ["weak"], "missing_required": []}
         with pytest.raises(cbp.ToneSafetyFailure):
@@ -182,6 +220,60 @@ class TestToneSafety:
     def test_assert_tone_passes_silently(self):
         tone_result = {"passed": True, "banned_phrases": [], "missing_required": []}
         cbp.assert_tone(tone_result)  # should not raise
+
+
+class TestModelResponseParsing:
+
+    def test_parser_falls_back_for_non_object_json(self):
+        parsed = cbp._parse_model_response("[]")
+        non_string = cbp._parse_model_response(None)
+
+        assert parsed["scores"] == {}
+        assert "bright_spot" in parsed
+        assert non_string["scores"] == {}
+
+    def test_shadow_generation_falls_back_for_non_object_json(self, tmp_path):
+        bundle_path = make_run(tmp_path, "shadow-non-object")
+        rubric = cbp.load_rubric(bundle_path)
+
+        with patch.object(cbp, "call_model", return_value="[]"):
+            shadow_spec = cbp.generate_shadow_spec(
+                bundle_path,
+                rubric,
+                ["claude-opus-4.8"],
+                None,
+                fixed_clock,
+            )
+
+        assert shadow_spec["source"] == "deterministic-policy"
+        assert len(shadow_spec["criteria"]) == rubric["shadow_spec"]["criteria_count"]
+
+    def test_synthetic_feedback_uses_supplied_project_context(self):
+        prompt = """
+Project: demo-day/pulseboard
+Builder: Team Aurora
+Source-labeled project context:
+- [builder.problem_statement] Builder-provided problem statement: Event teams lose time reconciling updates.
+- [builder.intended_user] Builder-provided intended user: hackathon organizers
+- [builder.demo_url] Builder-provided demo or artifact: https://demo.example/pulseboard
+
+Rubric dimensions:
+  - Innovation (id=innovation, max=10): weight=0.5
+  - Impact (id=impact, max=10): weight=0.5
+"""
+
+        response = json.loads(cbp._synthetic_model_response(prompt, "gpt-5.6-terra"))
+
+        assert "pulseboard" in response["bright_spot"]
+        assert "event teams" in response["bright_spot"]
+        assert "hackathon organizers" in response["bright_spot"]
+        assert "measurable before-and-after" in response["next_commit"]
+        assert response["grounding_refs"] == [
+            "builder.problem_statement",
+            "builder.intended_user",
+            "builder.demo_url",
+        ]
+        assert set(response["scores"]) == {"innovation", "impact"}
 
 
 class TestShowtimeDelight:
@@ -220,6 +312,67 @@ class TestShowtimeDelight:
 
         sleep.assert_not_called()
 
+    def test_audience_reveal_moment_is_stable_per_run(self):
+        args = argparse.Namespace(
+            run_id="live-room",
+            showtime=True,
+            no_suspense=True,
+        )
+
+        with patch.dict(os.environ, {"HJ_COLOR": "always"}, clear=True):
+            with patch("sys.stdout", new_callable=io.StringIO) as first:
+                cbp._audience_reveal_moment(args)
+            with patch("sys.stdout", new_callable=io.StringIO) as second:
+                cbp._audience_reveal_moment(args)
+
+        assert first.getvalue() == second.getvalue()
+        assert "Sideline report" in first.getvalue()
+        assert "Audience check ready" in first.getvalue()
+
+    def test_audience_reveal_waits_for_live_confirmation(self):
+        args = argparse.Namespace(
+            run_id="live-room",
+            showtime=True,
+            no_suspense=False,
+            yes=True,
+            demo=True,
+        )
+
+        with patch.dict(os.environ, {"HJ_COLOR": "always"}, clear=True):
+            with patch.object(cbp.sys.stdin, "isatty", return_value=True):
+                with patch.object(cbp, "_confirm", return_value=True) as confirm:
+                    cbp._audience_reveal_moment(args)
+
+        confirm.assert_called_once()
+
+    def test_textual_status_rejects_untested_major_version(self):
+        with patch.object(cbp.importlib.util, "find_spec", return_value=object()):
+            with patch.object(cbp.importlib.metadata, "version", return_value="9.0.0"):
+                ready, detail = cbp._textual_status()
+
+        assert ready is False
+        assert "unsupported" in detail
+
+    def test_textual_status_rejects_broken_dashboard_import(self):
+        with patch.object(cbp.importlib.util, "find_spec", return_value=object()):
+            with patch.object(cbp.importlib.metadata, "version", return_value="8.2.3"):
+                with patch.object(cbp.importlib, "import_module", side_effect=ImportError("broken")):
+                    ready, detail = cbp._textual_status()
+
+        assert ready is False
+        assert "could not load the dashboard" in detail
+
+    def test_workshop_receipt_does_not_overclaim_unexported_run(self, tmp_path, capsys):
+        bundle_path = make_run(tmp_path, "export-pending")
+        cbp.update_status(bundle_path, "awarded", fixed_clock)
+
+        cbp._print_workshop_receipt(bundle_path, "export-pending")
+
+        output = capsys.readouterr().out
+        assert "export pending" in output
+        assert "sealed and replayable" not in output
+        assert "before treating this result as tamper-evident" in output
+
     def test_workshop_caps_total_showtime_animation(self, tmp_path):
         env = {
             "HJ_RUNS_DIR": str(tmp_path / "runs"),
@@ -241,6 +394,9 @@ class TestShowtimeDelight:
             manual_confirm=False,
             no_suspense=False,
             projector=True,
+            require_live_terminal=False,
+            require_projector_window=False,
+            demo=False,
         )
 
         def fake_metadata(url):
@@ -279,6 +435,13 @@ class TestShowtimeDelight:
     )
     def test_audience_chatter_redacts_score_like_language(self, spoiler):
         assert cbp._audience_safe_commentary(spoiler, "safe fallback") == "safe fallback"
+
+    def test_audience_chatter_keeps_specific_non_result_feedback(self):
+        commentary = (
+            "Pulseboard shows strong product focus around reducing event handoff delays."
+        )
+
+        assert cbp._audience_safe_commentary(commentary, "safe fallback") == commentary
 
 
 # ---------------------------------------------------------------------------
@@ -387,6 +550,201 @@ class TestShadowScore:
         assert shadow["ranking"][0] == sid_a
         assert shadow["scores"][sid_a] > shadow["scores"][sid_b]
 
+    def test_tied_scores_use_shared_competition_placements(self, tmp_path):
+        rubric = copy.deepcopy(cbp.DEFAULT_RUBRIC)
+        scored_a = self._make_scored(
+            "sub-a",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_b = self._make_scored(
+            "sub-b",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_c = self._make_scored(
+            "sub-c",
+            {"innovation": 8, "impact": 8, "execution": 8, "presentation": 8},
+        )
+        shadow = cbp.compute_shadow_score([scored_b, scored_a, scored_c], rubric, fixed_clock)
+        assert shadow["placements"] == [
+            {
+                "rank": 1,
+                "submission_ids": ["sub-a", "sub-b"],
+                "score": 9.0,
+                "shared": True,
+            },
+            {
+                "rank": 3,
+                "submission_ids": ["sub-c"],
+                "score": 8.0,
+                "shared": False,
+            },
+        ]
+
+        bundle_path = make_run(tmp_path, "tied-podium")
+        for submission_id, project_name in (
+            ("sub-a", "Aurora"),
+            ("sub-b", "Beacon"),
+            ("sub-c", "Comet"),
+        ):
+            cbp.write_once_json(
+                bundle_path / "inputs" / f"{submission_id}.json",
+                {
+                    "submission_id": submission_id,
+                    "builder_name": project_name,
+                    "project_name": project_name,
+                    "description": "A project.",
+                    "submitted_at": FIXED_TS,
+                },
+            )
+        for scored in (scored_a, scored_b, scored_c):
+            cbp.write_once_json(
+                bundle_path / "verdicts" / f"{scored['submission_id']}.json",
+                {
+                    **scored,
+                    "project_name": scored["submission_id"],
+                    "builder_name": scored["submission_id"],
+                    "archetype_verdicts": [],
+                },
+            )
+        cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
+
+        awards = cbp._choose_award_winners(bundle_path, "sub-a", fixed_clock)["awards"]
+        gold = [award for award in awards if award["placement"] == 1]
+        bronze = [award for award in awards if award["placement"] == 3]
+        assert {award["winner_submission_id"] for award in gold} == {"sub-a", "sub-b"}
+        assert all(award["shared_placement"] is True for award in gold)
+        assert [award["winner_submission_id"] for award in bronze] == ["sub-c"]
+        assert not [award for award in awards if award["placement"] == 2]
+        ceremony_notes = cbp._tie_ceremony_notes(
+            cbp._choose_award_winners(bundle_path, "sub-a", fixed_clock)
+        )
+        assert ceremony_notes == [
+            "Shared podium: 2 projects share Gold — First Place. "
+            "The next numbered placement advances under the declared policy."
+        ]
+
+    def test_sealed_tiebreaker_resolves_public_score_tie_without_changing_scores(self):
+        rubric = copy.deepcopy(cbp.DEFAULT_RUBRIC)
+        rubric["tie_policy"] = {
+            "mode": "sealed-tiebreaker",
+            "tiebreaker_dimensions": ["impact"],
+        }
+        scored_a = self._make_scored(
+            "sub-a",
+            {"innovation": 8.166666666666666, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_b = self._make_scored(
+            "sub-b",
+            {"innovation": 9, "impact": 8, "execution": 9, "presentation": 9},
+        )
+
+        shadow = cbp.compute_shadow_score([scored_b, scored_a], rubric, fixed_clock)
+
+        assert shadow["scores"]["sub-a"] == shadow["scores"]["sub-b"] == 8.75
+        assert shadow["ranking"] == ["sub-a", "sub-b"]
+        assert shadow["placements"][0]["submission_ids"] == ["sub-a"]
+        assert shadow["placements"][0]["tie_resolution"] == "sealed-tiebreaker"
+        assert shadow["tie_events"] == [{
+            "rank": 1,
+            "public_score": 8.75,
+            "submission_ids": ["sub-a", "sub-b"],
+            "resolution": "sealed-tiebreaker",
+            "tiebreaker_dimensions": ["impact"],
+        }]
+
+    def test_human_tie_policy_requires_logged_decision(self, tmp_path):
+        event = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+        event["tie_policy"] = {
+            "mode": "human-resolution",
+            "tiebreaker_dimensions": [],
+        }
+        bundle_path = tmp_path / "human-tie"
+        cbp.init_bundle(
+            "human-tie",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            bundle_path,
+            fixed_clock,
+            event,
+        )
+        scored_a = self._make_scored(
+            "sub-a",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        scored_b = self._make_scored(
+            "sub-b",
+            {"innovation": 9, "impact": 9, "execution": 9, "presentation": 9},
+        )
+        for scored in (scored_a, scored_b):
+            submission_id = scored["submission_id"]
+            cbp.write_once_json(
+                bundle_path / "inputs" / f"{submission_id}.json",
+                {
+                    "submission_id": submission_id,
+                    "builder_name": submission_id,
+                    "project_name": submission_id,
+                    "description": "A project.",
+                    "submitted_at": FIXED_TS,
+                },
+            )
+            cbp.write_once_json(
+                bundle_path / "verdicts" / f"{submission_id}.json",
+                {
+                    **scored,
+                    "project_name": submission_id,
+                    "builder_name": submission_id,
+                    "archetype_verdicts": [],
+                },
+            )
+        shadow = cbp.compute_shadow_score(
+            [scored_a, scored_b], cbp.load_rubric(bundle_path), fixed_clock
+        )
+        cbp.seal_shadow_score(bundle_path, shadow, fixed_clock)
+
+        event_path = bundle_path / "config" / "event.json"
+        event_snapshot = cbp.load_json(event_path)
+        drifted_event = copy.deepcopy(event_snapshot)
+        drifted_event["tie_policy"] = {
+            "mode": "shared-podium",
+            "tiebreaker_dimensions": [],
+        }
+        event_path.write_text(json.dumps(drifted_event), encoding="utf-8")
+        with pytest.raises(cbp.ConfigValidationError, match="no longer matches"):
+            cbp._choose_award_winners(bundle_path, None, fixed_clock)
+        event_path.write_text(json.dumps(event_snapshot), encoding="utf-8")
+
+        with pytest.raises(cbp.ConfigValidationError, match="rank:1"):
+            cbp._choose_award_winners(bundle_path, None, fixed_clock)
+        with pytest.raises(cbp.ConfigValidationError, match="rank:1"):
+            cbp._choose_award_winners(bundle_path, "sub-b", fixed_clock)
+
+        assert cbp._winner_id_from_award_selection(
+            bundle_path,
+            {"rank:1": "sub-b"},
+            fixed_clock,
+        ) == "sub-b"
+        awards_card = cbp._choose_award_winners(
+            bundle_path,
+            "sub-b",
+            fixed_clock,
+            {"rank:1": "sub-b"},
+        )
+        gold = [award for award in awards_card["awards"] if award["placement"] == 1]
+        silver = [award for award in awards_card["awards"] if award["placement"] == 2]
+        assert [award["winner_submission_id"] for award in gold] == ["sub-b"]
+        assert [award["winner_submission_id"] for award in silver] == ["sub-a"]
+        assert {
+            event["resolution"]
+            for event in awards_card["tie_ceremony"]["award_tie_resolutions"]
+        } == {"human-declared", "human-resolution-derived"}
+
+    def test_shadow_criteria_reject_non_finite_weights(self):
+        criteria = cbp._default_shadow_criteria(
+            copy.deepcopy(cbp.DEFAULT_EVENT_SPEC), 6
+        )
+        criteria[0]["weight"] = float("nan")
+        assert cbp._normalize_shadow_criteria(criteria, 6) is None
+
     def test_seal_shadow_score_write_once(self, tmp_path):
         bundle_path = tmp_path / "run"
         bundle_path.mkdir()
@@ -462,6 +820,33 @@ class TestFreshnessGate:
         assert result["selected_model"] == "claude-opus-4.8"
         assert result["evaluation_provenance"]["mode"] == "live"
         assert (bundle_path / "freshness_gate.json").exists()
+
+    def test_gate_ignores_unconfigured_preferred_model(self, tmp_path):
+        bundle_path = make_run(tmp_path, "panel-only-policy")
+        rubric = cbp.load_rubric(bundle_path)
+        rubric["freshness_gate"].update(
+            {
+                "policy_mode": "strict",
+                "preferred_model": "legacy-preferred-model",
+                "panel_models": [
+                    "claude-opus-4.8",
+                    "gpt-5.6-terra",
+                    "gemini-3.1-pro-preview",
+                ],
+                "minimum_panel_size": 3,
+                "minimum_distinct_providers": 3,
+            }
+        )
+
+        result = cbp.run_freshness_gate(
+            bundle_path,
+            rubric,
+            MockGateway(),
+            fixed_clock,
+        )
+
+        assert result["status"] == "pass"
+        assert result["selected_models"] == rubric["freshness_gate"]["panel_models"]
 
     def test_default_gate_requires_premium_high_reasoning(self, tmp_path):
         bundle_path = make_run(tmp_path)
@@ -618,7 +1003,11 @@ class TestBulkUrlImport:
         args = build_args(
             "workshop",
             run_id="show-room",
-            urls=["DUBSOpenHub/copilot-cli-agent-pulse"],
+            urls=[
+                "DUBSOpenHub/project-one | Team One",
+                "DUBSOpenHub/project-two | Team Two",
+                "DUBSOpenHub/project-three | Team Three",
+            ],
             file=None,
             audience=None,
             awards=None,
@@ -650,15 +1039,21 @@ class TestBulkUrlImport:
         assert rc == 0
         output = capsys.readouterr().out
         assert "Create the workshop run bundle?" not in output
-        assert "Innovation Award" in output
-        assert "Build Quality Award" in output
-        assert "Hackathon Grand Prize" in output
+        assert "Bronze — Third Place" in output
+        assert "Silver — Second Place" in output
+        assert "Gold — First Place" in output
         assert "Workshop Recap" in output
         assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
         assert "Panel chatter:" in output
         assert "One fast panel take per project" in output
+        awards = cbp.load_json(tmp_path / "runs" / "show-room" / "winner" / "awards.json")
+        award_order = {"bronze": 0, "silver": 1, "grand-prize": 2}
+        award_ids = [award["award_id"] for award in awards["awards"]]
+        assert award_ids == sorted(award_ids, key=award_order.__getitem__)
+        assert "grand-prize" in award_ids
+        assert len({award["winner_submission_id"] for award in awards["awards"]}) == 3
 
     def test_gate_result_immutably_recorded(self, tmp_path):
         bundle_path = make_run(tmp_path)
@@ -674,8 +1069,19 @@ class TestBulkUrlImport:
     def test_gate_blocks_missing_model_strict(self, tmp_path):
         bundle_path = make_run(tmp_path)
         rubric = cbp.load_rubric(bundle_path)
-        rubric["freshness_gate"]["policy_mode"] = "strict"
-        rubric["freshness_gate"]["preferred_model"] = "nonexistent-model"
+        rubric["freshness_gate"].update(
+            {
+                "policy_mode": "strict",
+                "preferred_model": "claude-opus-4.8",
+                "panel_models": [
+                    "claude-opus-4.8",
+                    "gpt-5.6-terra",
+                    "nonexistent-model",
+                ],
+                "minimum_panel_size": 3,
+                "minimum_distinct_providers": 3,
+            }
+        )
         gw = MockGateway()
         with pytest.raises(cbp.FreshnessGateBlock):
             cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
@@ -694,8 +1100,136 @@ class TestCommandFlows:
         parser = cbp.build_parser()
         init_args = parser.parse_args(["init", "demo-day", "--event", "event.json"])
         tui_args = parser.parse_args(["tui", "demo-day", "--operator"])
+        quick_args = parser.parse_args([
+            "quick",
+            "owner/project",
+            "--tie-resolution",
+            "rank:1=sub-a",
+        ])
+        workshop_args = parser.parse_args([
+            "workshop",
+            "owner/project",
+            "--tie-resolution",
+            "rank:1=sub-a",
+            "--require-live-terminal",
+        ])
+        submit_args = parser.parse_args([
+            "submit", "demo-day", "--builder-name", "Team Aurora",
+            "--project-name", "Aurora", "--problem-statement", "Reduce follow-up gaps",
+            "--intended-user", "Account executives", "--demo-url", "https://demo.example",
+            "--builder-notes", "Daily workflow demo",
+        ])
+        award_args = parser.parse_args([
+            "award", "demo-day", "--winner", "sub-a",
+            "--tie-resolution", "rank:1=sub-a",
+        ])
         assert init_args.event == "event.json"
         assert tui_args.operator is True
+        assert quick_args.urls == ["owner/project"]
+        assert quick_args.tie_resolution == ["rank:1=sub-a"]
+        assert workshop_args.tie_resolution == ["rank:1=sub-a"]
+        assert workshop_args.require_live_terminal is True
+        assert submit_args.problem_statement == "Reduce follow-up gaps"
+        assert submit_args.intended_user == "Account executives"
+        assert submit_args.demo_url == "https://demo.example"
+        assert submit_args.builder_notes == "Daily workflow demo"
+        assert award_args.tie_resolution == ["rank:1=sub-a"]
+
+    def test_workshop_blocks_when_current_output_is_not_a_real_terminal(self, tmp_path, capsys):
+        args = build_args(
+            "workshop",
+            run_id="required-live-terminal",
+            urls=["DUBSOpenHub/project-one"],
+            audience=None,
+            panel_style=None,
+            showtime=True,
+            yes=True,
+            configure=False,
+            manual_confirm=False,
+            no_suspense=True,
+            projector=False,
+            require_live_terminal=True,
+        )
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            with patch.object(cbp.sys.stdout, "isatty", return_value=False):
+                rc = cbp.cmd_workshop(args, MockGateway(), fixed_clock)
+
+        assert rc == 7
+        captured = capsys.readouterr()
+        assert "requires a real interactive terminal" in captured.err
+        assert not (tmp_path / "required-live-terminal").exists()
+
+    def test_workshop_never_auto_launches_optional_monitor(self, tmp_path):
+        args = build_args(
+            "workshop",
+            run_id="single-screen",
+            urls=["DUBSOpenHub/project-one"],
+            audience=None,
+            panel_style="fun",
+            showtime=True,
+            yes=True,
+            configure=False,
+            manual_confirm=False,
+            no_suspense=True,
+            projector=True,
+        )
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            with patch.object(cbp, "fetch_repo_metadata", return_value=cbp._fallback_repo_metadata(
+                "https://github.com/DUBSOpenHub/project-one"
+            )):
+                with patch.object(cbp.subprocess, "Popen") as popen:
+                    with patch.object(cbp.subprocess, "run") as run:
+                        assert cbp.cmd_workshop(args, MockGateway(), fixed_clock) == 0
+
+        popen.assert_not_called()
+        assert all(
+            "osascript" not in str(call.args)
+            for call in run.call_args_list
+        )
+
+    def test_bundled_demo_runs_the_complete_single_screen_show(self, tmp_path, capsys):
+        args = build_args(
+            "workshop",
+            run_id="practice-show",
+            urls=[],
+            audience=None,
+            panel_style=None,
+            showtime=True,
+            yes=True,
+            configure=False,
+            manual_confirm=False,
+            no_suspense=True,
+            projector=False,
+            demo=True,
+        )
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            assert cbp.cmd_workshop(args, MockGateway(), fixed_clock) == 0
+
+        output = capsys.readouterr().out
+        manifest = cbp.load_manifest(tmp_path / "practice-show")
+        elapsed = re.search(r"Practice Live Show complete in ([0-9.]+)s", output)
+        assert "LIVE SHOW — SHARE THIS WINDOW" in output
+        assert "Practice demo" in output
+        assert "Audience check ready" in output
+        assert elapsed is not None
+        assert float(elapsed.group(1)) < cbp.DEMO_TIME_BUDGET_SECONDS
+        assert manifest["workshop_choices"]["display_surface"] == "single-terminal"
+        assert manifest["workshop_choices"]["optional_monitor_auto_launched"] is False
+        assert len(cbp._load_submissions(tmp_path / "practice-show")) == 3
+
+    def test_projector_tui_refuses_captured_output(self, capsys):
+        args = argparse.Namespace(
+            run_id="captured-projector",
+            projector=True,
+            operator=False,
+            showtime=False,
+        )
+
+        assert cbp.cmd_tui(args, None, fixed_clock) == 7
+        assert "requires a real interactive terminal" in capsys.readouterr().err
 
     def test_init_creates_bundle(self, tmp_path):
         with patch.dict(os.environ, self._env(tmp_path)):
@@ -725,6 +1259,304 @@ class TestCommandFlows:
         assert rc == 0
         inputs = list((tmp_path / "r1" / "inputs").glob("*.json"))
         assert len(inputs) == 1
+
+    def test_structured_submission_intake_preserves_evidence(self, tmp_path):
+        run_id = "structured-intake"
+        entries = cbp.parse_submission_entries(
+            "DUBSOpenHub/example | Team Aurora | Used Copilot Chat for the API contract | "
+            "Built an agent workflow with retrieval"
+        )
+        assert entries == [{
+            "url": "https://github.com/DUBSOpenHub/example",
+            "builder_name": "Team Aurora",
+            "copilot_evidence": "Used Copilot Chat for the API contract",
+            "frontier_evidence": "Built an agent workflow with retrieval",
+        }]
+
+        def fake_metadata(url):
+            return {
+                "name_with_owner": "DUBSOpenHub/example",
+                "description": "Example project",
+                "language": "Python",
+                "stars": 0,
+                "forks": 0,
+                "updated_at": FIXED_TS,
+                "url": url,
+                "source": "test",
+            }
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            cbp.cmd_init(build_args("init", run_id=run_id), None, fixed_clock)
+            with patch.object(cbp, "fetch_repo_metadata", fake_metadata):
+                created = cbp.import_url_submissions(tmp_path / run_id, entries, clock=fixed_clock)
+
+        assert created[0]["builder_name"] == "Team Aurora"
+        assert created[0]["copilot_evidence"] == "Used Copilot Chat for the API contract"
+        assert created[0]["frontier_evidence"] == "Built an agent workflow with retrieval"
+
+    def test_structured_intake_preserves_feedback_context_and_sources(self, tmp_path):
+        run_id = "contextual-intake"
+        entries = cbp.parse_submission_entries(
+            "DUBSOpenHub/example | Team Aurora |  |  | "
+            "Reduce missed follow-ups after customer meetings | "
+            "Account executives | https://demo.example.test/aurora | "
+            "The demo covers the daily follow-up flow"
+        )
+        assert entries[0]["problem_statement"] == (
+            "Reduce missed follow-ups after customer meetings"
+        )
+        assert entries[0]["intended_user"] == "Account executives"
+        assert entries[0]["demo_url"] == "https://demo.example.test/aurora"
+        assert entries[0]["builder_notes"] == "The demo covers the daily follow-up flow"
+
+        def fake_metadata(url):
+            return {
+                "name_with_owner": "DUBSOpenHub/example",
+                "description": "Turns meeting notes into follow-up plans.",
+                "language": "Python",
+                "stars": 0,
+                "forks": 0,
+                "updated_at": FIXED_TS,
+                "topics": ["productivity"],
+                "url": url,
+                "source": "test",
+            }
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            cbp.cmd_init(build_args("init", run_id=run_id), None, fixed_clock)
+            with patch.object(cbp, "fetch_repo_metadata", fake_metadata):
+                cbp.import_url_submissions(tmp_path / run_id, entries, clock=fixed_clock)
+            full_judge_run(tmp_path / run_id)
+
+        submission = cbp._load_submissions(tmp_path / run_id)[0]
+        feedback = cbp._load_feedback(tmp_path / run_id)[0]
+        source_ids = {source["id"] for source in feedback["grounding"]["sources"]}
+        judgments = cbp.load_json(
+            next((tmp_path / run_id / "eval").glob("step_*.json"))
+        )["model_judgments"]
+
+        assert submission["description_source"] == "repository-import"
+        assert feedback["grounding"]["status"] == "specific"
+        assert {
+            "builder.problem_statement",
+            "builder.intended_user",
+            "builder.demo_url",
+            "builder.builder_notes",
+            "repository.description",
+        } <= source_ids
+        assert feedback["grounding"]["used_source_ids"] == [
+            "builder.problem_statement",
+            "builder.intended_user",
+            "builder.demo_url",
+            "builder.builder_notes",
+        ]
+        assert feedback["grounding"]["reference_status"] == "panel-cited"
+        assert all(
+            "builder.problem_statement" in judgment["grounding_refs"]
+            for judgment in judgments
+        )
+        assert all(
+            not idea.startswith("Hypothesis:")
+            for idea in feedback["copilot_next_moves"]
+            + feedback["frontier_experiments"]
+        )
+
+    def test_feedback_labels_suggestions_as_hypotheses_without_context(self, tmp_path):
+        bundle_path = make_run(tmp_path, "no-context")
+        submission = {
+            "submission_id": "no-context",
+            "builder_name": "Team Aurora",
+            "project_name": "Aurora",
+            "description": "",
+            "artifacts": [],
+            "submitted_at": FIXED_TS,
+            "file_size_bytes": 0,
+        }
+        cbp.write_once_json(bundle_path / "inputs" / "no-context.json", submission)
+        cbp.update_status(bundle_path, "collecting", fixed_clock)
+        full_judge_run(bundle_path)
+
+        feedback = cbp._load_feedback(bundle_path)[0]
+        assert feedback["grounding"]["status"] == "hypothesis"
+        assert all(
+            idea.startswith("Hypothesis:")
+            for idea in feedback["copilot_next_moves"]
+            + feedback["frontier_experiments"]
+        )
+
+    def test_tone_fallback_keeps_ungrounded_feedback_hypothetical(self, tmp_path):
+        bundle_path = make_run(tmp_path, "no-context-tone-fallback")
+        submission = {
+            "submission_id": "no-context-tone-fallback",
+            "builder_name": "Team Aurora",
+            "project_name": "Aurora",
+            "description": "",
+            "artifacts": [],
+            "submitted_at": FIXED_TS,
+            "file_size_bytes": 0,
+        }
+        cbp.write_once_json(
+            bundle_path / "inputs" / "no-context-tone-fallback.json",
+            submission,
+        )
+        cbp.update_status(bundle_path, "collecting", fixed_clock)
+        full_judge_run(bundle_path)
+        feedback_path = bundle_path / "feedback" / "no-context-tone-fallback.json"
+        feedback_path.unlink()
+        panel_models = cbp.load_json(
+            bundle_path / "freshness_gate.json"
+        )["selected_models"]
+
+        with patch.object(
+            cbp,
+            "check_feedback_card_tone",
+            side_effect=[
+                {"passed": False, "banned_phrases": ["weak"], "missing_required": []},
+                {"passed": True, "banned_phrases": [], "missing_required": []},
+            ],
+        ):
+            cards = cbp.build_feedback_cards(
+                [{"submission_id": submission["submission_id"]}],
+                [submission],
+                cbp.load_rubric(bundle_path),
+                panel_models,
+                bundle_path,
+                None,
+                fixed_clock,
+            )
+
+        card = cards[0]
+        assert card["bright_spot"].startswith("Hypothesis:")
+        assert card["next_commit"].startswith("Hypothesis:")
+        assert card["panel_notes"].startswith("Hypothesis:")
+
+    def test_default_podium_follows_distinct_shadow_ranks(self, tmp_path):
+        bundle_path = make_run(tmp_path, "podium-ranks")
+        for project_name in ("Aurora", "Beacon", "Cinder"):
+            add_submission(bundle_path, project_name=project_name)
+        full_judge_run(bundle_path)
+
+        ranking = cbp.load_shadow_score(bundle_path)["ranking"]
+        awards = cbp._choose_award_winners(bundle_path, ranking[0], fixed_clock)["awards"]
+
+        assert [award["award_id"] for award in awards] == [
+            "bronze",
+            "silver",
+            "grand-prize",
+        ]
+        assert [award["winner_submission_id"] for award in awards] == [
+            ranking[2],
+            ranking[1],
+            ranking[0],
+        ]
+
+    def test_project_showcase_badges_include_activity_and_topics(self):
+        badges = cbp.project_showcase_badges({
+            "language": "TypeScript",
+            "stars": 8674,
+            "topics": ["ai", "llm", "natural-language", "types"],
+            "pushed_at": "2026-07-07T23:18:52Z",
+        })
+
+        assert badges == [
+            "📝 TypeScript",
+            "⭐ 8.7k",
+            "🏷️ ai, llm, natural-language",
+            "🟢 Active 2026-07-07",
+        ]
+
+    def test_present_spotlight_centers_project_context(self, tmp_path):
+        run_id = "project-context"
+        bundle_path = make_run(tmp_path, run_id)
+        submission_id = str(uuid.uuid4())
+        cbp.write_once_json(
+            bundle_path / "inputs" / f"{submission_id}.json",
+            {
+                "submission_id": submission_id,
+                "builder_name": "Team Aurora",
+                "project_name": "Project Aurora",
+                "description": "A project",
+                "repo_metadata": {
+                    "description": "Turns meeting notes into clear action plans.",
+                    "language": "Python",
+                    "stars": 1200,
+                    "topics": ["agents", "productivity"],
+                    "pushed_at": "2026-07-09T12:00:00Z",
+                    "homepage": "https://example.test/aurora",
+                },
+                "copilot_evidence": "Used Copilot Chat to design the workflow.",
+                "frontier_evidence": "Uses an agent loop to classify actions.",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+        )
+        cbp.update_status(bundle_path, "collecting", fixed_clock)
+        full_judge_run(bundle_path)
+
+        args = argparse.Namespace(run_id=run_id, showtime=False, projector=True, operator=False)
+        with patch.dict(os.environ, self._env(tmp_path)):
+            with patch("sys.stdout", new_callable=io.StringIO) as output:
+                assert cbp.cmd_present(args, None, fixed_clock) == 0
+
+        rendered = output.getvalue()
+        assert "SPOTLIGHT: Project Aurora" in rendered
+        assert "Built by: Team Aurora" in rendered
+        assert "What it does: Turns meeting notes into clear action plans." in rendered
+        assert "Project signals:" in rendered
+        assert "Copilot: Builder-provided Copilot use evidence:" in rendered
+        assert "Used Copilot Chat to design the workflow." in rendered
+        assert "Frontier: Builder-provided frontier use evidence:" in rendered
+        assert "Uses an agent loop to classify actions." in rendered
+
+    def test_quick_judging_is_quiet_and_writes_feedback(self, tmp_path, capsys):
+        run_id = "quick-flow"
+
+        def fake_metadata(url):
+            return {
+                "name_with_owner": url.replace("https://github.com/", "", 1),
+                "description": "Example project",
+                "language": "Python",
+                "stars": 0,
+                "forks": 0,
+                "updated_at": FIXED_TS,
+                "url": url,
+                "source": "test",
+            }
+
+        args = argparse.Namespace(
+            run_id=run_id,
+            urls=[
+                "DUBSOpenHub/project-one | Team One | Used Copilot for test design",
+                "DUBSOpenHub/project-two | Team Two",
+            ],
+            file=None,
+            builder_name="Participants",
+            config=None,
+            event=None,
+        )
+        with patch.dict(os.environ, self._env(tmp_path)):
+            with patch.object(cbp, "fetch_repo_metadata", fake_metadata):
+                assert cbp.cmd_quick(args, None, fixed_clock) == 0
+
+        output = capsys.readouterr().out
+        assert "Quick judging complete" in output
+        assert "Evaluation mode: simulated — practice demo only" in output
+        assert "Panel chatter:" not in output
+        assert "🥁" not in output
+        assert "Score:" not in output
+        assert "Private project feedback:" in output
+        assert "Validation: passed" in output
+        assert "Replay: python3 hackathon_judge.py replay quick-flow" in output
+        assert cbp.load_manifest(tmp_path / run_id)["engagement_mode"] == "quick"
+        assert cbp.load_manifest(tmp_path / run_id)["status"] == "exported"
+        assert (tmp_path / run_id / "HASHES").exists()
+        assert (tmp_path / run_id / "SEAL").exists()
+        assert (tmp_path / f"{run_id}.bundle.tar.gz").exists()
+        feedback = cbp._load_feedback(tmp_path / run_id)
+        assert feedback[0]["judges_liked"]
+        assert feedback[0]["copilot_use"]["status"] == "evidenced"
+        assert feedback[1]["copilot_use"]["status"] == "not_provided"
 
     def test_full_e2e_3_submissions(self, tmp_path):
         """AC-01: init + submit + judge + award completes for 3 submissions."""
@@ -778,6 +1610,15 @@ class TestCommandFlows:
             assert winner_card["award_name"] == cbp.AWARD_NAME
             awards_card = cbp.load_json(tmp_path / run_id / "winner" / "awards.json")
             assert len(awards_card["awards"]) == 3
+            feedback_by_submission = {
+                card["submission_id"]: card
+                for card in cbp._load_feedback(tmp_path / run_id)
+            }
+            for award in awards_card["awards"]:
+                feedback = feedback_by_submission[award["winner_submission_id"]]
+                assert award["selection_basis"]["award_criterion"] in award["reason"]
+                assert feedback["bright_spot"] in award["reason"]
+                assert award["selection_basis"]["judges_liked"] == feedback["judges_liked"]
 
             # present
             rc = cbp.cmd_present(build_args("present", run_id=run_id), gw, fixed_clock)
@@ -823,6 +1664,94 @@ class TestCommandFlows:
 
             rc = cbp.cmd_validate(build_args("validate", bundle=run_id), gw, fixed_clock)
             assert rc == 0
+
+            (tmp_path / run_id / "unsealed.txt").write_text("late mutation")
+            rc = cbp.cmd_validate(build_args("validate", bundle=run_id), gw, fixed_clock)
+            assert rc == 5
+
+    def test_export_resumes_after_archive_creation_failure(self, tmp_path, capsys):
+        run_id = "resume-export"
+        gw = MockGateway()
+        env = self._env(tmp_path)
+
+        with patch.dict(os.environ, env):
+            cbp.cmd_init(build_args("init", run_id=run_id), gw, fixed_clock)
+            cbp.cmd_submit(
+                build_args(
+                    "submit",
+                    run_id=run_id,
+                    builder_name="Dev",
+                    project_name="P1",
+                    description="desc",
+                ),
+                gw,
+                fixed_clock,
+            )
+            cbp.cmd_judge(build_args("judge", run_id=run_id), gw, fixed_clock)
+            winner_id = cbp.load_shadow_score(tmp_path / run_id)["ranking"][0]
+            cbp.cmd_award(
+                build_args("award", run_id=run_id, winner=winner_id),
+                gw,
+                fixed_clock,
+            )
+
+            with patch.object(cbp.tarfile, "open", side_effect=OSError("disk full")):
+                assert cbp.cmd_export(build_args("export", run_id=run_id), gw, fixed_clock) == 1
+
+            assert (tmp_path / run_id / "SEAL").exists()
+            assert not (tmp_path / f"{run_id}.bundle.tar.gz").exists()
+            with patch.object(cbp, "_textual_status", return_value=(True, "Textual 8.2.3")):
+                assert cbp.cmd_doctor(
+                    build_args("doctor", run_id=run_id),
+                    gw,
+                    fixed_clock,
+                ) == 1
+            assert "Replay archive: MISSING" in capsys.readouterr().err
+            assert cbp.cmd_export(build_args("export", run_id=run_id), gw, fixed_clock) == 0
+            assert (tmp_path / f"{run_id}.bundle.tar.gz").exists()
+            assert cbp.cmd_export(build_args("export", run_id=run_id), gw, fixed_clock) == 0
+
+    def test_export_resumes_after_seal_write_failure(self, tmp_path):
+        run_id = "resume-seal"
+        gw = MockGateway()
+        env = self._env(tmp_path)
+
+        with patch.dict(os.environ, env):
+            cbp.cmd_init(build_args("init", run_id=run_id), gw, fixed_clock)
+            cbp.cmd_submit(
+                build_args(
+                    "submit",
+                    run_id=run_id,
+                    builder_name="Dev",
+                    project_name="P1",
+                    description="desc",
+                ),
+                gw,
+                fixed_clock,
+            )
+            cbp.cmd_judge(build_args("judge", run_id=run_id), gw, fixed_clock)
+            winner_id = cbp.load_shadow_score(tmp_path / run_id)["ranking"][0]
+            cbp.cmd_award(
+                build_args("award", run_id=run_id, winner=winner_id),
+                gw,
+                fixed_clock,
+            )
+
+            original_write_once = cbp.write_once
+
+            def fail_seal(path, data):
+                if path.name == "SEAL":
+                    raise OSError("disk full")
+                return original_write_once(path, data)
+
+            with patch.object(cbp, "write_once", side_effect=fail_seal):
+                assert cbp.cmd_export(build_args("export", run_id=run_id), gw, fixed_clock) == 1
+
+            assert (tmp_path / run_id / "HASHES").exists()
+            assert not (tmp_path / run_id / "SEAL").exists()
+            assert cbp.cmd_export(build_args("export", run_id=run_id), gw, fixed_clock) == 0
+            assert (tmp_path / run_id / "SEAL").exists()
+            assert (tmp_path / f"{run_id}.bundle.tar.gz").exists()
 
     def test_validate_detects_tampering(self, tmp_path):
         """AC-02: validate fails with clear error on tampered artifact."""
@@ -926,15 +1855,27 @@ class TestCommandFlows:
             cbp.cmd_submit(build_args("submit", run_id=run_id, builder_name="Dev",
                                       project_name="P1", description="desc"), gw, fixed_clock)
             cbp.cmd_judge(build_args("judge", run_id=run_id), gw, fixed_clock)
+            winner_id = cbp.load_shadow_score(tmp_path / run_id)["ranking"][0]
+            cbp.cmd_award(build_args("award", run_id=run_id, winner=winner_id), gw, fixed_clock)
 
             bundle_path = tmp_path / run_id
             files_before = set(str(p) for p in bundle_path.rglob("*") if p.is_file())
+            model_calls_before_feedback = gw.call_count
 
             rc = cbp.cmd_feedback(build_args("feedback", run_id=run_id), gw, fixed_clock)
             assert rc == 0
 
             files_after = set(str(p) for p in bundle_path.rglob("*") if p.is_file())
             assert files_before == files_after  # bundle unchanged
+            assert gw.call_count == model_calls_before_feedback
+            proposal_path = next((tmp_path.parent / "feedback_proposals" / run_id).glob("proposal_*.json"))
+            proposal = json.loads(proposal_path.read_text())["proposals"][0]
+            assert proposal["selected_for"]
+            assert proposal["bright_spot"] in proposal["selected_for"][0]["why_selected"]
+            assert proposal["judges_liked"]
+            assert proposal["next_commit"] == proposal["ways_to_improve"]
+            assert proposal["copilot_use"]["status"] == "not_provided"
+            assert proposal["frontier_use"]["status"] == "not_provided"
 
     def test_winner_card_requires_human_approval(self, tmp_path):
         """AC-09: winner card has requires_human_approval: true."""
@@ -1000,15 +1941,29 @@ class TestCommandFlows:
         card = feedback[0]
         assert card["bright_spot"]
         assert card["next_commit"]
+        assert card["judges_liked"]
+        assert card["copilot_use"]["status"] == "not_provided"
+        assert card["frontier_use"]["status"] == "not_provided"
+        assert card["innovation_signal"]["status"] == "assessed"
         assert card["tone_checked"] is True
 
     def test_doctor_passes_clean_env(self, tmp_path):
         """DF-04: doctor self-test passes on clean environment."""
         env = self._env(tmp_path)
         with patch.dict(os.environ, env):
-            args = build_args("doctor", run_id=None)
-            rc = cbp.cmd_doctor(args, None, fixed_clock)
+            with patch.object(cbp, "_textual_status", return_value=(True, "Textual 8.2.3")):
+                args = build_args("doctor", run_id=None)
+                rc = cbp.cmd_doctor(args, None, fixed_clock)
         assert rc == 0
+
+    def test_doctor_reports_missing_textual(self, tmp_path, capsys):
+        env = self._env(tmp_path)
+        with patch.dict(os.environ, env):
+            with patch.object(cbp, "_textual_status", return_value=(False, "Textual is not installed")):
+                rc = cbp.cmd_doctor(build_args("doctor", run_id=None), None, fixed_clock)
+
+        assert rc == 0
+        assert "Optional monitor unavailable" in capsys.readouterr().out
 
     def test_award_blocked_if_already_awarded(self, tmp_path):
         """award is idempotent-blocked — second call raises BundleSealError (rc=2)."""
@@ -1079,6 +2034,306 @@ class TestCommandFlows:
             cbp.cmd_judge(build_args("judge", run_id=run_id), gw, fixed_clock)
             rc = cbp.cmd_resume(build_args("resume", run_id=run_id), gw, fixed_clock)
         assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# Multi-model consensus and Shadow Spec
+# ---------------------------------------------------------------------------
+
+class TestMultiModelConsensusAndShadowSpec:
+
+    def test_freshness_gate_selects_diverse_default_panel(self, tmp_path):
+        bundle_path = make_run(tmp_path)
+        result = cbp.run_freshness_gate(
+            bundle_path, cbp.load_rubric(bundle_path), MockGateway(), fixed_clock
+        )
+
+        assert result["selected_models"] == [
+            "claude-opus-4.8",
+            "gpt-5.6-terra",
+            "gemini-3.1-pro-preview",
+        ]
+        assert result["consensus_method"] == "median"
+        assert result["panel_degraded"] is False
+        assert {
+            cbp._model_provider(model_id) for model_id in result["selected_models"]
+        } == {"anthropic", "openai", "google"}
+
+    def test_strict_gate_blocks_an_incomplete_panel(self, tmp_path):
+        bundle_path = make_run(tmp_path)
+        rubric = cbp.load_rubric(bundle_path)
+        claude_only = [
+            model
+            for model in cbp.APPROVED_MODELS
+            if model["id"] == "claude-opus-4.8"
+        ]
+
+        with pytest.raises(cbp.FreshnessGateBlock):
+            cbp.run_freshness_gate(
+                bundle_path, rubric, MockGateway(models=claude_only), fixed_clock
+            )
+
+        gate = cbp.load_json(bundle_path / "freshness_gate.json")
+        assert gate["status"] == "blocked"
+        assert gate["selected_models"] == ["claude-opus-4.8"]
+
+    def test_scores_use_model_medians_and_record_private_provenance(self, tmp_path):
+        class MedianGateway:
+            scores = {"model-a": 6, "model-b": 8, "model-c": 10}
+
+            def call_model(self, _prompt, model_id):
+                return json.dumps(
+                    {
+                        "scores": {
+                            dimension["id"]: self.scores[model_id]
+                            for dimension in cbp.DEFAULT_RUBRIC["rubric"]["dimensions"]
+                        },
+                        "bright_spot": "This project demonstrates strong focus.",
+                        "next_commit": "Consider adding a focused user test.",
+                        "panel_notes": "Concrete project evidence supports this read.",
+                    }
+                )
+
+        bundle_path = make_run(tmp_path)
+        submission_id = add_submission(bundle_path)
+        scored = cbp.score_submissions(
+            cbp._load_submissions(bundle_path),
+            cbp.load_rubric(bundle_path),
+            ["model-a", "model-b", "model-c"],
+            bundle_path,
+            MedianGateway(),
+            fixed_clock,
+        )
+
+        assert len(scored) == 1
+        assert scored[0]["submission_id"] == submission_id
+        assert all(
+            dimension["score"] == 8
+            for dimension in scored[0]["dimension_scores"].values()
+        )
+        assert all(
+            dimension["consensus"]["model_count"] == 3
+            for dimension in scored[0]["dimension_scores"].values()
+        )
+        step = cbp.load_json(next((bundle_path / "eval").glob("step_*.json")))
+        assert step["model_panel"] == ["model-a", "model-b", "model-c"]
+        assert len(step["model_judgments"]) == 9
+        assert "model_judgments" not in scored[0]
+
+    def test_scoring_bounds_parallel_calls_and_preserves_judgment_order(self, tmp_path):
+        import threading
+        import time
+
+        class SlowGateway:
+            def __init__(self):
+                self.active_calls = 0
+                self.max_active_calls = 0
+                self.lock = threading.Lock()
+
+            def call_model(self, prompt, model_id):
+                with self.lock:
+                    self.active_calls += 1
+                    self.max_active_calls = max(
+                        self.max_active_calls, self.active_calls
+                    )
+                try:
+                    time.sleep(0.01)
+                    return cbp._synthetic_model_response(prompt, model_id)
+                finally:
+                    with self.lock:
+                        self.active_calls -= 1
+
+        bundle_path = make_run(tmp_path)
+        add_submission(bundle_path)
+        rubric = cbp.load_rubric(bundle_path)
+        rubric["freshness_gate"]["max_parallel_calls"] = 2
+        gateway = SlowGateway()
+        panel = ["model-a", "model-b", "model-c"]
+
+        cbp.score_submissions(
+            cbp._load_submissions(bundle_path),
+            rubric,
+            panel,
+            bundle_path,
+            gateway,
+            fixed_clock,
+        )
+
+        assert gateway.max_active_calls == 2
+        step = cbp.load_json(next((bundle_path / "eval").glob("step_*.json")))
+        expected = [
+            (lens["id"], model_id)
+            for lens in rubric["judge_archetypes"]
+            for model_id in panel
+        ]
+        assert [
+            (judgment["archetype_id"], judgment["model"])
+            for judgment in step["model_judgments"]
+        ] == expected
+        assert step["max_parallel_calls"] == 2
+
+    def test_failed_parallel_scoring_writes_no_partial_eval_step(self, tmp_path):
+        bundle_path = make_run(tmp_path)
+        add_submission(bundle_path)
+
+        with pytest.raises(cbp.ModelAPIError):
+            cbp.score_submissions(
+                cbp._load_submissions(bundle_path),
+                cbp.load_rubric(bundle_path),
+                ["model-a", "model-b", "model-c"],
+                bundle_path,
+                MockGateway(fail_on_call=True),
+                fixed_clock,
+            )
+
+        assert not list((bundle_path / "eval").glob("step_*.json"))
+
+    def test_judge_reuses_scoring_pass_and_records_room_timing(self, tmp_path):
+        import threading
+
+        class CountingGateway:
+            def __init__(self):
+                self.models = cbp.APPROVED_MODELS
+                self.call_count = 0
+                self._lock = threading.Lock()
+
+            def query_available_models(self):
+                return self.models
+
+            def call_model(self, prompt, model_id):
+                with self._lock:
+                    self.call_count += 1
+                return cbp._synthetic_model_response(prompt, model_id)
+
+        run_id = "fast-panel"
+        env = {
+            "HJ_RUNS_DIR": str(tmp_path),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+        }
+        gateway = CountingGateway()
+
+        with patch.dict(os.environ, env):
+            assert cbp.cmd_init(build_args("init", run_id=run_id), gateway, fixed_clock) == 0
+            assert cbp.cmd_submit(
+                build_args("submit", run_id=run_id), gateway, fixed_clock
+            ) == 0
+            assert cbp.cmd_judge(
+                build_args("judge", run_id=run_id), gateway, fixed_clock
+            ) == 0
+
+        bundle_path = tmp_path / run_id
+        verdict = cbp._load_verdicts(bundle_path)[0]
+        feedback = cbp._load_feedback(bundle_path)[0]
+        plan = cbp.load_json(bundle_path / "eval" / "plan.json")
+        timing = cbp.load_json(bundle_path / "eval" / "timing.json")
+        progress = cbp.load_json(bundle_path / "eval" / "progress.json")
+
+        assert gateway.call_count == 13  # spec + 9 score calls + 3 Shadow checks
+        assert all(
+            reaction["reused_scoring_pass"]
+            for reaction in verdict["archetype_verdicts"]
+        )
+        assert feedback["feedback_panel"]["reused_scoring_pass"] is True
+        assert plan["calls"]["avoided"] == 12
+        assert plan["max_parallel_calls"] == 6
+        assert timing["budget_policy"] == "warn-only"
+        assert progress == {
+            "schema_version": "1.0",
+            "updated_at": FIXED_TS,
+            "status": "complete",
+            "stage": "complete",
+            "submissions": {"completed": 1, "total": 1},
+            "max_parallel_calls": 6,
+            "remaining_model_calls": 0,
+        }
+        assert set(timing["stage_seconds"]) >= {
+            "freshness_gate",
+            "shadow_spec",
+            "public_scoring",
+            "shadow_assessment",
+            "verdicts",
+            "feedback",
+        }
+
+    def test_judge_seals_diagnostic_shadow_spec_without_ranking_it(self, tmp_path):
+        run_id = "shadow-spec-room"
+        env = {
+            "HJ_RUNS_DIR": str(tmp_path),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+        }
+        gateway = MockGateway()
+
+        with patch.dict(os.environ, env):
+            assert cbp.cmd_init(build_args("init", run_id=run_id), gateway, fixed_clock) == 0
+            assert cbp.cmd_submit(
+                build_args(
+                    "submit",
+                    run_id=run_id,
+                    builder_name="Builder",
+                    project_name="Project Lantern",
+                    description="A focused project with a clear demo path.",
+                ),
+                gateway,
+                fixed_clock,
+            ) == 0
+            assert cbp.cmd_judge(build_args("judge", run_id=run_id), gateway, fixed_clock) == 0
+
+        bundle_path = tmp_path / run_id
+        spec = cbp.load_shadow_spec(bundle_path)
+        assessment = cbp.load_shadow_assessment(bundle_path)
+        public_score = cbp.load_shadow_score(bundle_path)
+        feedback = cbp._load_feedback(bundle_path)[0]
+
+        assert spec["affects_public_ranking"] is False
+        assert spec["reveal_after"] == "awarded"
+        assert len(spec["criteria"]) == 6
+        assert any(criterion["is_decoy"] for criterion in spec["criteria"])
+        assert assessment["affects_public_ranking"] is False
+        assert "ranking" not in assessment
+        assert assessment["spec_hash"] == spec["spec_hash"]
+        assert public_score["ranking"]
+        assert feedback["copilot_next_moves"]
+        assert feedback["frontier_experiments"]
+        assert feedback["feedback_panel"]["model_count"] == 3
+
+    def test_award_returns_clear_error_when_no_ranked_award_is_eligible(self, tmp_path):
+        run_id = "empty-ranked-awards"
+        event = copy.deepcopy(cbp.DEFAULT_EVENT_SPEC)
+        event["awards"] = [
+            {
+                "id": "impossible-placement",
+                "name": "Impossible Placement",
+                "emoji": "🏅",
+                "tagline": "Reserved for an unavailable placement.",
+                "dimensions": [],
+                "rank": 2,
+                "reason": "This placement is intentionally unavailable in a one-project room.",
+            }
+        ]
+        event_path = tmp_path / "event.json"
+        event_path.write_text(json.dumps(event), encoding="utf-8")
+        env = {
+            "HJ_RUNS_DIR": str(tmp_path),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+        }
+        gateway = MockGateway()
+
+        with patch.dict(os.environ, env):
+            assert cbp.cmd_init(
+                build_args("init", run_id=run_id, event=str(event_path)),
+                gateway,
+                fixed_clock,
+            ) == 0
+            assert cbp.cmd_submit(build_args("submit", run_id=run_id), gateway, fixed_clock) == 0
+            assert cbp.cmd_judge(build_args("judge", run_id=run_id), gateway, fixed_clock) == 0
+            winner_id = cbp.load_shadow_score(tmp_path / run_id)["ranking"][0]
+            assert cbp.cmd_award(
+                build_args("award", run_id=run_id, winner=winner_id),
+                gateway,
+                fixed_clock,
+            ) == 7
+
+        assert not (tmp_path / run_id / "winner" / "card.json").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -1267,6 +2522,9 @@ def build_args(command: str, **kwargs) -> cbp.argparse.Namespace:
         "bundle_b": kwargs.get("bundle_b", "run-b"),
         "force": False,
         "projector": False,
+        "require_live_terminal": False,
+        "require_projector_window": False,
+        "demo": False,
         "operator": False,
     }
     defaults.update(kwargs)

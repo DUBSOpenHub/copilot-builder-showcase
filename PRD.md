@@ -5,10 +5,11 @@
 
 Hackathon Judge runs a clear, fair, and celebratory project judging
 experience from a terminal. An organizer pastes project links, screen-shares a
-guided show, and leaves with a replayable, tamper-evident event bundle.
+single guided show, and leaves with a replayable, tamper-evident event bundle.
 
-The product is event-neutral: it does not impose a host personality, organization
-identity, judge character, or fixed award names.
+The product is event-neutral: it does not impose a named host personality,
+organization identity, or judge character. The default show uses a bronze →
+silver → gold podium; EventSpecs may replace that award slate.
 
 ## Primary users
 
@@ -29,6 +30,12 @@ identity, judge character, or fixed award names.
 3. Every project receives a spotlight before the celebration.
 4. A saved bundle can be validated and replayed without a model call.
 5. A historical rubric-only bundle remains readable.
+6. The primary experience uses one visible terminal and never auto-opens a
+   second audience or monitor window.
+7. The bundled practice show completes the full intake-to-replay flow within
+   120 seconds under supported local conditions.
+8. The final result follows one randomly selected audience-participation cue and
+   explicit operator confirmation in an interactive Live Show.
 
 ## Core flow
 
@@ -48,6 +55,9 @@ premium policy check and sealed evaluation
 audience-safe project spotlights
         |
         v
+audience participation and confirmation
+        |
+        v
 award reveal and operator score access
         |
         v
@@ -61,9 +71,12 @@ python3 hackathon_judge.py workshop \
   --event event.json \
   --file submissions.txt \
   --run-id event-2026 \
-  --projector \
+  --require-live-terminal \
   --yes
 ```
+
+The complete run of show and commentary appears in that one terminal under the
+label `LIVE SHOW — SHARE THIS WINDOW`.
 
 ## EventSpec
 
@@ -75,7 +88,7 @@ event                name and tagline
 rubric               weighted scoring dimensions
 review_lenses        neutral evidence-focused perspectives
 awards               recognition categories and selection dimensions
-presentation         projector and audience-view defaults
+presentation         audience-view and optional-monitor defaults
 privacy              score-visibility and internal-use defaults
 accessibility        high contrast and reduced-motion defaults
 model_policy         freshness, premium tier, and reasoning requirements
@@ -96,8 +109,9 @@ at initialization.
 | Award reveal | Winners and configured celebration | Same |
 | After awards | Award results | `present --operator` can show numeric scores |
 
-The Textual dashboard must use the audience projection by default. Any
-operator projection is explicit and remains unavailable before awards.
+The optional Textual monitor must use the audience projection by default. It is
+never auto-launched by the Live Show. Any operator projection is explicit and
+remains unavailable before awards.
 
 ## Reliability and integrity
 
@@ -119,6 +133,7 @@ operator projection is explicit and remains unavailable before awards.
 - Executable presentation templates
 - Automatic external publication of winner material
 - A second, divergent bundle or seal implementation
+- Automatic launch of a second audience window
 
 ## Compatibility
 
