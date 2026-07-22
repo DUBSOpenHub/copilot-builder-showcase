@@ -1,49 +1,66 @@
-# 🏆 Hackathon Judge
+# Hackathon Judge
+
+**Paste project links. Run a fair judging show. Reveal the winners.**
+
+Hackathon Judge is a one-command live judging room for hackathons, build sprints,
+and demo days. It gives every project a consistent sealed review and a visible
+spotlight, then turns the final result into an audience moment instead of
+another spreadsheet.
+
+- **Built for:** hackathon organizers and event facilitators
+- **Input:** GitHub project links
+- **Output:** project spotlights, sealed awards, private feedback, and a replayable event bundle
 
 ![CI](https://github.com/DUBSOpenHub/hackathon-judge/actions/workflows/ci.yml/badge.svg)
-![Version: v3.1.0](https://img.shields.io/badge/version-v3.1.0-5E5E5E.svg)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen?logo=github)](SECURITY.md)
-![Python: 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB?logo=python&logoColor=white)
 
-> **A room full of people built something. The ending should feel like a show.**
-
-![Hackathon Judge single-screen Live Show practice demo](docs/images/live-show-demo.png)
-
-Paste project links and Hackathon Judge runs the complete finale in one shared
-Terminal: project entrances, sealed reviews, spotlights, an audience moment,
-awards, feedback, and a replayable result bundle.
-
-## ⚡ Start in 60 seconds
-
-Install once:
+## Install in one command
 
 ```bash
 gh api -H "Accept: application/vnd.github.raw" \
   repos/DUBSOpenHub/hackathon-judge/contents/install.sh | bash
 ```
 
-The installer needs Git, Python 3.11+, and an authenticated
-[GitHub CLI](https://cli.github.com/) with access to this repository. It prints
-one PATH command if `~/.local/bin` is not already available in your shell.
-
-Then type:
+Then start the show:
 
 ```bash
 hackathon
 ```
 
-Paste one GitHub project link per line and press Return on an empty line. That is
-the full beginner flow. You can also supply links immediately:
+Paste one project link per line and press Return on an empty line. You can also
+start immediately:
 
 ```bash
 hackathon owner/project-one owner/project-two owner/project-three
 ```
 
-No Python command, mode picker, team spreadsheet, model setup, or EventSpec is
+The installer needs Git, Python 3.11+, and an authenticated
+[GitHub CLI](https://cli.github.com/) with access to this repository. It prints
+one PATH command if `~/.local/bin` is not already available in your shell.
+
+![Hackathon Judge single-screen Live Show practice demo](docs/images/live-show-demo.png)
+
+## Why this exists
+
+**Problem.** Hackathons often end with tab switching, spreadsheets, uneven
+feedback, and a winner announcement that feels disconnected from the work.
+
+**Solution.** Hackathon Judge turns the same project links into a complete
+single-screen finale: consistent reviews, one spotlight per build, an
+audience-participation moment, sealed awards, and replayable evidence.
+
+**Who it is for.** Organizers who want a credible judging process without
+becoming production engineers or asking the audience to watch an admin tool.
+
+**Why now.** Modern build tools help more people ship credible demos faster,
+but judging and presentation have not kept pace. The final experience should
+scale with the creativity in the room.
+
+No Python command, mode picker, team spreadsheet, panel setup, or EventSpec is
 required. When no team name is supplied, Hackathon Judge labels the entry from
 the repository owner, such as `octocat team`.
 
-## 🎭 Try the complete practice show
+## Try the complete practice show
 
 ```bash
 hackathon --demo
@@ -64,7 +81,7 @@ Use `hackathon --official ...` when an official panel is mandatory. The command
 blocks before creating a run if no live panel is connected; it never silently
 turns an official event into a practice result.
 
-## ✨ Use it from Copilot CLI
+## Use it from Copilot CLI
 
 Add the skill:
 
@@ -82,7 +99,7 @@ Paste links with the request or when prompted. The skill checks whether the
 command is installed, asks permission before installing anything, runs a setup
 check, and opens exactly one real macOS Terminal for the audience experience.
 
-## 🎬 The one experience
+## The one experience
 
 ```text
 project links -> intake -> sealed reviews -> project spotlights
@@ -104,7 +121,7 @@ project links -> intake -> sealed reviews -> project spotlights
 The complete run appears in one Terminal. Hackathon Judge never auto-opens a
 dashboard or second audience window.
 
-## 📥 Project links are enough
+## Project links are enough
 
 The beginner input is simply:
 
@@ -126,7 +143,7 @@ https://github.com/example/project | Team Aurora | Used Copilot Chat for API des
 The optional fields are team or builder, Copilot evidence, frontier evidence,
 problem statement, intended user, demo URL, and builder notes.
 
-## 📦 After the show
+## After the show
 
 The Live Show automatically writes a recap, exports the bundle, validates its
 hashes and seal, and verifies a stored-artifact replay. Useful follow-up
@@ -144,7 +161,7 @@ actionable next step, a Copilot next move, and an optional frontier experiment.
 Unsupported ideas are labeled as hypotheses, and human approval is required
 before external delivery.
 
-## 🎛️ Advanced event customization
+## Advanced event customization
 
 Copy the portable event pack:
 
@@ -171,7 +188,7 @@ Exact ties follow the sealed event policy: shared podium by default, a
 predeclared rubric tiebreaker, or an explicit human decision. Submission order
 is never a hidden tiebreaker.
 
-## 🔒 Fair by default
+## Fair by default
 
 | Guardrail | What it means |
 | --- | --- |
@@ -188,7 +205,7 @@ Run bundles can contain project metadata and judge feedback. Treat them as
 internal artifacts unless a human approves publication. See
 [SECURITY.md](SECURITY.md) for reporting guidance.
 
-## 🧰 Command reference
+## Command reference
 
 | Command | Use it for |
 | --- | --- |
@@ -205,7 +222,7 @@ internal artifacts unless a human approves publication. See
 The installer also preserves `hackathon-judge` as the full compatibility CLI for
 advanced automation and existing scripts.
 
-## 🏗️ How it is built
+## How it is built
 
 ```text
 EventSpec -> intake -> consensus review -> sealed artifacts
@@ -221,7 +238,7 @@ EventSpec -> intake -> consensus review -> sealed artifacts
 The primary Live Show uses the Python standard library. Textual is an optional
 monitor dependency; an installation failure never blocks the show.
 
-## 🧪 Develop
+## Develop
 
 ```bash
 python3 -m pytest -q
@@ -229,13 +246,13 @@ python3 -m py_compile hackathon_launcher.py hackathon_judge.py hackathon_judge_d
 bash -n install.sh
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Keep the default experience neutral, beginner-first, and audience-safe. Do not
 commit run bundles, credentials, or confidential project metadata. The working
 invariants and canonical surfaces are in [AGENTS.md](AGENTS.md).
 
-## 💜 Credits
+## Credits
 
 Created with care by [@DUBSOpenHub](https://github.com/DUBSOpenHub) with the
 [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli).
