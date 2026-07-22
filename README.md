@@ -1,27 +1,36 @@
 # Hackathon Judge
 
-**Paste project links. Run a fair judging show. Reveal the winners.**
+> **Most hackathons spend hours building and end with judges staring at a
+> spreadsheet. Hackathon Judge turns project links into a fair, watchable
+> awards show.**
 
-Hackathon Judge is a one-command live judging room for hackathons, build sprints,
-and demo days. It gives every project a consistent sealed review and a visible
-spotlight, then turns the final result into an audience moment instead of
-another spreadsheet.
+Hackathon Judge is a one-command live judging room for hackathons, build
+sprints, and demo days. Organizers paste GitHub links once. Every project is
+reviewed against the same rubric, introduced to the room, and given private
+feedback. Scores stay sealed until the audience joins the final reveal, and the
+entire event is preserved as a tamper-evident replay.
+
+It starts with the hardest ten minutes of a hackathon: judging the projects and
+revealing a winner without losing the room.
 
 - **Built for:** hackathon organizers and event facilitators
-- **Input:** GitHub project links
-- **Output:** project spotlights, sealed awards, private feedback, and a replayable event bundle
+- **Input:** a list of GitHub project links
+- **Live experience:** one shared Terminal, one spotlight per build, one sealed reveal
+- **Proof:** the bundled three-project show runs end to end in under two minutes
 
 ![CI](https://github.com/DUBSOpenHub/hackathon-judge/actions/workflows/ci.yml/badge.svg)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen?logo=github)](SECURITY.md)
 
-## Install in one command
+## Run your first show
+
+### 1. Install in one command
 
 ```bash
 gh api -H "Accept: application/vnd.github.raw" \
   repos/DUBSOpenHub/hackathon-judge/contents/install.sh | bash
 ```
 
-Then start the show:
+### 2. Type `hackathon`
 
 ```bash
 hackathon
@@ -40,21 +49,26 @@ one PATH command if `~/.local/bin` is not already available in your shell.
 
 ![Hackathon Judge single-screen Live Show practice demo](docs/images/live-show-demo.png)
 
-## Why this exists
+## From spreadsheet to show
 
-**Problem.** Hackathons often end with tab switching, spreadsheets, uneven
-feedback, and a winner announcement that feels disconnected from the work.
+| The usual finish | With Hackathon Judge |
+| --- | --- |
+| Judges bounce between tabs and spreadsheets | The organizer pastes every project link once |
+| Feedback depends on which judge saw which build | Every project follows the same sealed review flow |
+| The audience waits while judges operate admin tools | Every accepted build gets a visible spotlight |
+| A winner is announced without context | The room joins a short, suspenseful final reveal |
+| Results disappear after the event | The recap, feedback, awards, and replay stay together |
 
-**Solution.** Hackathon Judge turns the same project links into a complete
-single-screen finale: consistent reviews, one spotlight per build, an
-audience-participation moment, sealed awards, and replayable evidence.
+## Why now
 
-**Who it is for.** Organizers who want a credible judging process without
-becoming production engineers or asking the audience to watch an admin tool.
+Modern build tools let more people ship credible demos in a day. Events now have
+more projects, more first-time builders, and less time to give each one a fair
+moment. Judging has become the bottleneck, and the final ten minutes still run
+like an internal meeting.
 
-**Why now.** Modern build tools help more people ship credible demos faster,
-but judging and presentation have not kept pace. The final experience should
-scale with the creativity in the room.
+Hackathon Judge gives those ten minutes their own product experience: fast
+enough for the room, structured enough for the judges, and memorable enough for
+the builders.
 
 No Python command, mode picker, team spreadsheet, panel setup, or EventSpec is
 required. When no team name is supplied, Hackathon Judge labels the entry from
