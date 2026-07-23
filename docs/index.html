@@ -659,6 +659,9 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .hero-cta-sub { margin-top: 14px; font-size: 13px; }
 .hero-cta-sub a { color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding-bottom: 1px; }
 .hero-cta-sub a:hover { color: var(--cp-accent); }
+.demo-link { background: none; border: 0; cursor: pointer; font: inherit; font-size: 13px; color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding: 0 0 1px; }
+.demo-link:hover { color: var(--cp-accent); }
+.sub-sep { color: var(--cp-border-strong); margin: 0 4px; }
 </style>
 </head>
 <body>
@@ -677,9 +680,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           </p>
           <div class="hero-cta">
             <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Start my showcase</button>
-            <button class="btn btn-ghost btn-lg" id="demoHero">👁&nbsp; Watch the demo</button>
           </div>
-          <div class="hero-cta-sub"><a href="#how">See how it works ↓</a></div>
+          <div class="hero-cta-sub"><a href="#how">See how it works ↓</a> <span class="sub-sep" aria-hidden="true">·</span> <button type="button" class="demo-link" id="demoHero">👁&nbsp; Watch a quick demo</button></div>
           <button type="button" class="command-chip command-chip-btn" id="copyCmdChip"
             aria-label="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
             title="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
@@ -798,7 +800,6 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <p>Start your showcase — <b>drop the project links</b>, or let <b>participants scan the QR</b> to add their own — then run the Copilot judging panel, live.</p>
         <div class="hero-cta">
           <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Start my showcase</button>
-          <button class="btn btn-ghost btn-lg" id="demoCta">👁&nbsp; Watch the demo</button>
         </div>
       </div>
     </section>
@@ -1398,7 +1399,6 @@ var QRClean = (function () {
   $("launchHero").addEventListener("click", function () { launch("live"); });
   $("launchCta").addEventListener("click", function () { launch("live"); });
   $("demoHero").addEventListener("click", function () { launch("demo"); });
-  $("demoCta").addEventListener("click", function () { launch("demo"); });
   $("resumeBtn").addEventListener("click", enterStage);
 
   function enterStage() {
