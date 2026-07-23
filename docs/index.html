@@ -14,6 +14,9 @@
       try { stored = localStorage.getItem("cbs_theme"); } catch (e) {}
       var theme = p || stored || "dark";
       document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+      var ap = new URLSearchParams(location.search).get("accent");
+      var astored = null; try { astored = localStorage.getItem("cbs_accent"); } catch (e2) {}
+      document.documentElement.setAttribute("data-accent", (ap || astored) === "purple" ? "purple" : "green");
     } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
@@ -657,6 +660,19 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .hero-cta-sub { margin-top: 14px; font-size: 13px; }
 .hero-cta-sub a { color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding-bottom: 1px; }
 .hero-cta-sub a:hover { color: var(--cp-accent); }
+/* ---- Accent palette toggle (green default · purple option) ---- */
+html[data-accent="purple"] { --primary: 265 85% 66%; --primary-foreground: 265 55% 10%; --ring: 265 85% 66%; }
+html[data-accent="purple"][data-theme="light"] { --primary: 266 74% 50%; --primary-foreground: 0 0% 100%; --ring: 266 74% 50%; }
+.accent-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 12px 8px 10px; border-radius: 999px; border: 1px solid var(--cp-border-strong);
+  background: var(--cp-surface); color: var(--cp-text); font-weight: 800; font-size: 12.5px; letter-spacing: 0.01em;
+  box-shadow: var(--cp-shadow); cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.accent-toggle:hover { border-color: var(--cp-accent); transform: translateY(-1px); }
+.accent-toggle:focus-visible { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft), var(--cp-shadow); }
+.accent-toggle .sw { width: 14px; height: 14px; border-radius: 50%; background: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); flex: none; }
+.accent-toggle .lbl { line-height: 1; }
+.accent-toggle .arrow { color: var(--cp-text-soft); font-weight: 900; }
+@media (max-width: 640px) { .accent-toggle { right: 10px; bottom: 10px; padding: 7px 10px; font-size: 12px; } }
 </style>
 </head>
 <body>
@@ -1069,6 +1085,15 @@ var QRClean = (function () {
   ["themeToggleApp", "themeToggleStage", "themeToggleSubmit"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", toggleTheme); });
   applyThemeIcon();
 
+  /* ---- accent palette toggle (green default · purple preview) ---- */
+  var ACCENT_KEY = "cbs_accent";
+  function currentAccent() { return root.getAttribute("data-accent") === "purple" ? "purple" : "green"; }
+  function applyAccentLabel() { var b = $("accentToggle"); if (!b) return; var a = currentAccent(); var lbl = b.querySelector(".lbl"); if (lbl) lbl.textContent = a === "purple" ? "Purple" : "Green"; b.setAttribute("title", "Accent: " + (a === "purple" ? "Purple" : "Green") + " — click to preview " + (a === "purple" ? "green" : "purple")); }
+  function toggleAccent() { var next = currentAccent() === "purple" ? "green" : "purple"; root.setAttribute("data-accent", next); try { localStorage.setItem(ACCENT_KEY, next); } catch (e) {} applyAccentLabel(); }
+  (function () { function wire() { var b = $("accentToggle"); if (b) b.addEventListener("click", toggleAccent); applyAccentLabel(); } if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire(); })();
+  function accentColor(a) { var v = (getComputedStyle(root).getPropertyValue("--primary") || "156 90% 42%").trim(); return "hsl(" + v + (a != null ? " / " + a : "") + ")"; }
+  function accentLight() { var v = (getComputedStyle(root).getPropertyValue("--primary") || "156 90% 42%").trim().split(/\s+/); if (v.length >= 3) { var l = parseFloat(v[2]); return "hsl(" + v[0] + " " + v[1] + " " + Math.min(74, (isNaN(l) ? 50 : l) + 16) + "%)"; } return accentColor(); }
+
   /* ---- shared state ---- */
   var STORE_KEY = "cbs_showcase_v1";
   var CH = null; try { CH = ("BroadcastChannel" in window) ? new BroadcastChannel("cbs_showcase") : null; } catch (e) { CH = null; }
@@ -1463,7 +1488,7 @@ var QRClean = (function () {
   function delibStart() {
     var cv = $("deliberate"); if (!cv || !cv.getContext) return;
     var ctx = cv.getContext("2d"); if (!ctx) return;
-    var GREEN = "#00A562", AMBER = "#FDC006", FX = [0.18, 0.5, 0.82], H = 84;
+    var GREEN = accentColor(), AMBER = "#FDC006", FX = [0.18, 0.5, 0.82], H = 84;
     var w = cv.clientWidth || 480, dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = w * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     function pos(i) { return { x: FX[i] * w, y: H * 0.5 }; }
@@ -1555,7 +1580,7 @@ var QRClean = (function () {
   function cueBurst(step) {
     if (reduceMotion) return;
     var host = $("cueOverlay"); if (!host) return;
-    var colors = ["#FDC006", "#00A562", "#ffd24a", "#00d67f", "#e5e7eb"];
+    var colors = ["#FDC006", accentColor(), "#ffd24a", accentLight(), "#e5e7eb"];
     var glyphs = ["✦", "●", "✦", "◆"];
     var storm = document.createElement("div");
     storm.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1;";
@@ -1667,7 +1692,7 @@ var QRClean = (function () {
     var cv = $("confetti"); if (!cv) return; var stage = $("stage");
     cv.classList.add("on"); var W = cv.width = stage.clientWidth || 1200, H = cv.height = stage.clientHeight || 700;
     var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; }
-    var gold = ["#FDC006", "#facc15", "#f59e0b", "#ffd24a"], mix = ["#00A562", "#00d67f", "#22c55e", "#e5e7eb", "#c9ced6"];
+    var gold = ["#FDC006", "#facc15", "#f59e0b", "#ffd24a"], mix = [accentColor(), accentLight(), accentColor(0.75), "#e5e7eb", "#c9ced6"];
     var parts = [];
     function spawn(cx, cy, n, spread, up, goldBias) {
       for (var i = 0; i < n; i++) {
@@ -1787,5 +1812,8 @@ var QRClean = (function () {
   boot();
 })();
 </script>
+<button type="button" id="accentToggle" class="accent-toggle" title="Accent color — click to switch" aria-label="Switch accent color between green and purple">
+  <span class="sw" aria-hidden="true"></span><span class="lbl">Green</span><span class="arrow" aria-hidden="true">⇄</span>
+</button>
 </body>
 </html>
