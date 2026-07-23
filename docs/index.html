@@ -756,7 +756,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <h3>Add the projects — two ways</h3>
           <p>Drop the whole list of links yourself, <strong>or</strong> let participants scan the on-screen QR to add their own project. Either way it lands on the board — project first.</p>
           <ul>
-            <li><span class="ck">✓</span> Paste links, one per line — or GitHub <code style="font-family:Consolas,monospace">owner/repo</code></li>
+            <li><span class="ck">✓</span> Paste one link or a whole batch at once — or GitHub <code style="font-family:Consolas,monospace">owner/repo</code></li>
             <li><span class="ck">✓</span> Real scannable QR → lightweight mobile submit</li>
             <li><span class="ck">✓</span> Every accepted project gets a spotlight</li>
           </ul>
@@ -854,7 +854,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <div id="pasteIntake" class="intake-ways">
           <div class="iway">
             <div class="iway-head"><span class="iway-num">1</span> Drop the links</div>
-            <p class="iway-note">You paste the project links — one per line.</p>
+            <p class="iway-note">Paste one link or the whole batch at once — spaces, commas, or new lines all work.</p>
             <textarea id="pasteLinks" rows="3" placeholder="https://github.com/owner/repo&#10;owner/repo&#10;https://your-demo.app"></textarea>
             <button class="btn btn-primary" id="addLinksBtn">＋&nbsp; Add these projects</button>
           </div>
@@ -1559,13 +1559,23 @@ var QRClean = (function () {
     var picks = pool.slice(0, 3), i = 0;
     seedRunning = true;
     function drip() {
-      if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open" || i >= picks.length) { seedRunning = false; return; }
+      if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open") { seedRunning = false; return; }
+      if (i >= picks.length) { seedRunning = false; scheduleAutoPanel(myRun); return; }
       var p = picks[i++];
       addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" }, { quiet: i > 1 });
       setTimeout(drip, 1400 + (hash(p.proj) % 900));
     }
     setTimeout(drip, 1500); /* let the empty state + QR breathe before entries land */
     setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "open") pushFeed("Demo tip: scan the QR to add a real project alongside the samples."); }, 1200);
+  }
+  function scheduleAutoPanel(myRun) {
+    setTimeout(function () {
+      if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open" || view !== "stage") return;
+      if (state.entries.length < 3) return;
+      state.status = "judging"; state.calls = 0; save(); fbSetStatus("judging");
+      renderStage(); showJudging(true);
+      pushFeed("Demo — auto-running the Copilot judging panel.");
+    }, reduceMotion ? 500 : 1700);
   }
   $("seedBtn").addEventListener("click", function () {
     if (state.status !== "open" || state.mode !== "demo") return;
@@ -1577,7 +1587,7 @@ var QRClean = (function () {
 
   /* ---- paste-links intake (leader loads projects directly; no phone needed) ---- */
   function addLinksFromText(text) {
-    var tokens = (text || "").split(/[\s,]+/).map(function (t) { return t.trim(); }).filter(Boolean);
+    var tokens = (text || "").split(/[\s,;|]+/).map(function (t) { return t.replace(/^[<("'\[]+/, "").replace(/[>)"'\].,;]+$/, "").trim(); }).filter(Boolean);
     var seen = {}; state.entries.forEach(function (e) { seen[(e.link || "").toLowerCase()] = 1; });
     var added = 0, bad = 0;
     tokens.forEach(function (tok) {
@@ -1722,6 +1732,7 @@ var QRClean = (function () {
     $("judgeAgg").textContent = state.entries.length + " projects · " + state.calls + " Copilot panel calls · median consensus locked";
     $("revealCue").classList.add("on");
     pushFeed("Copilot panel finished — scores sealed until the reveal.");
+    if (state.mode === "demo") { var myRun = state.runId; setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "judging" && view === "stage") playCue("countdown"); }, reduceMotion ? 500 : 1600); }
   }
   Array.prototype.forEach.call(document.querySelectorAll("#cueChoices .cue-btn"), function (b) { b.addEventListener("click", function () { playCue(b.getAttribute("data-cue")); }); });
   function playCue(type) {
