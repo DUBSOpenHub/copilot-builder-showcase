@@ -10,6 +10,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
 
+[project.optional-dependencies]
+textual = ["textual>=8,<9"]
+
 [project.scripts]
 showcase = "showcase_launcher:main"
 copilot-builder-showcase = "builder_showcase:main"

@@ -2475,6 +2475,7 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
     preferred_model = gate_config.get("preferred_model", "claude-opus-4.7-high")
     required_tier = gate_config.get("required_tier", "premium")
     required_reasoning = gate_config.get("required_reasoning", "high")
+    configured_models = _configured_panel_models(gate_config, preferred_model)
     checked_at = _now(clock)
     provenance = {
         "mode": "live" if _gateway is not None else "simulated",
@@ -2492,9 +2493,14 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
         # API unavailable — log and block
         result = {
             "configured_model": preferred_model,
+            "configured_models": configured_models,
             "available_models": [],
             "selected_model": preferred_model,
             "selected_models": [],
+            "required_tier": required_tier,
+            "required_reasoning": required_reasoning,
+            "minimum_panel_size": gate_config.get("minimum_panel_size", len(configured_models)),
+            "minimum_distinct_providers": gate_config.get("minimum_distinct_providers", 1),
             "status": "blocked",
             "policy_mode": policy_mode,
             "reason": f"Model API unavailable: {exc}",
@@ -2504,7 +2510,6 @@ def run_freshness_gate(bundle_path: Path, rubric: Dict,
         write_once_json(gate_path, result)
         raise ModelAPIError(f"Model API unavailable during freshness gate: {exc}") from exc
 
-    configured_models = _configured_panel_models(gate_config, preferred_model)
     selected_models, failures, minimum_panel_size, minimum_distinct_providers = (
         _resolve_model_panel(
             available,
@@ -7986,6 +7991,7 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
     """replay — read-only re-run of any prior bundle; no model calls, no new artifacts."""
     bundle_arg = getattr(args, "bundle", None) or getattr(args, "run_id", None)
     runs_dir = get_runs_dir()
+    temp_extract_dir: Optional[Path] = None
 
     if bundle_arg and Path(bundle_arg).is_dir():
         bundle_path = Path(bundle_arg)
@@ -7996,6 +8002,7 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
             # Extract to temp location in runs dir and replay
             extract_dir = runs_dir / f"_replay_{uuid.uuid4().hex[:8]}"
             extract_dir.mkdir(parents=True)
+            temp_extract_dir = extract_dir
             try:
                 with tarfile.open(archive, "r:gz") as tar:
                     _safe_extract_tar(tar, extract_dir)
@@ -8015,98 +8022,102 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
         _print_error(7, "ConfigValidationError", "Provide --bundle <path> or a run_id.")
         return 7
 
-    if not bundle_path.exists():
-        _print_error(7, "ConfigValidationError", f"Bundle not found: {bundle_path}")
-        return 7
+    try:
+        if not bundle_path.exists():
+            _print_error(7, "ConfigValidationError", f"Bundle not found: {bundle_path}")
+            return 7
 
-    # Validate first
-    seal_path = bundle_path / "SEAL"
-    hashes_path = bundle_path / "HASHES"
-    if seal_path.exists() and hashes_path.exists():
-        _sideline("Validating bundle integrity before replay...", "📼", "blue")
-        # Quick seal check
-        stored_seal = seal_path.read_text(encoding="utf-8").strip()
-        hashes_content = hashes_path.read_text(encoding="utf-8")
-        recomputed = _sha256_bytes(hashes_content.encode("utf-8"))
-        if stored_seal != recomputed:
-            _print_error(5, "BundleTamperError", "Bundle integrity check failed — cannot replay tampered bundle.")
-            return 5
-        _success("Bundle integrity: OK")
+        # Validate first
+        seal_path = bundle_path / "SEAL"
+        hashes_path = bundle_path / "HASHES"
+        if seal_path.exists() and hashes_path.exists():
+            _sideline("Validating bundle integrity before replay...", "📼", "blue")
+            # Quick seal check
+            stored_seal = seal_path.read_text(encoding="utf-8").strip()
+            hashes_content = hashes_path.read_text(encoding="utf-8")
+            recomputed = _sha256_bytes(hashes_content.encode("utf-8"))
+            if stored_seal != recomputed:
+                _print_error(5, "BundleTamperError", "Bundle integrity check failed — cannot replay tampered bundle.")
+                return 5
+            _success("Bundle integrity: OK")
 
-    # Read all artifacts and render (read-only, no model calls, no new files)
-    manifest = load_manifest(bundle_path)
-    rubric = load_rubric(bundle_path)
-    verdicts = _load_verdicts(bundle_path)
-    feedback = _load_feedback(bundle_path)
-    gate = None
-    gate_path = bundle_path / "freshness_gate.json"
-    if gate_path.exists():
-        gate = load_json(gate_path)
+        # Read all artifacts and render (read-only, no model calls, no new files)
+        manifest = load_manifest(bundle_path)
+        rubric = load_rubric(bundle_path)
+        verdicts = _load_verdicts(bundle_path)
+        feedback = _load_feedback(bundle_path)
+        gate = None
+        gate_path = bundle_path / "freshness_gate.json"
+        if gate_path.exists():
+            gate = load_json(gate_path)
 
-    event_name = _event_name(bundle_path)
-    scores_revealed = manifest.get("status") in {"awarded", "exported"}
-    _magic_banner(f"{event_name} Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
-    _sideline(f"Status: {manifest.get('status', 'unknown')}", "📼", "blue")
-    if gate:
-        _sideline(
-            f"Panel: {_model_panel_label(gate)} ({gate.get('status', '')})",
-            "🧠",
-            "green",
-        )
+        event_name = _event_name(bundle_path)
+        scores_revealed = manifest.get("status") in {"awarded", "exported"}
+        _magic_banner(f"{event_name} Replay", f"Run: {manifest.get('run_id', bundle_path.name)}")
+        _sideline(f"Status: {manifest.get('status', 'unknown')}", "📼", "blue")
+        if gate:
+            _sideline(
+                f"Panel: {_model_panel_label(gate)} ({gate.get('status', '')})",
+                "🧠",
+                "green",
+            )
 
-    if verdicts:
-        print(_paint("\n🎙️ Panel Verdicts", "magenta", bold=True))
-        for v in verdicts:
-            score = float(v.get("total_score", 0))
-            print(_paint(f"\n  ─── 🛠️ {v.get('project_name', v['submission_id'])} ───", "blue", bold=True))
-            print(_paint(f"  Builder: {v.get('builder_name', '')}", "cyan"))
-            if scores_revealed:
-                print(_paint(f"  Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
-            else:
-                print(_paint("  Score:   sealed until the award reveal", "gold", bold=True))
-            for arch_v in v.get("archetype_verdicts", []):
-                reaction = arch_v.get("bright_spot", "")
+        if verdicts:
+            print(_paint("\n🎙️ Panel Verdicts", "magenta", bold=True))
+            for v in verdicts:
+                score = float(v.get("total_score", 0))
+                print(_paint(f"\n  ─── 🛠️ {v.get('project_name', v['submission_id'])} ───", "blue", bold=True))
+                print(_paint(f"  Builder: {v.get('builder_name', '')}", "cyan"))
+                if scores_revealed:
+                    print(_paint(f"  Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
+                else:
+                    print(_paint("  Score:   sealed until the award reveal", "gold", bold=True))
+                for arch_v in v.get("archetype_verdicts", []):
+                    reaction = arch_v.get("bright_spot", "")
+                    if not scores_revealed:
+                        reaction = _audience_safe_commentary(
+                            reaction,
+                            "The panel found a thoughtful detail worth celebrating.",
+                        )
+                    print(_paint(f"    🎙️ {arch_v['archetype_name']}: {reaction[:100]}", "green"))
+        else:
+            print("\n  No verdicts found in bundle.")
+
+        if feedback:
+            print(_paint("\n✨ Next-Commit Nudges", "cyan", bold=True))
+            for fc in feedback:
+                print(_paint(f"\n  Builder: {fc.get('builder_name', fc['submission_id'])}", "cyan"))
+                bright_spot = fc.get("bright_spot", "")
+                next_commit = fc.get("next_commit", "")
                 if not scores_revealed:
-                    reaction = _audience_safe_commentary(
-                        reaction,
-                        "The panel found a thoughtful detail worth celebrating.",
+                    bright_spot = _audience_safe_commentary(
+                        bright_spot,
+                        "This project brought a thoughtful moment to the room.",
                     )
-                print(_paint(f"    🎙️ {arch_v['archetype_name']}: {reaction[:100]}", "green"))
-    else:
-        print("\n  No verdicts found in bundle.")
+                    next_commit = _audience_safe_commentary(
+                        next_commit,
+                        "A helpful next step will be shared after the reveal.",
+                    )
+                print(_paint(f"  ✨ {bright_spot}", "green"))
+                print(_paint(f"  ➜ {next_commit}", "yellow"))
 
-    if feedback:
-        print(_paint("\n✨ Next-Commit Nudges", "cyan", bold=True))
-        for fc in feedback:
-            print(_paint(f"\n  Builder: {fc.get('builder_name', fc['submission_id'])}", "cyan"))
-            bright_spot = fc.get("bright_spot", "")
-            next_commit = fc.get("next_commit", "")
-            if not scores_revealed:
-                bright_spot = _audience_safe_commentary(
-                    bright_spot,
-                    "This project brought a thoughtful moment to the room.",
-                )
-                next_commit = _audience_safe_commentary(
-                    next_commit,
-                    "A helpful next step will be shared after the reveal.",
-                )
-            print(_paint(f"  ✨ {bright_spot}", "green"))
-            print(_paint(f"  ➜ {next_commit}", "yellow"))
+        winner_path = bundle_path / "winner" / "card.json"
+        awards_card = _load_awards(bundle_path)
+        if scores_revealed and awards_card:
+            print()
+            _print_award_ceremony(awards_card, args)
+        elif scores_revealed and winner_path.exists():
+            winner = load_json(winner_path)
+            print()
+            _magic_banner(
+                f"🏆 {winner.get('award_name', _event_grand_prize_name(bundle_path))}",
+                f"{winner.get('winner_builder_name', 'Unknown')}",
+            )
 
-    winner_path = bundle_path / "winner" / "card.json"
-    awards_card = _load_awards(bundle_path)
-    if scores_revealed and awards_card:
-        print()
-        _print_award_ceremony(awards_card, args)
-    elif scores_revealed and winner_path.exists():
-        winner = load_json(winner_path)
-        print()
-        _magic_banner(
-            f"🏆 {winner.get('award_name', _event_grand_prize_name(bundle_path))}",
-            f"{winner.get('winner_builder_name', 'Unknown')}",
-        )
-
-    return 0
+        return 0
+    finally:
+        if temp_extract_dir is not None:
+            shutil.rmtree(temp_extract_dir, ignore_errors=True)
 
 
 def cmd_resume(args: argparse.Namespace, _gateway: Optional[Any] = None,

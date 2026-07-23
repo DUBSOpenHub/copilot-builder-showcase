@@ -14,6 +14,7 @@ import json
 import ntpath
 import os
 import re
+import tomllib
 import subprocess
 import sys
 import tarfile
@@ -1407,6 +1408,26 @@ class TestFreshnessGate:
                 ),
                 fixed_clock,
             )
+
+    def test_gate_api_unavailable_record_keeps_policy_fields(self, tmp_path):
+        bundle_path = make_run(tmp_path, "api-unavailable-gate")
+        rubric = cbp.load_rubric(bundle_path)
+
+        with patch.object(
+            cbp,
+            "query_available_models",
+            side_effect=RuntimeError("offline"),
+        ):
+            with pytest.raises(cbp.ModelAPIError, match="Model API unavailable"):
+                cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
+
+        gate = cbp.load_json(bundle_path / "freshness_gate.json")
+        assert gate["status"] == "blocked"
+        assert gate["configured_models"]
+        assert gate["required_tier"] == rubric["freshness_gate"]["required_tier"]
+        assert gate["required_reasoning"] == rubric["freshness_gate"]["required_reasoning"]
+        assert gate["minimum_panel_size"] == rubric["freshness_gate"]["minimum_panel_size"]
+        assert gate["minimum_distinct_providers"] == rubric["freshness_gate"]["minimum_distinct_providers"]
 
     def test_gate_fallback_permissive(self, tmp_path):
         bundle_path = make_run(tmp_path)
@@ -2910,6 +2931,14 @@ class TestCommandFlows:
             files_after = set(str(p) for p in bundle_path.rglob("*") if p.is_file())
             assert files_before == files_after
 
+            archive_path = tmp_path / f"{run_id}.tar.gz"
+            with tarfile.open(archive_path, "w:gz") as tar:
+                tar.add(bundle_path, arcname=run_id)
+
+            rc = cbp.cmd_replay(build_args("replay", bundle=str(archive_path)), gw, fixed_clock)
+            assert rc == 0
+            assert not list(tmp_path.glob("_replay_*"))
+
     def test_present_idempotent(self, tmp_path):
         """AC-07: two present calls on same bundle produce identical output."""
         import io
@@ -3770,6 +3799,15 @@ class TestConfigValidation:
             clear=True,
         ):
             assert cbp.get_registry_path() == Path("/tmp/cbs/log.ndjson")
+
+
+class TestPackagingConfig:
+
+    def test_pyproject_declares_optional_textual_extra(self):
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+
+        assert data["project"]["optional-dependencies"]["textual"] == ["textual>=8,<9"]
 
 
 # ---------------------------------------------------------------------------
