@@ -632,9 +632,9 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <span class="badge"><span class="badge-star">✦</span> One command · <code style="font-family:Consolas,monospace">showcase</code></span>
           <h1>End every build session on a <span class="accent">podium.</span></h1>
           <p class="lede">
-            Copilot Builder Showcase turns a loose list of project links into a live,
-            <strong>Copilot-judged</strong> finale — every project gets a spotlight, the room scans in,
-            and a real podium lands: Builder Bronze, Builder Silver, and the Copilot Builder Award.
+            Turn any workshop into a live, <strong>Copilot-judged</strong> showcase. Add every project two ways —
+            <strong>drop the links yourself</strong>, or let participants <strong>scan a QR to add their own</strong> —
+            then spotlight the winners on a real podium, in under two minutes.
           </p>
           <div class="hero-cta">
             <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Start my showcase</button>
@@ -708,11 +708,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <article class="pillar">
           <span class="num">2</span>
           <div class="p-ic">▦</div>
-          <h3>Scan to submit</h3>
-          <p>A real, scannable QR code appears. Builders scan it, paste a project link, and their project lands on the board — project first.</p>
+          <h3>Add the projects — two ways</h3>
+          <p>Drop the whole list of links yourself, <strong>or</strong> let participants scan the on-screen QR to add their own project. Either way it lands on the board — project first.</p>
           <ul>
-            <li><span class="ck">✓</span> Live QR generated on-device</li>
-            <li><span class="ck">✓</span> Lightweight mobile submit view</li>
+            <li><span class="ck">✓</span> Paste links, one per line — or GitHub <code style="font-family:Consolas,monospace">owner/repo</code></li>
+            <li><span class="ck">✓</span> Real scannable QR → lightweight mobile submit</li>
             <li><span class="ck">✓</span> Every accepted project gets a spotlight</li>
           </ul>
         </article>
@@ -752,7 +752,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="cta-band">
         <span class="badge" style="margin:0 auto 12px">Ready when you are</span>
         <h2>Give the room a finale worth staying for.</h2>
-        <p>Start your showcase — paste project links or let the room scan in — then run the Copilot judging panel, live.</p>
+        <p>Start your showcase — <b>drop the project links</b>, or let <b>participants scan the QR</b> to add their own — then run the Copilot judging panel, live.</p>
         <div class="hero-cta">
           <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Start my showcase</button>
           <button class="btn btn-ghost btn-lg" id="demoCta">👁&nbsp; Watch the demo</button>
@@ -791,7 +791,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="board-head">
         <div>
           <div class="bt" id="boardTitle">Open for submissions</div>
-          <div class="bsub" id="boardSub">Scan the code to add your project to the showcase.</div>
+          <div class="bsub" id="boardSub">Two ways to add projects: drop the links, or have participants scan the QR.</div>
         </div>
         <div class="counts">
           <div class="count"><b id="cEntries">0</b><span>Projects</span></div>
@@ -807,12 +807,12 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div id="boardEmpty" class="board-empty">
         <div class="big">📥</div>
         <h3 id="emptyTitle">Add projects to begin</h3>
-        <p id="emptySub">Two ways to load projects — paste the links here, or have the room scan the QR code.</p>
+        <p id="emptySub">Two ways to add projects: <b>paste the links</b> here, or have <b>participants scan the QR</b> to add their own.</p>
         <div id="pasteIntake" class="paste-intake">
           <textarea id="pasteLinks" rows="3" placeholder="Paste project links — one per line&#10;https://github.com/owner/repo    ·    owner/repo    ·    https://your-demo.app"></textarea>
           <div class="paste-actions">
             <button class="btn btn-primary" id="addLinksBtn">＋&nbsp; Add these projects</button>
-            <span class="paste-or">— or have the room scan the QR&nbsp;→</span>
+            <span class="paste-or">— or participants scan the QR&nbsp;→</span>
           </div>
         </div>
       </div>
@@ -865,8 +865,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
     <aside class="sidepanel">
       <div class="qr-card" id="qrCard">
-        <h4>▦ Or scan to submit from a phone</h4>
-        <div class="qr-sub">The room points a camera here → opens the mobile submit view → paste a link, tap submit.</div>
+        <h4>▦ Or: participants scan to add their own</h4>
+        <div class="qr-sub">Point a phone camera here → mobile submit view → paste a project link, tap submit.</div>
         <div class="qr-frame"><canvas id="qrCanvas" width="220" height="220" role="img" aria-label="QR code linking to the project submission page"></canvas></div>
         <div class="qr-url" id="qrUrl">…</div>
         <div class="qr-warn" id="qrWarn" style="display:none">⚠ Serving on <b>localhost</b> — phones on other devices can’t reach this address. Deploy the page (e.g. GitHub Pages) or serve it on your computer’s Wi-Fi IP so the room can scan. You can always use <b>Add these projects</b> to paste links directly.</div>
@@ -1186,13 +1186,13 @@ var QRClean = (function () {
     var tt = titles[state.status] || titles.open;
     $("boardTitle").textContent = tt[0];
     $("boardSub").textContent = (state.status === "open")
-      ? (isDemo ? "Sample projects roll in automatically — illustrative demo." : "Paste links or scan the QR — every project gets a spotlight.")
+      ? (isDemo ? "Sample projects roll in automatically — illustrative demo." : "Two ways to add projects: drop the links, or have participants scan the QR to add their own.")
       : tt[1];
     if (state.status === "open") {
       $("emptyTitle").textContent = isDemo ? "Warming up the demo…" : "Add projects to begin";
       $("emptySub").textContent = isDemo
         ? "Illustrative sample projects are rolling in. You can also scan the QR to add a real one."
-        : "Two ways to load projects — paste the links here, or have the room scan the QR code.";
+        : "Two ways to add projects: paste the links here, or have participants scan the QR to add their own.";
       $("pasteIntake").style.display = isDemo ? "none" : "";
     }
     /* operator */
