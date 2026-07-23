@@ -561,6 +561,17 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* ---- dead-simple intake + mode clarity ---- */
+.paste-intake { margin: 16px auto 0; max-width: 540px; text-align: left; }
+.paste-intake textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 76px; padding: 12px 14px; border-radius: 0.7rem; border: 1px solid var(--cp-border-strong); background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; line-height: 1.5; }
+.paste-intake textarea:focus { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+.paste-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.paste-or { color: var(--cp-text-muted); font-size: 13px; }
+.qr-warn { margin-top: 10px; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--cp-warning); background: var(--cp-accent-soft); color: var(--cp-text); font-size: 12px; line-height: 1.45; text-align: left; }
+.hero-cta-sub { margin-top: 14px; font-size: 13px; }
+.hero-cta-sub a { color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding-bottom: 1px; }
+.hero-cta-sub a:hover { color: var(--cp-accent); }
 </style>
 </head>
 <body>
@@ -598,9 +609,10 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
             and a real podium lands: Builder Bronze, Builder Silver, and the Copilot Builder Award.
           </p>
           <div class="hero-cta">
-            <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Launch the experience</button>
-            <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+            <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Start my showcase</button>
+            <button class="btn btn-ghost btn-lg" id="demoHero">👁&nbsp; Watch the 60-sec demo</button>
           </div>
+          <div class="hero-cta-sub"><a href="#how">See how it works ↓</a></div>
           <div class="command-chip" aria-hidden="true">
             <span class="dots"><i></i><i></i><i></i></span>
             <span class="prompt">$</span><span class="cmd">showcase</span><span class="caret"></span>
@@ -712,9 +724,10 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="cta-band">
         <span class="badge" style="margin:0 auto 12px">Ready when you are</span>
         <h2>Give the room a finale worth staying for.</h2>
-        <p>Launch the big screen, let builders scan in, and run the Copilot judging panel — live.</p>
+        <p>Start your showcase — paste project links or let the room scan in — then run the Copilot judging panel, live.</p>
         <div class="hero-cta">
-          <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Launch the experience</button>
+          <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Start my showcase</button>
+          <button class="btn btn-ghost btn-lg" id="demoCta">👁&nbsp; Watch the demo</button>
         </div>
       </div>
     </section>
@@ -740,7 +753,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="step" data-step="awarded"><span class="n">3</span><span class="lbl">Awarded</span></div>
     </div>
     <div class="spacer"></div>
-    <span class="pill status-pill"><span class="badge-dot"></span> Practice · illustrative</span>
+    <span class="pill status-pill" id="stageMode"><span class="badge-dot"></span> Live · illustrative results</span>
     <button class="icon-btn" id="themeToggleStage" title="Toggle theme" aria-label="Toggle color theme">🌙</button>
     <button class="btn btn-sm btn-ghost" id="exitStage" title="Back to landing">✕ Exit</button>
   </div>
@@ -765,8 +778,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
       <div id="boardEmpty" class="board-empty">
         <div class="big">📥</div>
-        <h3>Waiting for the first project…</h3>
-        <p>Point a phone camera at the QR code to submit a project link. Entries appear here the moment they land.</p>
+        <h3 id="emptyTitle">Add projects to begin</h3>
+        <p id="emptySub">Two ways to load projects — paste the links here, or have the room scan the QR code.</p>
+        <div id="pasteIntake" class="paste-intake">
+          <textarea id="pasteLinks" rows="3" placeholder="Paste project links — one per line&#10;https://github.com/owner/repo    ·    owner/repo    ·    https://your-demo.app"></textarea>
+          <div class="paste-actions">
+            <button class="btn btn-primary" id="addLinksBtn">＋&nbsp; Add these projects</button>
+            <span class="paste-or">— or have the room scan the QR&nbsp;→</span>
+          </div>
+        </div>
       </div>
 
       <!-- judging overlay -->
@@ -815,10 +835,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
     <aside class="sidepanel">
       <div class="qr-card" id="qrCard">
-        <h4>▦ Scan to submit your project</h4>
-        <div class="qr-sub">Open the mobile submit view — paste a link, tap submit.</div>
+        <h4>▦ Or scan to submit from a phone</h4>
+        <div class="qr-sub">The room points a camera here → opens the mobile submit view → paste a link, tap submit.</div>
         <div class="qr-frame"><canvas id="qrCanvas" width="220" height="220" role="img" aria-label="QR code linking to the project submission page"></canvas></div>
         <div class="qr-url" id="qrUrl">…</div>
+        <div class="qr-warn" id="qrWarn" style="display:none">⚠ Serving on <b>localhost</b> — phones on other devices can’t reach this address. Deploy the page (e.g. GitHub Pages) or serve it on your computer’s Wi-Fi IP so the room can scan. You can always use <b>Add these projects</b> to paste links directly.</div>
         <div class="qr-actions">
           <button class="btn btn-sm" id="copyUrl">⧉ Copy link</button>
           <button class="btn btn-sm btn-primary" id="openSubmit">Open submit ↗</button>
@@ -975,7 +996,7 @@ var QRClean = (function () {
   var STORE_KEY = "cbs_showcase_v1";
   var CH = null; try { CH = ("BroadcastChannel" in window) ? new BroadcastChannel("cbs_showcase") : null; } catch (e) { CH = null; }
   var mem = null;
-  function freshState() { return { status: "idle", runId: "", startedAt: 0, calls: 0, entries: [], podium: null, seeded: 0 }; }
+  function freshState() { return { status: "idle", mode: "live", runId: "", startedAt: 0, calls: 0, entries: [], podium: null, seeded: 0 }; }
   function readState() { try { var s = localStorage.getItem(STORE_KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; }
   function writeState(st) { mem = st; try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {} }
   var state = readState() || freshState();
@@ -1015,7 +1036,8 @@ var QRClean = (function () {
     for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.modules[r][c]) ctx.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
     return true;
   }
-  function drawStageQR() { var ok = drawQR($("qrCanvas"), submitURL()); $("qrUrl").textContent = submitURL(); if (!ok) $("qrUrl").textContent = "Open " + submitURL() + " on another device."; }
+  function isLocalHost() { var h = (location.hostname || "").toLowerCase(); return location.protocol === "file:" || h === "" || h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "0.0.0.0"; }
+  function drawStageQR() { var url = submitURL(); var ok = drawQR($("qrCanvas"), url); $("qrUrl").textContent = ok ? url : ("Open " + url + " on another device."); var w = $("qrWarn"); if (w) w.style.display = isLocalHost() ? "" : "none"; }
 
   /* ---- demo projects ---- */
   var DEMO = [
@@ -1066,30 +1088,37 @@ var QRClean = (function () {
 
   function renderResume() {
     var live = state.status !== "idle";
+    var isDemo = state.mode === "demo";
     var b = $("resumeBanner"); b.classList.toggle("on", live);
     if (live) {
       var map = { open: "Open for submissions", judging: "Copilot judging in progress", awarded: "Winners revealed" };
-      $("resumeText").textContent = "A live showcase is running — " + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
+      $("resumeText").textContent = (isDemo ? "A demo showcase is running — " : "A live showcase is running — ") + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
     }
-    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (live ? "Live · " + state.entries.length + " projects" : "Practice showcase");
+    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (live ? ((isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects") : "Ready to start");
   }
 
   /* ---- landing actions ---- */
-  function launch() {
+  function launch(mode) {
+    var m = (mode === "demo") ? "demo" : "live";
     if (state.status === "idle") {
       state = freshState();
+      state.mode = m;
       state.status = "open";
       state.runId = "run-" + Date.now().toString(36);
       state.startedAt = Date.now();
       save();
       feed = [];
-      pushFeed("Showcase is open — the room can scan in now.");
+      pushFeed(m === "demo"
+        ? "Demo showcase — illustrative sample projects will roll in."
+        : "Showcase is open — paste your project links or let the room scan in.");
     }
     enterStage();
-    if (state.status === "open" && state.entries.length === 0 && !seedRunning) scheduleSeed();
+    if (state.mode === "demo" && state.status === "open" && state.entries.length === 0 && !seedRunning) scheduleSeed();
   }
-  $("launchHero").addEventListener("click", launch);
-  $("launchCta").addEventListener("click", launch);
+  $("launchHero").addEventListener("click", function () { launch("live"); });
+  $("launchCta").addEventListener("click", function () { launch("live"); });
+  $("demoHero").addEventListener("click", function () { launch("demo"); });
+  $("demoCta").addEventListener("click", function () { launch("demo"); });
   $("resumeBtn").addEventListener("click", enterStage);
 
   function enterStage() {
@@ -1114,20 +1143,32 @@ var QRClean = (function () {
   }
   function renderStage() {
     setStepper();
+    var isDemo = state.mode === "demo";
     $("cEntries").textContent = state.entries.length;
     $("cStage").textContent = { open: "Open", judging: "Judging", awarded: "Awarded", idle: "Ready" }[state.status] || state.status;
     $("cCalls").textContent = state.calls || 0;
+    $("stageMode").innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · illustrative" : "Live · illustrative results");
     var titles = {
       open: ["Open for submissions", "Scan the code — every project that lands gets a spotlight."],
       judging: ["Copilot judging in progress", "One rubric, applied to every project. Scores stay sealed."],
       awarded: ["The winners are in", "Chosen by median consensus of a Copilot CLI panel."]
     };
     var tt = titles[state.status] || titles.open;
-    $("boardTitle").textContent = tt[0]; $("boardSub").textContent = tt[1];
+    $("boardTitle").textContent = tt[0];
+    $("boardSub").textContent = (state.status === "open")
+      ? (isDemo ? "Sample projects roll in automatically — illustrative demo." : "Paste links or scan the QR — every project gets a spotlight.")
+      : tt[1];
+    if (state.status === "open") {
+      $("emptyTitle").textContent = isDemo ? "Warming up the demo…" : "Add projects to begin";
+      $("emptySub").textContent = isDemo
+        ? "Illustrative sample projects are rolling in. You can also scan the QR to add a real one."
+        : "Two ways to load projects — paste the links here, or have the room scan the QR code.";
+      $("pasteIntake").style.display = isDemo ? "none" : "";
+    }
     /* operator */
     var canRun = state.status === "open" && state.entries.length >= 3;
     var rp = $("runPanelBtn"); rp.disabled = !canRun;
-    $("seedBtn").style.display = state.status === "open" ? "" : "none";
+    $("seedBtn").style.display = (state.status === "open" && isDemo) ? "" : "none";
     if (state.status === "open") { $("opHint").textContent = state.entries.length < 3 ? ("Need at least 3 projects for a podium — " + state.entries.length + "/3 so far.") : "The room is ready. Run the Copilot judging panel when you are."; }
     else if (state.status === "judging") $("opHint").textContent = "The Copilot panel is reviewing every project…";
     else $("opHint").textContent = "Showcase complete. Start another run whenever you like.";
@@ -1136,7 +1177,7 @@ var QRClean = (function () {
     renderHeroSpot();
     if (state.status === "open" && state.entries.length > 1) { if (!heroTimer) startHeroTimer(); } else if (state.status !== "open") { stopHeroTimer(); }
     renderTicker();
-    $("topStatus").innerHTML = '<span class="badge-dot"></span> Live · ' + state.entries.length + " projects";
+    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects";
   }
   function spotCard(e, idx) {
     var link = safeURL(e.link);
@@ -1231,24 +1272,52 @@ var QRClean = (function () {
 
   /* ---- auto seed for demo polish ---- */
   function scheduleSeed() {
+    if (state.mode !== "demo") { seedRunning = false; return; }
+    var myRun = state.runId;
     var pool = DEMO.slice(0).sort(function () { return hash("" + Date.now() + Math.random()) % 2 ? 1 : -1; });
     var picks = pool.slice(0, 3), i = 0;
     seedRunning = true;
     function drip() {
-      if (state.status !== "open" || i >= picks.length) { seedRunning = false; return; }
+      if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open" || i >= picks.length) { seedRunning = false; return; }
       var p = picks[i++];
       addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" }, { quiet: i > 1 });
       setTimeout(drip, 1400 + (hash(p.proj) % 900));
     }
     setTimeout(drip, 1500); /* let the empty state + QR breathe before entries land */
-    setTimeout(function () { if (state.status === "open") pushFeed("Tip: scan the QR to add a real project alongside the demo entries."); }, 1200);
+    setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "open") pushFeed("Demo tip: scan the QR to add a real project alongside the samples."); }, 1200);
   }
   $("seedBtn").addEventListener("click", function () {
-    if (state.status !== "open") return;
+    if (state.status !== "open" || state.mode !== "demo") return;
     var used = {}; state.entries.forEach(function (e) { used[e.proj] = 1; });
     var avail = DEMO.filter(function (d) { return !used[d.proj]; });
     var p = avail.length ? avail[hash("" + Date.now()) % avail.length] : DEMO[hash("" + Date.now()) % DEMO.length];
     addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" });
+  });
+
+  /* ---- paste-links intake (leader loads projects directly; no phone needed) ---- */
+  function addLinksFromText(text) {
+    var tokens = (text || "").split(/[\s,]+/).map(function (t) { return t.trim(); }).filter(Boolean);
+    var seen = {}; state.entries.forEach(function (e) { seen[(e.link || "").toLowerCase()] = 1; });
+    var added = 0, bad = 0;
+    tokens.forEach(function (tok) {
+      var link = normalizeLink(tok);
+      if (!link) { bad++; return; }
+      var key = link.toLowerCase(); if (seen[key]) return; seen[key] = 1;
+      var d = deriveProject(link);
+      addEntry({ proj: d.proj, link: link, team: d.team, desc: "", source: "live" }, { quiet: true });
+      added++;
+    });
+    return { added: added, bad: bad };
+  }
+  $("addLinksBtn").addEventListener("click", function () {
+    if (state.status !== "open") return;
+    var ta = $("pasteLinks"), res = addLinksFromText(ta.value);
+    if (res.added) { ta.value = ""; toast(res.added === 1 ? "Added 1 project" : ("Added " + res.added + " projects")); }
+    else if (res.bad) { toast("Couldn’t read a valid link — use https://… or owner/repo"); }
+    else { toast("Paste one or more project links first"); }
+  });
+  $("pasteLinks").addEventListener("keydown", function (ev) {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key === "Enter") { ev.preventDefault(); $("addLinksBtn").click(); }
   });
 
   /* ---- QR + operator actions ---- */
@@ -1271,9 +1340,12 @@ var QRClean = (function () {
   $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on"); });
 
   function newRun() {
-    state = freshState(); state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
-    save(); feed = []; heroIdx = 0; pushFeed("Fresh showcase — open for submissions.");
-    resetStageUI(); renderStage(); drawStageQR(); scheduleSeed();
+    var m = state.mode || "live";
+    state = freshState(); state.mode = m; state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
+    save(); feed = []; heroIdx = 0;
+    pushFeed(m === "demo" ? "Fresh demo — illustrative samples incoming." : "Fresh showcase — open for submissions.");
+    resetStageUI(); renderStage(); drawStageQR();
+    if (m === "demo") scheduleSeed();
   }
   function resetStageUI() {
     stopHeroTimer();
