@@ -222,6 +222,8 @@ button { font-family: inherit; cursor: pointer; }
 .command-chip-btn:hover { border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft), var(--cp-shadow); transform: translateY(-2px); }
 .command-chip-btn:active { transform: translateY(0); }
 .command-chip-btn:focus-visible { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+.command-chip-btn.copied { border-color: var(--cp-success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-success) 22%, transparent); }
+.command-chip-btn.copied .chip-hint { color: var(--cp-success); border-left-color: color-mix(in srgb, var(--cp-success) 40%, var(--cp-border)); }
 .command-chip .chip-hint { padding-left: 12px; border-left: 1px solid var(--cp-border); font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12.5px; font-weight: 700; color: var(--cp-accent); white-space: nowrap; }
 @media (max-width: 560px) { .command-chip .chip-hint { display: none; } }
 .hero-note { margin-top: 16px; font-size: 13.5px; color: var(--cp-text-soft); display: flex; align-items: center; gap: 8px; }
@@ -1384,7 +1386,15 @@ var QRClean = (function () {
   var copyCmdChip = $("copyCmdChip");
   if (copyCmdChip) copyCmdChip.addEventListener("click", function () {
     var cmd = copyCmdChip.getAttribute("data-cmd") || "";
-    function ok() { toast("Copilot CLI prompt copied — paste it into your terminal"); }
+    var hint = copyCmdChip.querySelector(".chip-hint");
+    var hintDefault = hint ? hint.textContent : "";
+    function ok() {
+      toast("Copilot CLI prompt copied — paste it into your terminal");
+      copyCmdChip.classList.add("copied");
+      if (hint) hint.textContent = "✓ Copied — paste in your terminal";
+      clearTimeout(copyCmdChip._h);
+      copyCmdChip._h = setTimeout(function () { copyCmdChip.classList.remove("copied"); if (hint) hint.textContent = hintDefault; }, 1900);
+    }
     function legacyCopy(t) { var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy this: " + t); } document.body.removeChild(ta); }
     try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(cmd).then(ok, function () { legacyCopy(cmd); }); } else legacyCopy(cmd); } catch (e) { legacyCopy(cmd); }
   });
