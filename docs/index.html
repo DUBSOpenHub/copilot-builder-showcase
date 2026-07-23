@@ -1387,7 +1387,7 @@ var QRClean = (function () {
       state.startedAt = Date.now();
       seedRunning = false;
       save();
-      fbFreshRoom();
+      if (m === "live") fbFreshRoom();
       feed = [];
       pushFeed(m === "demo"
         ? "Demo showcase — illustrative sample projects will roll in."
@@ -1404,7 +1404,7 @@ var QRClean = (function () {
   function enterStage() {
     setView("stage");
     resetStageUI();
-    if (liveEnabled() && (state.status === "open" || state.status === "judging")) fbEnsureRoom();
+    if (liveEnabled() && state.mode === "live" && (state.status === "open" || state.status === "judging")) fbEnsureRoom();
     renderStage();
     drawStageQR();
     if (state.status === "judging") showJudging(true);
@@ -1638,7 +1638,7 @@ var QRClean = (function () {
   function newRun() {
     var m = state.mode || "live";
     state = freshState(); state.mode = m; state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
-    save(); fbFreshRoom(); feed = []; heroIdx = 0;
+    save(); if (m === "live") fbFreshRoom(); feed = []; heroIdx = 0;
     pushFeed(m === "demo" ? "Fresh demo — illustrative samples incoming." : "Fresh showcase — open for submissions.");
     resetStageUI(); renderStage(); drawStageQR();
     if (m === "demo") scheduleSeed();
