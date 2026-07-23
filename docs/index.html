@@ -14,9 +14,6 @@
       try { stored = localStorage.getItem("cbs_theme"); } catch (e) {}
       var theme = p || stored || "dark";
       document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
-      var ap = new URLSearchParams(location.search).get("accent");
-      var astored = null; try { astored = localStorage.getItem("cbs_accent"); } catch (e2) {}
-      document.documentElement.setAttribute("data-accent", (ap || astored) === "purple" ? "purple" : "green");
     } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
@@ -32,8 +29,8 @@
   --card-foreground: 0 0% 96%;
   --popover: 0 0% 6%;
   --popover-foreground: 0 0% 96%;
-  --primary: 156 90% 42%;            /* TechCrunch green (#00A562), brightened for dark */
-  --primary-foreground: 150 65% 6%;  /* near-black on green = crisp, editorial */
+  --primary: 265 85% 66%;            /* violet, brightened for dark */
+  --primary-foreground: 265 55% 10%; /* near-black violet on the bright accent */
   --secondary: 0 0% 13%;
   --secondary-foreground: 0 0% 96%;
   --muted: 0 0% 12.5%;
@@ -44,7 +41,7 @@
   --destructive-foreground: 0 0% 98%;
   --border: 0 0% 16%;
   --input: 0 0% 20%;
-  --ring: 156 90% 42%;
+  --ring: 265 85% 66%;
 
   /* --cp-* compatibility layer mapped onto shadcn tokens (re-resolves per active theme) */
   --cp-bg: hsl(var(--background));
@@ -82,7 +79,7 @@ html[data-theme="light"] {
   --card-foreground: 0 0% 9%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 9%;
-  --primary: 156 100% 27%;            /* deeper green for contrast on white */
+  --primary: 266 74% 50%;            /* deep violet for contrast on white */
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 96%;
   --secondary-foreground: 0 0% 9%;
@@ -94,7 +91,7 @@ html[data-theme="light"] {
   --destructive-foreground: 0 0% 100%;
   --border: 0 0% 90%;
   --input: 0 0% 87%;
-  --ring: 156 100% 27%;
+  --ring: 266 74% 50%;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -660,19 +657,6 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .hero-cta-sub { margin-top: 14px; font-size: 13px; }
 .hero-cta-sub a { color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding-bottom: 1px; }
 .hero-cta-sub a:hover { color: var(--cp-accent); }
-/* ---- Accent palette toggle (green default · purple option) ---- */
-html[data-accent="purple"] { --primary: 265 85% 66%; --primary-foreground: 265 55% 10%; --ring: 265 85% 66%; }
-html[data-accent="purple"][data-theme="light"] { --primary: 266 74% 50%; --primary-foreground: 0 0% 100%; --ring: 266 74% 50%; }
-.accent-toggle { position: fixed; right: 16px; bottom: 16px; z-index: 60; display: inline-flex; align-items: center; gap: 8px;
-  padding: 8px 12px 8px 10px; border-radius: 999px; border: 1px solid var(--cp-border-strong);
-  background: var(--cp-surface); color: var(--cp-text); font-weight: 800; font-size: 12.5px; letter-spacing: 0.01em;
-  box-shadow: var(--cp-shadow); cursor: pointer; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-.accent-toggle:hover { border-color: var(--cp-accent); transform: translateY(-1px); }
-.accent-toggle:focus-visible { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft), var(--cp-shadow); }
-.accent-toggle .sw { width: 14px; height: 14px; border-radius: 50%; background: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); flex: none; }
-.accent-toggle .lbl { line-height: 1; }
-.accent-toggle .arrow { color: var(--cp-text-soft); font-weight: 900; }
-@media (max-width: 640px) { .accent-toggle { right: 10px; bottom: 10px; padding: 7px 10px; font-size: 12px; } }
 </style>
 </head>
 <body>
@@ -1085,14 +1069,9 @@ var QRClean = (function () {
   ["themeToggleApp", "themeToggleStage", "themeToggleSubmit"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", toggleTheme); });
   applyThemeIcon();
 
-  /* ---- accent palette toggle (green default · purple preview) ---- */
-  var ACCENT_KEY = "cbs_accent";
-  function currentAccent() { return root.getAttribute("data-accent") === "purple" ? "purple" : "green"; }
-  function applyAccentLabel() { var b = $("accentToggle"); if (!b) return; var a = currentAccent(); var lbl = b.querySelector(".lbl"); if (lbl) lbl.textContent = a === "purple" ? "Purple" : "Green"; b.setAttribute("title", "Accent: " + (a === "purple" ? "Purple" : "Green") + " — click to preview " + (a === "purple" ? "green" : "purple")); }
-  function toggleAccent() { var next = currentAccent() === "purple" ? "green" : "purple"; root.setAttribute("data-accent", next); try { localStorage.setItem(ACCENT_KEY, next); } catch (e) {} applyAccentLabel(); }
-  (function () { function wire() { var b = $("accentToggle"); if (b) b.addEventListener("click", toggleAccent); applyAccentLabel(); } if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", wire); else wire(); })();
-  function accentColor(a) { var v = (getComputedStyle(root).getPropertyValue("--primary") || "156 90% 42%").trim(); return "hsl(" + v + (a != null ? " / " + a : "") + ")"; }
-  function accentLight() { var v = (getComputedStyle(root).getPropertyValue("--primary") || "156 90% 42%").trim().split(/\s+/); if (v.length >= 3) { var l = parseFloat(v[2]); return "hsl(" + v[0] + " " + v[1] + " " + Math.min(74, (isNaN(l) ? 50 : l) + 16) + "%)"; } return accentColor(); }
+  /* ---- accent-derived confetti colors (reads the --primary token) ---- */
+  function accentColor(a) { var v = (getComputedStyle(root).getPropertyValue("--primary") || "265 85% 66%").trim(); return "hsl(" + v + (a != null ? " / " + a : "") + ")"; }
+  function accentLight() { var v = (getComputedStyle(root).getPropertyValue("--primary") || "265 85% 66%").trim().split(/\s+/); if (v.length >= 3) { var l = parseFloat(v[2]); return "hsl(" + v[0] + " " + v[1] + " " + Math.min(74, (isNaN(l) ? 50 : l) + 16) + "%)"; } return accentColor(); }
 
   /* ---- shared state ---- */
   var STORE_KEY = "cbs_showcase_v1";
@@ -1812,8 +1791,5 @@ var QRClean = (function () {
   boot();
 })();
 </script>
-<button type="button" id="accentToggle" class="accent-toggle" title="Accent color — click to switch" aria-label="Switch accent color between green and purple">
-  <span class="sw" aria-hidden="true"></span><span class="lbl">Green</span><span class="arrow" aria-hidden="true">⇄</span>
-</button>
 </body>
 </html>
