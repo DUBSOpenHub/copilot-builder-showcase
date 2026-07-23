@@ -451,6 +451,33 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 #confetti { position: absolute; inset: 0; z-index: 7; pointer-events: none; display: none; }
 #confetti.on { display: block; }
 
+/* ---------- PREMIUM PODIUM: god-rays, per-lens insight, method ---------- */
+.podium-wrap > *:not(.podium-rays) { position: relative; z-index: 1; }
+.podium-rays { position: absolute; left: 50%; top: 6%; width: min(920px, 94%); height: min(760px, 78%); transform: translateX(-50%); pointer-events: none; opacity: 0; z-index: 0; transition: opacity .9s ease; filter: blur(2px);
+  background: conic-gradient(from 0deg at 50% 42%,
+    transparent 0deg, color-mix(in srgb, var(--cp-gold) 26%, transparent) 5deg, transparent 11deg,
+    transparent 27deg, color-mix(in srgb, var(--cp-gold) 20%, transparent) 32deg, transparent 38deg,
+    transparent 60deg, color-mix(in srgb, var(--cp-gold) 22%, transparent) 65deg, transparent 71deg,
+    transparent 118deg, color-mix(in srgb, var(--cp-gold) 18%, transparent) 123deg, transparent 129deg,
+    transparent 176deg, color-mix(in srgb, var(--cp-gold) 20%, transparent) 181deg, transparent 187deg,
+    transparent 236deg, color-mix(in srgb, var(--cp-gold) 18%, transparent) 241deg, transparent 247deg,
+    transparent 300deg, color-mix(in srgb, var(--cp-gold) 22%, transparent) 305deg, transparent 311deg);
+  -webkit-mask: radial-gradient(closest-side, #000 0%, #000 26%, transparent 76%); mask: radial-gradient(closest-side, #000 0%, #000 26%, transparent 76%); }
+.podium-rays.on { opacity: .5; animation: rays-spin 30s linear infinite; }
+@keyframes rays-spin { to { transform: translateX(-50%) rotate(360deg); } }
+.lens-block { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; text-align: left; }
+.lens-row { display: grid; grid-template-columns: 92px 1fr 32px; align-items: center; gap: 8px; }
+.lens-name { font-size: 10.5px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .04em; }
+.lens-bar { height: 7px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; }
+.lens-bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning)); transition: width .85s cubic-bezier(.2,.8,.2,1); }
+.lens-val { font-size: 12px; font-weight: 800; color: var(--cp-text); text-align: right; font-variant-numeric: tabular-nums; }
+.award.first .lens-bar > i { background: linear-gradient(90deg, var(--cp-gold), var(--cp-warning)); }
+.award .uplift { font-size: 12.5px; color: var(--cp-text-muted); margin-top: 10px; text-align: left; }
+.award .uplift b { color: var(--cp-text); }
+.growth.method .growth-grid { grid-template-columns: repeat(2, 1fr); }
+.growth.method .gc .gl { color: var(--cp-text); font-weight: 600; }
+@media (max-width: 760px) { .growth.method .growth-grid { grid-template-columns: 1fr; } .lens-row { grid-template-columns: 80px 1fr 30px; } }
+
 /* ---------- SUBMIT (mobile) ---------- */
 .submit-view { display: none; min-height: 100vh; align-items: flex-start; justify-content: center; padding: 24px 18px 48px; position: relative; z-index: 1; }
 .submit-view.on { display: flex; }
@@ -813,14 +840,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
       <!-- podium overlay -->
       <div class="podium-wrap" id="podiumWrap">
+        <div class="podium-rays" id="podiumRays" aria-hidden="true"></div>
         <div class="podium-head">
           <span class="badge">🎉 The podium</span>
           <h2>Copilot Builder Showcase — winners</h2>
           <p>Chosen by median consensus of a Copilot CLI panel · practice showcase, illustrative results</p>
         </div>
         <div class="podium" id="podium"></div>
-        <div class="growth" id="growth">
-          <div class="op-t">Top-three growth cards · one level-up move each</div>
+        <div class="growth method" id="growth">
+          <div class="op-t" id="growthTitle">How the panel decided · rubric &amp; method</div>
           <div class="growth-grid" id="growthGrid"></div>
         </div>
         <div class="podium-actions">
@@ -1337,7 +1365,7 @@ var QRClean = (function () {
   });
   $("resetBtn").addEventListener("click", function () { newRun(); });
   $("newRunBtn").addEventListener("click", function () { newRun(); });
-  $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on"); });
+  $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); });
 
   function newRun() {
     var m = state.mode || "live";
@@ -1349,7 +1377,7 @@ var QRClean = (function () {
   }
   function resetStageUI() {
     stopHeroTimer();
-    $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
+    $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
   }
 
   /* ---- judging sequence ---- */
@@ -1427,15 +1455,23 @@ var QRClean = (function () {
     { cls: "third", place: "Third place", name: "Builder Bronze", rosette: "🥉" }
   ];
   function whyText(rank, sc) {
-    var lens = sc.topLens.toLowerCase();
-    var base = { 0: "The Copilot panel reached the strongest consensus here — it kept coming back to the project's " + lens + ".", 1: "A close, well-rounded result. The panel especially rated its " + lens + ".", 2: "Rounded out the podium on the strength of its " + lens + "." }[rank];
-    return base;
+    var lens = sc.topLens, v = sc.per[sc.topLens].toFixed(1);
+    var lead = { 0: "Strongest overall consensus", 1: "A close, well-rounded second", 2: "Rounded out the podium" }[rank];
+    return lead + " — the panel leaned most on its " + lens.toLowerCase() + " (" + v + "/10).";
   }
+  function lowLens(sc) { return Object.keys(sc.per).sort(function (a, b) { return sc.per[a] - sc.per[b]; })[0]; }
   function levelUp(sc) {
-    var low = Object.keys(sc.per).sort(function (a, b) { return sc.per[a] - sc.per[b]; })[0];
-    var moves = { "Innovation": "Optional next move: push one bolder idea the demo only hints at.", "Build Quality": "Optional next move: add a test or two around the core path and tidy the README.", "Impact": "Optional next move: show the before/after for one real user to sharpen the impact story." };
-    return moves[low] || "Optional next move: sharpen the demo's single clearest win.";
+    var low = lowLens(sc);
+    var moves = { "Innovation": "push one bolder idea the demo only hints at", "Build Quality": "add a test or two around the core path and tidy the README", "Impact": "show the before/after for one real user to sharpen the story" };
+    return low + " — " + (moves[low] || "sharpen the demo's single clearest win") + ".";
   }
+  function lensBar(name, val) {
+    var w = Math.max(8, Math.min(100, Math.round(val / 10 * 100)));
+    return '<div class="lens-row"><span class="lens-name">' + esc(name) + '</span>' +
+      '<span class="lens-bar"><i data-w="' + w + '"></i></span>' +
+      '<span class="lens-val">' + val.toFixed(1) + '</span></div>';
+  }
+  function fillLensBars() { Array.prototype.forEach.call(document.querySelectorAll("#podium .lens-bar > i"), function (i) { i.style.width = (i.getAttribute("data-w") || 0) + "%"; }); }
   function showPodium(animate) {
     stopHeroTimer();
     $("judging").classList.remove("on");
@@ -1449,23 +1485,39 @@ var QRClean = (function () {
     /* visual order: 2nd, 1st, 3rd */
     var visual = [top3[1], top3[0], top3[2]], rankOf = [1, 0, 2];
     $("podium").innerHTML = visual.map(function (r, i) { return r ? awardCard(rankOf[i], r) : ""; }).join("");
-    $("growthGrid").innerHTML = top3.map(function (r) { return r ? '<div class="gc"><div class="gp">' + esc(r.e.proj) + '</div><div class="gl">' + levelUp(r.sc) + "</div></div>" : ""; }).join("");
+    /* "How the panel decided" — the method + supporting data behind the result */
+    var methodStats = [
+      ["Rubric", "Innovation · Build Quality · Impact"],
+      ["How scores combined", "Median consensus of a 3-panel Copilot CLI review"],
+      ["Projects reviewed", String(state.entries.length)],
+      ["Copilot panel calls", String(state.calls || 0)]
+    ];
+    $("growthGrid").innerHTML = methodStats.map(function (s) { return '<div class="gc"><div class="gp">' + esc(s[0]) + '</div><div class="gl">' + esc(s[1]) + "</div></div>"; }).join("");
     var cards = document.querySelectorAll("#podium .award");
-    var delays = { 0: animate ? 900 : 0, 1: animate ? 450 : 0, 2: animate ? 0 : 0 };
-    Array.prototype.forEach.call(cards, function (card) { var rk = +card.getAttribute("data-rank"); setTimeout(function () { card.classList.add("show"); }, reduceMotion ? 0 : delays[rk] || 0); });
-    setTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : (animate ? 1500 : 0));
-    if (animate && !reduceMotion) setTimeout(confetti, 950);
+    /* staged reveal (3rd → 2nd → 1st) so the room can read each one */
+    var delays = { 2: 0, 1: animate ? 750 : 0, 0: animate ? 1550 : 0 };
+    Array.prototype.forEach.call(cards, function (card) { var rk = +card.getAttribute("data-rank"); setTimeout(function () { card.classList.add("show"); }, reduceMotion ? 0 : (delays[rk] || 0)); });
+    if (reduceMotion) { fillLensBars(); $("growth").classList.add("show"); $("podiumRays").classList.add("on"); }
+    else {
+      setTimeout(function () { $("podiumRays").classList.add("on"); }, animate ? 1550 : 0);
+      setTimeout(fillLensBars, animate ? 2100 : 60);
+      setTimeout(function () { $("growth").classList.add("show"); }, animate ? 2700 : 0);
+      if (animate) setTimeout(confetti, 1650);
+    }
     renderStage();
   }
   function awardCard(rank, r) {
     var m = AWARD_META[rank], e = r.e, sc = r.sc;
+    var lensHTML = LENSES.map(function (L) { return lensBar(L, sc.per[L]); }).join("");
     return '<div class="award ' + m.cls + '" data-rank="' + rank + '">' +
       '<div class="rosette">' + m.rosette + "</div>" +
       '<div class="place">' + m.place + "</div>" +
       '<div class="aname">' + m.name + "</div>" +
       '<div class="aproj">' + esc(e.proj) + "</div>" +
       '<div class="ateam">👥 ' + esc(e.team || "Project team") + "</div>" +
+      '<div class="lens-block">' + lensHTML + "</div>" +
       '<div class="why"><b>Why it placed:</b> ' + whyText(rank, sc) + "</div>" +
+      '<div class="uplift"><b>Level up:</b> ' + levelUp(sc) + "</div>" +
       '<div class="consensus">🤝 Panel consensus ' + sc.total.toFixed(1) + "/30 · median</div>" +
       "</div>";
   }
@@ -1473,15 +1525,26 @@ var QRClean = (function () {
   /* ---- confetti ---- */
   function confetti() {
     var cv = $("confetti"); if (!cv) return; var stage = $("stage");
-    cv.classList.add("on"); cv.width = stage.clientWidth || 1200; cv.height = stage.clientHeight || 700;
-    var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; } var colors = ["#00A562", "#FDC006", "#00d67f", "#22c55e", "#e5e7eb", "#f59e0b", "#facc15", "#c9ced6", "#d08a52"];
-    var parts = [], N = Math.min(240, Math.max(90, Math.round(cv.width / 6)));
-    for (var i = 0; i < N; i++) parts.push({ x: cv.width * (0.28 + Math.random() * 0.44), y: cv.height * 0.26 + Math.random() * 50, vx: (Math.random() - 0.5) * 8, vy: -7 - Math.random() * 7, g: 0.16 + Math.random() * 0.13, s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.34, c: colors[i % colors.length], life: 0, ttl: 130 + Math.random() * 70, shape: Math.random() < 0.5 ? 0 : 1 });
+    cv.classList.add("on"); var W = cv.width = stage.clientWidth || 1200, H = cv.height = stage.clientHeight || 700;
+    var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; }
+    var gold = ["#FDC006", "#facc15", "#f59e0b", "#ffd24a"], mix = ["#00A562", "#00d67f", "#22c55e", "#e5e7eb", "#c9ced6"];
+    var parts = [];
+    function spawn(cx, cy, n, spread, up, goldBias) {
+      for (var i = 0; i < n; i++) {
+        var c = (Math.random() < goldBias) ? gold[i % gold.length] : mix[i % mix.length];
+        var shape = Math.random() < 0.34 ? 2 : (Math.random() < 0.5 ? 0 : 1); /* 0 rect · 1 disc · 2 ribbon */
+        parts.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * spread, vy: up * (0.7 + Math.random() * 0.85), g: 0.15 + Math.random() * 0.13, s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.36, c: c, life: 0, ttl: 150 + Math.random() * 80, shape: shape });
+      }
+    }
+    spawn(W * 0.5, H * 0.32, Math.min(190, Math.max(90, Math.round(W / 8))), 9, -8, 0.5);   /* center, gold-rich */
+    spawn(W * 0.07, H * 0.72, 44, 6, -13, 0.3);                                             /* left cannon */
+    spawn(W * 0.93, H * 0.72, 44, 6, -13, 0.3);                                             /* right cannon */
+    setTimeout(function () { spawn(W * 0.5, H * 0.28, 90, 11, -7, 0.78); }, 650);           /* gold finale burst */
     var t0 = performance.now();
     function frame(now) {
-      ctx.clearRect(0, 0, cv.width, cv.height); var alive = false;
-      for (var i = 0; i < parts.length; i++) { var p = parts[i]; p.life++; if (p.life > p.ttl) continue; alive = true; p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.rot += p.vr; var a = Math.max(0, 1 - p.life / p.ttl); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; if (p.shape === 0) ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); else { ctx.beginPath(); ctx.arc(0, 0, p.s * 0.5, 0, 6.28); ctx.fill(); } ctx.restore(); }
-      if (alive && now - t0 < 4400) cv._raf = requestAnimationFrame(frame); else { ctx.clearRect(0, 0, cv.width, cv.height); cv.classList.remove("on"); }
+      ctx.clearRect(0, 0, W, H); var alive = false;
+      for (var i = 0; i < parts.length; i++) { var p = parts[i]; p.life++; if (p.life > p.ttl) continue; alive = true; p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.rot += p.vr; var a = Math.max(0, 1 - p.life / p.ttl); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; if (p.shape === 0) ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); else if (p.shape === 1) { ctx.beginPath(); ctx.arc(0, 0, p.s * 0.5, 0, 6.28); ctx.fill(); } else ctx.fillRect(-p.s * 0.18, -p.s * 1.1, p.s * 0.36, p.s * 2.2); ctx.restore(); }
+      if ((alive || now - t0 < 780) && now - t0 < 5200) cv._raf = requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); cv.classList.remove("on"); }
     }
     if (cv._raf) cancelAnimationFrame(cv._raf); cv._raf = requestAnimationFrame(frame);
   }
