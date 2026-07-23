@@ -413,6 +413,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .qr-frame { margin: 14px auto 12px; width: fit-content; padding: 12px; background: #ffffff; border-radius: 0.8rem; border: 1px solid var(--cp-border); box-shadow: 0 8px 22px -14px rgba(0,0,0,.5); }
 .qr-frame canvas { display: block; image-rendering: pixelated; border-radius: 3px; }
 .qr-url { font-family: Consolas, "Courier New", monospace; font-size: 11px; color: var(--cp-text-soft); word-break: break-all; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 0.6rem; padding: 8px 10px; margin-top: 4px; }
+.qr-room { margin: 2px 0 8px; font-size: 13px; color: var(--cp-text-muted); letter-spacing: .01em; }
+.qr-room b { font-family: Consolas, "Courier New", monospace; font-size: 20px; letter-spacing: .16em; color: var(--cp-accent); margin-left: 4px; }
 .qr-actions { display: flex; gap: 8px; margin-top: 12px; }
 .qr-actions .btn { flex: 1; }
 
@@ -915,6 +917,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <h4>▦ Or: participants scan to add their own</h4>
         <div class="qr-sub">Point a phone camera here → mobile submit view → paste a project link, tap submit.</div>
         <div class="qr-frame"><canvas id="qrCanvas" width="220" height="220" role="img" aria-label="QR code linking to the project submission page"></canvas></div>
+        <div class="qr-room" id="qrRoom" style="display:none"></div>
         <div class="qr-url" id="qrUrl">…</div>
         <div class="qr-warn" id="qrWarn" style="display:none">⚠ Serving on <b>localhost</b> — phones on other devices can’t reach this address. Deploy the page (e.g. GitHub Pages) or serve it on your computer’s Wi-Fi IP so the room can scan. You can always use <b>Add these projects</b> to paste links directly.</div>
         <div class="qr-actions">
@@ -1077,12 +1080,73 @@ var QRClean = (function () {
   var STORE_KEY = "cbs_showcase_v1";
   var CH = null; try { CH = ("BroadcastChannel" in window) ? new BroadcastChannel("cbs_showcase") : null; } catch (e) { CH = null; }
   var mem = null;
-  function freshState() { return { status: "idle", mode: "live", runId: "", startedAt: 0, calls: 0, entries: [], podium: null, seeded: 0 }; }
+  function freshState() { return { status: "idle", mode: "live", runId: "", startedAt: 0, calls: 0, entries: [], room: "", podium: null, seeded: 0 }; }
   function readState() { try { var s = localStorage.getItem(STORE_KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; }
   function writeState(st) { mem = st; try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {} }
   var state = readState() || freshState();
   function save(opts) { writeState(state); try { if (CH) CH.postMessage({ t: "sync", s: state, from: TAB }); } catch (e) {} if (!(opts && opts.silent)) {} }
   var TAB = Math.random().toString(36).slice(2);
+
+  /* =========================================================================
+     LIVE BACKEND (optional) — Firebase Realtime Database (free "Spark" plan).
+     Turns the QR into REAL phone -> projector submissions. Leave databaseURL
+     as "" to keep the zero-backend, same-device behavior (the QR then only
+     works on the host's own device; use "Add these projects" / "Try it
+     yourself" instead). No SDK/CDN — this talks to Firebase's REST + streaming
+     API with plain fetch() + EventSource(), so the page stays a single file.
+
+     ---- ONE-TIME SETUP (~15 min, host/owner does this once) -----------------
+     1. Go to https://console.firebase.google.com -> "Add project" (no billing
+        needed; the free Spark plan is enough for workshop-scale traffic).
+     2. Build -> Realtime Database -> "Create Database" -> pick a location ->
+        start in "locked mode" (rules below make it work).
+     3. Copy the database URL shown at the top of the Data tab. It looks like
+        https://YOUR-PROJECT-default-rtdb.firebaseio.com  (or a *.firebasedatabase.app
+        regional URL). Paste it into databaseURL below and redeploy the page.
+     4. Rules tab -> paste EXACTLY this, then Publish:
+
+        {
+          "rules": {
+            "rooms": {
+              "$room": {
+                ".read": true,
+                ".write": true,
+                "entries": {
+                  "$e": {
+                    ".validate": "newData.hasChildren(['proj']) && newData.child('proj').isString() && newData.child('proj').val().length <= 200 && (!newData.hasChild('link') || newData.child('link').val().length <= 400)"
+                  }
+                }
+              }
+            }
+          }
+        }
+
+     That scopes access to /rooms only and caps field sizes. Anyone with a
+     room's 4-letter code can read/write THAT room's list — fine for a public
+     showcase. For stricter control, enable Anonymous Auth and change ".write"
+     to "auth != null" (phones then auth anonymously; add sign-in in the client).
+
+     ---- HOW IT WORKS AT A WORKSHOP -----------------------------------------
+     Host clicks Start -> a random room code (e.g. "K7QP") is created and its
+     QR/URL carry ?room=CODE. Phones scan -> submit -> POST into
+     rooms/CODE/entries. The host's big screen streams rooms/CODE/entries and
+     new projects appear live. Status (open/judging/awarded) is mirrored in
+     rooms/CODE/meta so a phone that scans early auto-updates the moment the
+     host opens submissions. Works over any network, including cellular.
+
+     Privacy/cost: submissions (project link, team, notes) pass through Google
+     Firebase. Low-sensitivity data, well within the free tier for a workshop.
+     ========================================================================= */
+  var FIREBASE = {
+    databaseURL: ""  /* e.g. "https://your-project-default-rtdb.firebaseio.com" */
+  };
+  function liveEnabled() {
+    if (!FIREBASE || typeof FIREBASE.databaseURL !== "string") return false;
+    var u = FIREBASE.databaseURL;
+    /* https anywhere, or http only for a local Firebase emulator */
+    return /^https:\/\/[^ ]+$/.test(u) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(u);
+  }
+  function dbRoot() { return FIREBASE.databaseURL.replace(/\/+$/, ""); }
 
   function onRemote(st) {
     var prevStatus = state.status, prevN = state.entries.length;
@@ -1103,7 +1167,10 @@ var QRClean = (function () {
 
   /* ---- URLs ---- */
   function baseURL() { var o = location.origin; if (o && o !== "null") return o + location.pathname; return location.href.split("#")[0].split("?")[0]; }
-  function submitURL() { return baseURL() + "#submit"; }
+  function submitURL() {
+    if (liveEnabled() && state.room) return baseURL() + "?room=" + encodeURIComponent(state.room) + "#submit";
+    return baseURL() + "#submit";
+  }
 
   /* ---- QR ---- */
   function drawQR(canvas, text) {
@@ -1118,7 +1185,136 @@ var QRClean = (function () {
     return true;
   }
   function isLocalHost() { var h = (location.hostname || "").toLowerCase(); return location.protocol === "file:" || h === "" || h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "0.0.0.0"; }
-  function drawStageQR() { var url = submitURL(); var ok = drawQR($("qrCanvas"), url); $("qrUrl").textContent = ok ? url : ("Open " + url + " on another device."); var w = $("qrWarn"); if (w) w.style.display = isLocalHost() ? "" : "none"; }
+  function drawStageQR() {
+    var url = submitURL();
+    var ok = drawQR($("qrCanvas"), url);
+    $("qrUrl").textContent = ok ? url : ("Open " + url + " on another device.");
+    var rm = $("qrRoom");
+    if (rm) { if (liveEnabled() && state.room) { rm.style.display = ""; rm.innerHTML = "Room code <b>" + esc(state.room) + "</b>"; } else { rm.style.display = "none"; } }
+    var w = $("qrWarn"); if (w) w.style.display = isLocalHost() ? "" : "none";
+  }
+
+  /* =========================================================================
+     LIVE MODULE — Firebase RTDB over plain fetch + EventSource (no SDK).
+     Inert unless liveEnabled() (a databaseURL is configured above).
+     Host owns state; phones only POST entries into rooms/<CODE>/entries and
+     read rooms/<CODE>/meta.status to know when submissions are open.
+     ========================================================================= */
+  function fbUrl(path) { return dbRoot() + "/" + path + ".json"; }
+  function genRoom() { var A = "ABCDEFGHJKMNPQRSTUVWXYZ23456789", s = ""; for (var i = 0; i < 4; i++) s += A.charAt(Math.floor(Math.random() * A.length)); return s; }
+  function roomFromURL() { try { return new URLSearchParams(location.search).get("room") || ""; } catch (e) { return ""; } }
+
+  function fbPutMeta(room, meta) { return fetch(fbUrl("rooms/" + room + "/meta"), { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(meta) }); }
+  function fbPatchMeta(room, patch) { return fetch(fbUrl("rooms/" + room + "/meta"), { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(patch) }); }
+  function fbGetMeta(room) { return fetch(fbUrl("rooms/" + room + "/meta")).then(function (r) { return r.ok ? r.json() : null; }); }
+  function fbPushEntry(room, entry) { return fetch(fbUrl("rooms/" + room + "/entries"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) }); }
+
+  /* host: open / refresh the room and broadcast status */
+  function fbOpenRoom() { if (!liveEnabled() || !state.room) return; fbPutMeta(state.room, { status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now() }).catch(function () {}); }
+  function fbSetStatus(s) { if (!liveEnabled() || !state.room) return; fbPatchMeta(state.room, { status: s, at: Date.now() }).catch(function () {}); }
+  function fbFreshRoom() { if (!liveEnabled()) return; state.room = genRoom(); save(); fbOpenRoom(); fbSubscribeEntries(state.room); }
+  function fbEnsureRoom() { if (!liveEnabled()) return; if (!state.room) { fbFreshRoom(); return; } fbOpenRoom(); fbSubscribeEntries(state.room); }
+
+  /* host: receive submissions live via RTDB REST streaming (Server-Sent Events) */
+  var fbES = null, fbESRoom = "";
+  function fbUnsubscribe() { if (fbES) { try { fbES.close(); } catch (e) {} } fbES = null; fbESRoom = ""; }
+  function fbSubscribeEntries(room) {
+    if (!liveEnabled() || !room || !("EventSource" in window)) return;
+    if (fbES && fbESRoom === room) return;
+    fbUnsubscribe();
+    try { fbES = new EventSource(fbUrl("rooms/" + room + "/entries")); } catch (e) { fbES = null; return; }
+    fbESRoom = room;
+    fbES.addEventListener("put", function (ev) { fbApplyEvent(ev, room); });
+    fbES.addEventListener("patch", function (ev) { fbApplyEvent(ev, room); });
+  }
+  function fbApplyEvent(ev, room) {
+    if (state.room !== room) return;
+    var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+    if (!msg || typeof msg.path === "undefined") return;
+    var p = msg.path || "/", d = msg.data;
+    if (p === "/") { if (d && typeof d === "object") Object.keys(d).forEach(function (k) { mergeRemoteEntry(k, d[k], true); }); return; }
+    var key = p.replace(/^\/+/, "").split("/")[0];
+    if (key && d && typeof d === "object") mergeRemoteEntry(key, d, false);
+  }
+  function mergeRemoteEntry(rid, obj, quiet) {
+    if (!rid || !obj || typeof obj !== "object") return;
+    var rawLink = (obj.link || "").toString();
+    var link = normalizeLink(rawLink) || safeURL(rawLink) || rawLink;
+    var lk = (link || "").toLowerCase();
+    for (var i = 0; i < state.entries.length; i++) { var e = state.entries[i]; if (e.rid === rid) return; if (lk && (e.link || "").toLowerCase() === lk) return; }
+    var derived = link ? deriveProject(link) : { proj: "Project", team: "Project team" };
+    var proj = (obj.proj || "").toString().trim().slice(0, 120) || derived.proj;
+    var team = (obj.team || "").toString().trim().slice(0, 120) || derived.team;
+    var desc = (obj.desc || "").toString().trim().slice(0, 200);
+    addEntry({ proj: proj, link: link, team: team, desc: desc, source: "live", rid: rid }, { quiet: !!quiet });
+  }
+
+  /* phone: live submit page — reads the room's remote status, no host on this device */
+  function liveClosedMarkup(status) {
+    var m = ({
+      idle: ["\u23F3", "Waiting for the host to start", "Keep this page open — it updates automatically the moment submissions open."],
+      judging: ["\uD83D\uDD12", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."],
+      awarded: ["\uD83C\uDF89", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"]
+    })[status] || ["\u23F3", "Waiting for the host to start", "Keep this page open — it updates automatically."];
+    return '<div class="submit-closed"><div class="big">' + m[0] + '</div><h2>' + m[1] + "</h2><p>" + m[2] + "</p></div>";
+  }
+  var liveCtx = { room: "", onForm: false, es: null };
+  function renderLiveForm(container, room) {
+    liveCtx.onForm = true;
+    container.innerHTML = '<span class="badge"><span class="badge-dot"></span> Live · open for submissions</span><h1>Add your project</h1><p class="sh-sub">Paste a link to your project or demo. It appears on the big screen right away — project first.</p>' + formFieldsMarkup();
+    var form = container.querySelector("form"), fLink = container.querySelector(".js-flink"), inLink = container.querySelector(".js-link");
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var link = normalizeLink(inLink.value);
+      if (!link) { fLink.classList.add("invalid"); inLink.focus(); return; }
+      fLink.classList.remove("invalid");
+      var derived = deriveProject(link);
+      var proj = (container.querySelector(".js-proj").value || "").trim() || derived.proj;
+      var team = (container.querySelector(".js-team").value || "").trim() || derived.team;
+      var desc = (container.querySelector(".js-desc").value || "").trim();
+      var btn = form.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+      fbPushEntry(room, { proj: proj, link: link, team: team, desc: desc, at: Date.now() }).then(function (r) {
+        if (!r || !r.ok) throw new Error("bad");
+        liveCtx.onForm = false;
+        container.innerHTML = successMarkup({ proj: proj, link: link, team: team });
+        var ag = container.querySelector(".js-again"); if (ag) ag.addEventListener("click", function () { renderLiveForm(container, room); });
+      }).catch(function () {
+        if (btn) { btn.disabled = false; btn.textContent = "Submit to the showcase →"; }
+        toast("Couldn’t reach the showcase — check your connection and try again.");
+      });
+    });
+    inLink.addEventListener("input", function () { fLink.classList.remove("invalid"); });
+  }
+  function renderLiveState(container, room, meta) {
+    var status = (meta && meta.status) ? meta.status : "idle";
+    if (status === "open") renderLiveForm(container, room);
+    else { liveCtx.onForm = false; container.innerHTML = liveClosedMarkup(status); }
+  }
+  function liveMetaSubscribe(room, container) {
+    if (!("EventSource" in window)) return;
+    if (liveCtx.es) { try { liveCtx.es.close(); } catch (e) {} liveCtx.es = null; }
+    var es; try { es = new EventSource(fbUrl("rooms/" + room + "/meta")); } catch (e) { return; }
+    liveCtx.es = es;
+    function onMeta(ev) {
+      var msg; try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (!msg || typeof msg.path === "undefined") return;
+      var d = msg.data, status = null;
+      if (d && typeof d === "object" && typeof d.status === "string") status = d.status;
+      else if (msg.path === "/status" && typeof d === "string") status = d;
+      if (!status) return;
+      if (status === "open") { if (!liveCtx.onForm) renderLiveForm(container, room); }
+      else renderLiveState(container, room, { status: status });
+    }
+    es.addEventListener("put", onMeta);
+    es.addEventListener("patch", onMeta);
+  }
+  function renderSubmitLive(room) {
+    var container = $("submitPanel");
+    liveCtx.room = room; liveCtx.onForm = false;
+    container.innerHTML = '<div class="submit-closed"><div class="big">\u23F3</div><h2>Connecting…</h2><p>Checking the showcase status.</p></div>';
+    fbGetMeta(room).then(function (meta) { renderLiveState(container, room, meta); }, function () { container.innerHTML = '<div class="submit-closed"><div class="big">\uD83D\uDCE1</div><h2>Couldn’t connect</h2><p>Check your connection, then reload this page.</p></div>'; });
+    liveMetaSubscribe(room, container);
+  }
 
   /* ---- demo projects ---- */
   var DEMO = [
@@ -1190,6 +1386,7 @@ var QRClean = (function () {
       state.startedAt = Date.now();
       seedRunning = false;
       save();
+      fbFreshRoom();
       feed = [];
       pushFeed(m === "demo"
         ? "Demo showcase — illustrative sample projects will roll in."
@@ -1207,12 +1404,13 @@ var QRClean = (function () {
   function enterStage() {
     setView("stage");
     resetStageUI();
+    if (liveEnabled() && (state.status === "open" || state.status === "judging")) fbEnsureRoom();
     renderStage();
     drawStageQR();
     if (state.status === "judging") showJudging(true);
     if (state.status === "awarded") showPodium(false);
   }
-  $("exitStage").addEventListener("click", function () { stopHeroTimer(); setView("app"); location.hash = ""; renderResume(); });
+  $("exitStage").addEventListener("click", function () { stopHeroTimer(); fbUnsubscribe(); setView("app"); location.hash = ""; renderResume(); });
 
   /* ---- stage rendering ---- */
   function setStepper() {
@@ -1429,7 +1627,7 @@ var QRClean = (function () {
 
   $("runPanelBtn").addEventListener("click", function () {
     if (state.status !== "open" || state.entries.length < 3) return;
-    state.status = "judging"; state.calls = 0; save();
+    state.status = "judging"; state.calls = 0; save(); fbSetStatus("judging");
     renderStage(); showJudging(true);
     pushFeed("Operator started the Copilot judging panel.");
   });
@@ -1440,7 +1638,7 @@ var QRClean = (function () {
   function newRun() {
     var m = state.mode || "live";
     state = freshState(); state.mode = m; state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
-    save(); feed = []; heroIdx = 0;
+    save(); fbFreshRoom(); feed = []; heroIdx = 0;
     pushFeed(m === "demo" ? "Fresh demo — illustrative samples incoming." : "Fresh showcase — open for submissions.");
     resetStageUI(); renderStage(); drawStageQR();
     if (m === "demo") scheduleSeed();
@@ -1587,7 +1785,7 @@ var QRClean = (function () {
   function reveal() {
     var ranked = rankEntries();
     state.podium = ranked.slice(0, 3).map(function (r) { return r.e.id; });
-    state.status = "awarded"; save();
+    state.status = "awarded"; save(); fbSetStatus("awarded");
     showPodium(true);
     pushFeed("🏆 Copilot Builder Award goes to “" + ranked[0].e.proj + "”.");
   }
@@ -1776,18 +1974,27 @@ var QRClean = (function () {
   $("backToShow").addEventListener("click", function (ev) { ev.preventDefault(); location.hash = ""; setView("app"); renderResume(); });
 
   /* ---- init ---- */
+  function routeSubmit() {
+    setView("submit");
+    var room = roomFromURL();
+    if (liveEnabled() && room) renderSubmitLive(room);
+    else renderSubmit();
+  }
   function boot() {
     var h = (location.hash || "").toLowerCase();
-    if (h.indexOf("submit") !== -1) { setView("submit"); renderSubmit(); }
+    if (h.indexOf("submit") !== -1) { routeSubmit(); }
     else if (h.indexOf("stage") !== -1 && state.status !== "idle") { enterStage(); }
     else { setView("app"); renderResume(); }
     applyThemeIcon();
   }
   window.addEventListener("hashchange", function () {
     var h = (location.hash || "").toLowerCase();
-    if (h.indexOf("submit") !== -1) { setView("submit"); renderSubmit(); }
+    if (h.indexOf("submit") !== -1) { routeSubmit(); }
     else if (h === "" || h === "#") { if (view !== "stage") { setView("app"); renderResume(); } }
   });
+  if (/(?:^|[?&])cbstest=1(?:&|$)/.test(location.search || "")) {
+    window.CBS = { fbApplyEvent: fbApplyEvent, mergeRemoteEntry: mergeRemoteEntry, renderLiveState: renderLiveState, genRoom: genRoom, submitURL: submitURL, getEntries: function () { return state.entries; }, setRoom: function (r) { state.room = r; }, getRoom: function () { return state.room; }, fbFreshRoom: fbFreshRoom, setLive: function (u) { FIREBASE.databaseURL = u; } };
+  }
   boot();
 })();
 </script>
