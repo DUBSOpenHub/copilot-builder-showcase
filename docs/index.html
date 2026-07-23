@@ -231,20 +231,61 @@ button { font-family: inherit; cursor: pointer; }
 /* hero visual: mini stage preview */
 .preview {
   position: relative; border-radius: 1.1rem; border: 1px solid var(--cp-border);
-  background: var(--cp-surface); box-shadow: var(--cp-shadow); overflow: hidden; padding: 18px;
+  background:
+    radial-gradient(125% 85% at 50% -12%, color-mix(in srgb, var(--cp-gold) 12%, transparent), transparent 62%),
+    var(--cp-surface);
+  box-shadow: var(--cp-shadow); overflow: hidden; padding: 18px 18px 16px;
 }
 .preview::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
   background: linear-gradient(90deg, var(--cp-bronze), var(--cp-silver), var(--cp-gold)); }
-.preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .preview-head .t { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
-.mini-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; }
-.mini-col { border-radius: 0.7rem; border: 1px solid var(--cp-border); background: var(--cp-surface-soft); padding: 12px 10px; text-align: center; }
-.mini-col .medal { font-size: 24px; }
-.mini-col .mp { font-size: 12.5px; font-weight: 800; margin-top: 4px; color: var(--cp-text); }
-.mini-col .mt { font-size: 10.5px; color: var(--cp-text-soft); }
-.mini-col.c1 { padding-top: 20px; border-color: color-mix(in srgb, var(--cp-gold) 55%, var(--cp-border)); }
-.mini-col.c2 { border-color: color-mix(in srgb, var(--cp-silver) 45%, var(--cp-border)); }
-.mini-col.c3 { border-color: color-mix(in srgb, var(--cp-bronze) 45%, var(--cp-border)); }
+
+.mini-stage { position: relative; }
+.mini-stage::before { content: ""; position: absolute; left: 50%; top: -10px; width: 60%; height: 128%;
+  transform: translateX(-50%);
+  background: radial-gradient(58% 52% at 50% 0%, color-mix(in srgb, var(--cp-gold) 30%, transparent), transparent 72%);
+  pointer-events: none; z-index: 0; }
+.mini-podium { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 9px; align-items: end; }
+
+.mini-col { position: relative; overflow: hidden; text-align: center;
+  border: 1px solid var(--cp-border); border-radius: 0.85rem 0.85rem 0.5rem 0.5rem;
+  background: linear-gradient(180deg, var(--cp-surface), var(--cp-surface-soft));
+  padding: 13px 8px 0; box-shadow: 0 6px 16px rgba(0,0,0,0.16); }
+.mini-col .medal { font-size: 26px; line-height: 1; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3)); }
+.mini-col .mp { font-size: 12.5px; font-weight: 800; margin-top: 7px; color: var(--cp-text); letter-spacing: -0.01em; line-height: 1.15; }
+.mini-col .mt { font-size: 10px; font-weight: 700; margin-top: 3px; letter-spacing: 0.02em; color: var(--cp-text-soft); }
+.mini-col .riser { margin-top: 11px; font-weight: 900; line-height: 1;
+  border-top: 1px solid color-mix(in srgb, var(--cp-border-strong) 55%, transparent);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cp-border) 50%, var(--cp-surface)), var(--cp-surface-soft)); }
+.mini-col .riser span { display: inline-block; margin-top: 5px; font-size: 13px; color: color-mix(in srgb, var(--cp-text) 55%, transparent); }
+
+.mini-col.c1 { border-color: color-mix(in srgb, var(--cp-gold) 68%, var(--cp-border));
+  box-shadow: 0 12px 30px color-mix(in srgb, var(--cp-gold) 26%, transparent); }
+.mini-col.c1 .medal { font-size: 33px; }
+.mini-col.c1 .mt { color: var(--cp-gold); }
+.mini-col.c1 .riser { height: 46px; color: var(--cp-gold);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cp-gold) 28%, var(--cp-surface)), color-mix(in srgb, var(--cp-gold) 9%, var(--cp-surface-soft))); }
+.mini-col.c1 .riser span { color: color-mix(in srgb, var(--cp-gold) 80%, var(--cp-text)); font-size: 15px; }
+.mini-col.c1::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 34%, color-mix(in srgb, var(--cp-gold) 34%, transparent) 49%, transparent 64%);
+  transform: translateX(-130%); animation: miniSheen 5s ease-in-out 1.4s infinite; }
+@keyframes miniSheen { 0%, 16% { transform: translateX(-130%); } 42%, 100% { transform: translateX(130%); } }
+
+.mini-col.c2 { border-color: color-mix(in srgb, var(--cp-silver) 55%, var(--cp-border)); }
+.mini-col.c2 .mt { color: color-mix(in srgb, var(--cp-silver) 78%, var(--cp-text-soft)); }
+.mini-col.c2 .riser { height: 33px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cp-silver) 22%, var(--cp-surface)), var(--cp-surface-soft)); }
+
+.mini-col.c3 { border-color: color-mix(in srgb, var(--cp-bronze) 55%, var(--cp-border)); }
+.mini-col.c3 .mt { color: color-mix(in srgb, var(--cp-bronze) 80%, var(--cp-text-soft)); }
+.mini-col.c3 .riser { height: 23px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--cp-bronze) 22%, var(--cp-surface)), var(--cp-surface-soft)); }
+
+.preview-foot { margin-top: 15px; display: flex; align-items: center; gap: 7px; justify-content: center;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; color: var(--cp-text-soft); }
+.preview-foot .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--cp-gold);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cp-gold) 22%, transparent); }
 
 
 /* ---------- generic section ---------- */
@@ -623,36 +664,18 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
 <!-- ============ MAIN APP / LANDING ============ -->
 <div id="app">
-  <header class="topbar">
-    <div class="wrap">
-      <div class="topbar-inner">
-        <div class="brand">
-          <span class="logo" aria-hidden="true">🏆</span>
-          <span>
-            <span class="brand-name">Copilot Builder Showcase</span>
-            <span class="brand-sub">the finale for anything you build together</span>
-          </span>
-        </div>
-        <div class="topbar-spacer"></div>
-        <span class="pill status-pill" id="topStatus"><span class="badge-dot"></span> Practice showcase</span>
-        <button class="icon-btn" id="themeToggleApp" title="Toggle theme" aria-label="Toggle color theme">🌙</button>
-      </div>
-    </div>
-  </header>
-
   <main class="wrap">
     <!-- HERO -->
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <span class="badge"><span class="badge-star">✦</span> One command · <code style="font-family:Consolas,monospace">showcase</code></span>
           <h1>Turn any workshop into a live <span class="accent">Copilot Builder Showcase</span>.</h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
           <div class="hero-cta">
             <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Start my showcase</button>
-            <button class="btn btn-ghost btn-lg" id="demoHero">👁&nbsp; Watch the 60-sec demo</button>
+            <button class="btn btn-ghost btn-lg" id="demoHero">👁&nbsp; Watch the demo</button>
           </div>
           <div class="hero-cta-sub"><a href="#how">See how it works ↓</a></div>
           <button type="button" class="command-chip command-chip-btn" id="copyCmdChip"
@@ -677,11 +700,14 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
             <span class="t">Big-screen preview</span>
             <span class="pill"><span class="badge-dot" style="background:var(--cp-success)"></span> Awarded</span>
           </div>
-          <div class="mini-podium">
-            <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div></div>
-            <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">Copilot Builder Award</div></div>
-            <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div></div>
+          <div class="mini-stage">
+            <div class="mini-podium">
+              <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div><div class="riser"><span>3</span></div></div>
+              <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">Copilot Builder Award</div><div class="riser"><span>1</span></div></div>
+              <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div><div class="riser"><span>2</span></div></div>
+            </div>
           </div>
+          <div class="preview-foot"><span class="dot"></span> Sealed scores · revealed live on the big screen</div>
         </div>
       </div>
     </section>
@@ -689,7 +715,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <!-- PROBLEM -->
     <section class="section" id="why">
       <div class="section-head">
-        <span class="eyebrow">The awkward last ten minutes</span>
+        <span class="eyebrow">The awkward final ten minutes</span>
         <h2>Workshops are great at building. Bad at ending.</h2>
         <p>Links scatter across chat threads, docs, and browser tabs. A few people get demo time, most projects get no review, and the session just… stops. A human judging panel would fix it — but recruiting judges is too much overhead for most sessions.</p>
       </div>
@@ -1145,7 +1171,7 @@ var QRClean = (function () {
       var map = { open: "Open for submissions", judging: "Copilot judging in progress", awarded: "Winners revealed" };
       $("resumeText").textContent = (isDemo ? "A demo showcase is running — " : "A live showcase is running — ") + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
     }
-    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (live ? ((isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects") : "Ready to start");
+    var _ts = $("topStatus"); if (_ts) _ts.innerHTML = '<span class="badge-dot"></span> ' + (live ? ((isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects") : "Ready to start");
   }
 
   /* ---- landing actions ---- */
@@ -1230,7 +1256,7 @@ var QRClean = (function () {
     renderHeroSpot();
     if (state.status === "open" && state.entries.length > 1) { if (!heroTimer) startHeroTimer(); } else if (state.status !== "open") { stopHeroTimer(); }
     renderTicker();
-    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects";
+    var _ts2 = $("topStatus"); if (_ts2) _ts2.innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects";
   }
   function spotCard(e, idx) {
     var link = safeURL(e.link);
