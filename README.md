@@ -29,7 +29,7 @@ two minutes.
 >
 > *Requires Git, an authenticated GitHub CLI, and Python 3.11+. Official judging uses an authenticated GitHub Copilot CLI.*
 
-![Copilot Builder Showcase single-screen practice demo](docs/images/builder-showcase-demo.png)
+![Copilot Builder Showcase live reveal with podium and Top-3 growth cards](docs/images/builder-showcase-demo.svg)
 
 ---
 
@@ -133,6 +133,8 @@ project links -> sealed panel review -> every project gets a spotlight
    become project cards.
 2. **The rapid panel reviews** — one compact Copilot scorecard applies Innovation,
    Build Quality, and Impact lenses to each project while scores remain sealed.
+   Official events keep the configured panel policy and do not silently downgrade
+   to a single-model decision.
 3. **Every project gets a spotlight** — three brief judge reactions appear without
    exposing scores or rank.
 4. **The room joins in** — a quick audience cue asks for a drumroll, countdown,
@@ -141,6 +143,9 @@ project links -> sealed panel review -> every project gets a spotlight
    Builder Award.
 6. **The work stays useful** — recap, private feedback, validation, export, and
    replay are saved together.
+7. **Top-three growth cards land after awards** — each podium project gets
+   improvement guidance, a Copilot-next suggestion, and an evidence-based
+   Copilot-use note.
 
 The complete showcase runs in one visible Terminal. Copilot Builder Showcase never
 auto-opens a dashboard or second audience window.
@@ -266,6 +271,8 @@ concurrency, and reasoning requirements in your event file.
 
 If `--official` is used without an authenticated Copilot CLI, the command
 blocks. It never silently converts an official event into a practice result.
+Official scoring policy is preserved even in rapid scorecard mode; it never
+falls back to a hidden single-model panel.
 
 ---
 
@@ -308,8 +315,13 @@ Every project receives a brief on-screen review. Only the top three receive awar
 | 🏆 **First Place — Copilot Builder Award** | Strongest complete result |
 
 Each award explains why the project placed, what the panel uniquely liked, and one
-specific level-up move. Exact ties follow the event's declared policy: shared
-placement, a predeclared rubric tiebreaker, or a logged human decision.
+specific level-up move. After the reveal, top-three growth cards add:
+1. one improvement move,
+2. one optional Copilot next move,
+3. one Copilot-use summary sourced only from builder-provided evidence.
+
+Exact ties follow the event's declared policy: shared placement, a predeclared
+rubric tiebreaker, or a logged human decision.
 
 Formal events can replace this slate with a traditional podium or any custom
 recognitions in the EventSpec.
@@ -346,6 +358,7 @@ turning hidden criteria into a secret way to choose winners.
 | Equal spotlight | Every accepted project appears before the recognition ceremony. |
 | Same declared rubric | Every entry uses the same snapshotted review policy. |
 | Multi-model consensus | Official panels combine configured judges using median consensus. |
+| Strict official panel policy | Rapid scorecards keep configured panel policy and never silently downgrade to one model. |
 | Evidence, not inference | Copilot and frontier claims require builder-provided evidence. |
 | Hidden diagnostic review | The Shadow Spec can warn the organizer but cannot alter winners. |
 | Declared tie policy | Exact ties use the event policy, never input order. |
@@ -496,6 +509,7 @@ Terminal for the audience experience.
 | `showcase` | Paste links and start the complete live showcase. |
 | `showcase <links...>` | Start immediately with supplied projects. |
 | `showcase --demo` | Run the bundled two-minute practice showcase. |
+| `showcase --reduced-motion` | Prefer low-motion reveal pacing in the live showcase. |
 | `showcase --official <links...>` | Require a connected official Copilot panel. |
 | `showcase replay <run-id>` | Replay a prior showcase without judge calls. |
 | `showcase validate <run-id>` | Verify bundle hashes and seals. |

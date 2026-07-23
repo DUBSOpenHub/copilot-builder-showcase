@@ -53,7 +53,9 @@ jobs:
 
           "$root/bin/showcase" --help > "$root/help.log"
           "$root/bin/showcase" --version > "$root/version.log"
+          "$root/bin/copilot-builder-showcase" --version > "$root/advanced-version.log"
           "$root/bin/hackathon" --version > "$root/legacy-version.log"
+          "$root/bin/hackathon-judge" --version > "$root/legacy-advanced-version.log"
           CBS_RUNS_DIR="$root/runs" \
             CBS_REGISTRY_PATH="$root/registry/log.ndjson" \
             CBS_COLOR=never \
@@ -63,7 +65,9 @@ jobs:
           grep -q "Type: showcase" "$root/install.log"
           grep -q "showcase owner/project-one owner/project-two" "$root/help.log"
           grep -q "3.2.1" "$root/version.log"
+          grep -q "3.2.1" "$root/advanced-version.log"
           grep -q "3.2.1" "$root/legacy-version.log"
+          grep -q "3.2.1" "$root/legacy-advanced-version.log"
           grep -q "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" "$root/demo.log"
 
   windows:
@@ -109,13 +113,19 @@ jobs:
           .\install.ps1 6>&1 | Out-File (Join-Path $root "install.log")
 
           $showcase = Join-Path $root "bin\showcase.exe"
+          $advanced = Join-Path $root "bin\copilot-builder-showcase.exe"
           $legacy = Join-Path $root "bin\hackathon.exe"
+          $legacyAdvanced = Join-Path $root "bin\hackathon-judge.exe"
           & $showcase --help | Out-File (Join-Path $root "help.log")
           if ($LASTEXITCODE -ne 0) { throw "Primary command help failed." }
           & $showcase --version | Out-File (Join-Path $root "version.log")
           if ($LASTEXITCODE -ne 0) { throw "Primary command version failed." }
+          & $advanced --version | Out-File (Join-Path $root "advanced-version.log")
+          if ($LASTEXITCODE -ne 0) { throw "Advanced command version failed." }
           & $legacy --version | Out-File (Join-Path $root "legacy-version.log")
           if ($LASTEXITCODE -ne 0) { throw "Legacy command version failed." }
+          & $legacyAdvanced --version | Out-File (Join-Path $root "legacy-advanced-version.log")
+          if ($LASTEXITCODE -ne 0) { throw "Legacy judge command version failed." }
 
           $env:CBS_RUNS_DIR = Join-Path $root "runs"
           $env:CBS_REGISTRY_PATH = Join-Path $root "registry\log.ndjson"
@@ -137,8 +147,14 @@ jobs:
           if (-not (Select-String -Quiet -Path (Join-Path $root "version.log") -Pattern "3.2.1")) {
             throw "Primary command version is incorrect."
           }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "advanced-version.log") -Pattern "3.2.1")) {
+            throw "Advanced command version is incorrect."
+          }
           if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-version.log") -Pattern "3.2.1")) {
             throw "Legacy command version is incorrect."
+          }
+          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-advanced-version.log") -Pattern "3.2.1")) {
+            throw "Legacy judge command version is incorrect."
           }
           if (-not (Select-String -Quiet -Path (Join-Path $root "demo.log") -Pattern "PRACTICE SHOWCASE")) {
             throw "Windows demo did not complete."

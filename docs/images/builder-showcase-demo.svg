@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
+  <title id="title">Copilot Builder Showcase live demo screenshot</title>
+  <desc id="desc">A terminal-style screenshot of the live showcase reveal with podium winners, audience cue, and Top-3 growth cards.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b3a39"/>
+      <stop offset="100%" stop-color="#1f1f1f"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a2a"/>
+      <stop offset="100%" stop-color="#232323"/>
+    </linearGradient>
+    <style>
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+      .title { font: 700 31px/1.2 sans-serif; fill: #b9b9b9; letter-spacing: .3px; }
+      .chrome { fill: #2f2f2f; stroke: #474747; stroke-width: 1; }
+      .pill { fill: #3b2b14; stroke: #f0b74d; stroke-width: 1.2; }
+      .pillText { font: 700 18px/1 sans-serif; fill: #ffd166; letter-spacing: .8px; }
+      .headline { font: 700 26px/1.2 "Menlo", monospace; fill: #ffca3a; }
+      .subhead { font: 700 18px/1.2 "Menlo", monospace; fill: #55b6ff; }
+      .body { font: 700 16px/1.35 "Menlo", monospace; fill: #f2f2f2; }
+      .pink { fill: #ff89a9; }
+      .green { fill: #5be38a; }
+      .yellow { fill: #ffca3a; }
+      .muted { fill: #a8a8a8; }
+      .cardStroke { stroke: #ff89a9; stroke-width: 2.5; fill: none; }
+      .cardInner { stroke: #ff89a9; stroke-width: 2; fill: rgba(0,0,0,0.12); }
+      .accentBlue { stroke: #55b6ff; stroke-width: 3; }
+      .shadow { filter: drop-shadow(0 12px 30px rgba(0,0,0,.35)); }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1280" height="900" rx="24" fill="#141414"/>
+  <g class="shadow">
+    <rect x="50" y="28" width="1180" height="850" rx="18" fill="url(#bg)" stroke="#4d4d4d" stroke-width="1.5"/>
+    <rect x="50" y="28" width="1180" height="61" rx="18" class="chrome"/>
+    <circle cx="81" cy="58" r="7" fill="#ff6961"/>
+    <circle cx="107" cy="58" r="7" fill="#f8c54b"/>
+    <circle cx="133" cy="58" r="7" fill="#2ecc71"/>
+    <text x="640" y="64" text-anchor="middle" class="title">Copilot Builder Showcase — PRACTICE SHOW — ILLUSTRATIVE RESULTS</text>
+    <g transform="translate(1116,42)">
+      <rect class="pill" x="0" y="0" width="96" height="23" rx="11.5"/>
+      <text class="pillText" x="48" y="16" text-anchor="middle">REDUCED</text>
+    </g>
+
+    <rect x="84" y="123" width="1112" height="3" fill="#55b6ff"/>
+    <text x="102" y="167" class="subhead">▶ ACT IV — AWARD REVEAL</text>
+    <text x="102" y="202" class="headline">PRACTICE SHOW — ILLUSTRATIVE RESULTS</text>
+    <rect x="84" y="218" width="1112" height="3" fill="#55b6ff"/>
+
+    <text x="84" y="255" class="body">
+      <tspan x="84" dy="0">✉  The envelopes are sealed. The room is waiting.</tspan>
+      <tspan x="84" dy="28" class="pink">🎙  Sideline report: the panel is locked, the audience is live, and the suspense is real.</tspan>
+      <tspan x="84" dy="28" class="yellow">🥁  3... 2... 1... GO!  The final result is about to hit.</tspan>
+      <tspan x="84" dy="28" class="muted">📣  Audience cue: DRUMROLL + APPLAUSE</tspan>
+    </text>
+
+    <text x="84" y="396" class="body">
+      <tspan x="84" dy="0">🏆  GOLD — FIRST PLACE</tspan>
+      <tspan x="84" dy="29" class="yellow">    Project: demo-day/skillbridge</tspan>
+      <tspan x="84" dy="25" class="green">    Built by: Team Lift</tspan>
+      <tspan x="84" dy="25" class="pink">    Copilot-next: generate an acceptance-test checklist for onboarding.</tspan>
+      <tspan x="84" dy="25" class="green">    Growth: one focused next step, one Copilot move, one evidence-based note.</tspan>
+    </text>
+
+    <g transform="translate(84,540)">
+      <rect x="0" y="0" width="1112" height="218" rx="4" class="cardStroke"/>
+      <rect x="4" y="4" width="1104" height="210" rx="3" class="cardInner"/>
+      <text x="24" y="38" class="body yellow">TOP-3 GROWTH CARDS</text>
+      <line x1="22" y1="50" x2="1090" y2="50" class="accentBlue"/>
+
+      <text x="26" y="84" class="body">
+        <tspan x="26" dy="0">1. Aurora — tighten the onboarding walkthrough.</tspan>
+        <tspan x="26" dy="24" class="pink">   Copilot-used-well: scaffolded the workflow start with Copilot Chat.</tspan>
+        <tspan x="26" dy="24" class="green">   Next move: turn the best moment into one testable release slice.</tspan>
+      </text>
+
+      <text x="26" y="164" class="body">
+        <tspan x="26" dy="0">2. Beacon — add one concrete user flow and a clearer handoff.</tspan>
+        <tspan x="26" dy="24" class="pink">   Copilot-used-well: used builder-provided evidence, not a vague claim.</tspan>
+        <tspan x="26" dy="24" class="green">   Next move: draft API contract tests and a shorter demo script.</tspan>
+      </text>
+
+      <text x="684" y="84" class="body">
+        <tspan x="0" dy="0">3. Cinder — sharpen the explanation and highlight the strongest result.</tspan>
+        <tspan x="0" dy="24" class="pink">   Copilot-next: ask Copilot for a concise polish pass.</tspan>
+        <tspan x="0" dy="24" class="green">   Growth note: strong idea, now make the path to value obvious.</tspan>
+      </text>
+    </g>
+
+    <text x="84" y="814" class="muted mono">PRACTICE SHOW — ILLUSTRATIVE RESULTS • scores stayed sealed until reveal • top-3 coaching lands after awards</text>
+  </g>
+</svg>

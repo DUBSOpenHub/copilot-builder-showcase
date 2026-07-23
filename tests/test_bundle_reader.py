@@ -479,6 +479,49 @@ class TestAudienceProjection:
     def test_narrative_redacts_ordinal_and_plural_winner_language(self, spoiler):
         assert redact_audience_narrative(spoiler, "safe fallback") == "safe fallback"
 
+    @pytest.mark.parametrize(
+        "spoiler",
+        [
+            "This project won the whole thing.",
+            "A clear champion of the room.",
+            "The championship build is here.",
+            "Took home the gold medal.",
+            "Definitely silver medal material.",
+            "The medalists are set.",
+            "This one is taking the trophy.",
+            "Hand them the trophies.",
+            "Top of the podium for sure.",
+            "The grand prize is basically decided.",
+            "A first prize contender.",
+            "A top prize lock.",
+            "The prize-winner is obvious.",
+            "Genuinely prizewinning work.",
+            "Runner-up at best.",
+            "An easy victory here.",
+            "Clearly victorious tonight.",
+            "It outscored everyone.",
+            "It outperformed the field.",
+            "Undefeated so far.",
+            "Best in show, no contest.",
+            "It beat every other build.",
+            "It beat out the competition.",
+        ],
+    )
+    def test_narrative_redacts_award_and_medal_language(self, spoiler):
+        assert redact_audience_narrative(spoiler, "safe fallback") == "safe fallback"
+
+    @pytest.mark.parametrize(
+        "grounded",
+        [
+            "Pulseboard shows strong product focus around reducing event handoff delays.",
+            "A thoughtful, well-built project with a clean data model.",
+            "Wonderful onboarding flow and a wonder-filled interface.",
+            "The team built a heartbeat monitor for climbers.",
+        ],
+    )
+    def test_narrative_keeps_grounded_non_result_summaries(self, grounded):
+        assert redact_audience_narrative(grounded, "safe fallback") == grounded
+
     def test_operator_projection_preserves_full_data(self, tmp_path):
         bundle_path = tmp_path / "run-5"
         submissions = [_make_submission("Alice Chen", "Compass", "Navigation tool.")]

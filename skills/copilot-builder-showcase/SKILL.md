@@ -205,6 +205,18 @@ next step, a Copilot next move, a bounded frontier experiment, and explicit
 evidence status. Project-specific claims must use supplied context; unsupported
 suggestions must be labeled hypotheses.
 
+Immediately after the reveal, each podium project also receives a Top-3 growth
+card: one improvement move, one optional Copilot-next suggestion, and one
+Copilot-use note sourced only from builder-provided evidence. These are
+diagnostic/growth content, not additional awards.
+
+## Accessibility
+
+If the organizer asks for a lower-motion showcase, add `--reduced-motion` to the
+`showcase` command (or set `CBS_REDUCED_MOTION=1`). This keeps the same
+single-terminal ceremony but skips optional suspense pauses. An EventSpec may
+also set this as its default via `accessibility.reduced_motion`.
+
 ## After the run
 
 Report the result status, run ID, bundle path, private feedback path, awards and

@@ -261,6 +261,13 @@ def validate_event_spec(spec: Mapping[str, Any]) -> None:
                 "EventSpec awards[].rank must be a positive integer when provided."
             )
 
+    ranks = [award.get("rank") for award in awards if award.get("rank") is not None]
+    if len(set(ranks)) != len(ranks):
+        raise EventSpecValidationError(
+            "EventSpec awards[].rank values must be unique; two awards cannot "
+            "both claim the same podium placement."
+        )
+
     tie_policy = spec.get("tie_policy")
     if not isinstance(tie_policy, Mapping):
         raise EventSpecValidationError("EventSpec requires a 'tie_policy' object.")
@@ -303,6 +310,23 @@ def validate_event_spec(spec: Mapping[str, Any]) -> None:
             "tie_policy.mode='sealed-tiebreaker'."
         )
 
+    accessibility = spec.get("accessibility", {})
+    if not isinstance(accessibility, Mapping):
+        raise EventSpecValidationError("EventSpec accessibility must be an object.")
+    allowed_accessibility_keys = {"high_contrast", "reduced_motion"}
+    unknown_accessibility_keys = set(accessibility) - allowed_accessibility_keys
+    if unknown_accessibility_keys:
+        raise EventSpecValidationError(
+            "EventSpec accessibility contains unsupported key(s): "
+            + ", ".join(sorted(unknown_accessibility_keys))
+            + ". Supported keys are 'high_contrast' and 'reduced_motion'."
+        )
+    for key in allowed_accessibility_keys:
+        if key in accessibility and not isinstance(accessibility[key], bool):
+            raise EventSpecValidationError(
+                f"EventSpec accessibility.{key} must be a boolean."
+            )
+
     model_policy = spec.get("model_policy")
     if not isinstance(model_policy, Mapping):
         raise EventSpecValidationError("EventSpec requires a 'model_policy' object.")
@@ -317,6 +341,31 @@ def validate_event_spec(spec: Mapping[str, Any]) -> None:
         )
     for model_id in panel_models:
         _require_string(model_id, "model_policy.panel_models[]")
+    _require_string(
+        model_policy.get("preferred_model"), "model_policy.preferred_model"
+    )
+    if model_policy.get("policy_mode", "strict") not in {"strict", "permissive"}:
+        raise EventSpecValidationError(
+            "EventSpec model_policy.policy_mode must be 'strict' or 'permissive'. "
+            "A misspelled or mismatched value would silently fall back to "
+            "permissive behavior instead of blocking a strict event."
+        )
+    if model_policy.get("required_tier", "standard") not in {"standard", "premium"}:
+        raise EventSpecValidationError(
+            "EventSpec model_policy.required_tier must be 'standard' or 'premium'."
+        )
+    # Kept in sync with builder_showcase._REASONING_LEVELS; duplicated here
+    # (rather than imported) to avoid a circular import between the two modules.
+    valid_reasoning_levels = {"low", "medium", "high", "xhigh"}
+    required_reasoning = model_policy.get("required_reasoning", "high")
+    if (
+        not isinstance(required_reasoning, str)
+        or required_reasoning.lower() not in valid_reasoning_levels
+    ):
+        raise EventSpecValidationError(
+            "EventSpec model_policy.required_reasoning must be one of "
+            "'low', 'medium', 'high', or 'xhigh'."
+        )
     minimum_panel_size = model_policy.get("minimum_panel_size", 1)
     if (
         not isinstance(minimum_panel_size, int)

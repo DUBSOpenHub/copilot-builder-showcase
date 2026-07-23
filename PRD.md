@@ -57,6 +57,11 @@ first-place Copilot Builder Award. EventSpecs may replace that podium.
     reached.
 13. Native Bash and PowerShell installers provide the same primary and
     compatibility commands on macOS, Linux, and Windows.
+14. After awards, each podium project receives a Top-3 growth card with one
+    improvement move, one optional Copilot-next suggestion, and one Copilot-use
+    summary sourced only from builder-provided evidence.
+15. Rapid scorecard judging preserves declared official panel policy and never
+    silently downgrades a strict event to a single-model decision.
 
 ## Core flow
 
@@ -80,6 +85,9 @@ audience participation and confirmation
         |
         v
 award reveal and operator score access
+        |
+        v
+top-three growth cards
         |
         v
 recap, validation, and immutable replay archive

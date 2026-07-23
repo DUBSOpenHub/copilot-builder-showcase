@@ -673,7 +673,7 @@ class SidePanel(Static):
                 lines.append("\n")
 
         # Awards
-        if s.awards:
+        if s.is_revealed and s.awards:
             lines.append(f"\n🏆 Awards\n", style="bold underline bright_white")
             tie_ceremony = s.awards.get("tie_ceremony", {})
             if isinstance(tie_ceremony, dict):
@@ -802,7 +802,7 @@ class BuilderDashboard(App):
 
         # Awards
         award_widget = self.query_one("#award-reveal", AwardReveal)
-        if s.awards:
+        if s.is_revealed and s.awards:
             award_widget.set_awards(s.awards)
 
         # Side panel

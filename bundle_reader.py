@@ -43,10 +43,19 @@ _PRIVATE_PROJECT_CONTEXT_FIELDS = (
     "builder_notes",
 )
 _NARRATIVE_SPOILER_RE = re.compile(
-    r"\b(?:score(?:s|d)?|rank(?:s|ed|ing)?|leaderboard|winners?|winning|"
+    r"\b(?:score(?:s|d)?|rank(?:s|ed|ing)?|leaderboard|winners?|winning|won|wins|"
     r"finalists?|(?:\d+(?:st|nd|rd|th)|first|second|third|fourth|fifth|sixth|"
     r"seventh|eighth|ninth|tenth)[-\s]+place|leading|highest|lowest|"
     r"top[-\s]+(?:project|build|entry)|best[-\s]+(?:project|build|entry)|perfect\s+ten)\b"
+    # Award, medal, and podium language can leak an outcome just as directly as a
+    # raw score, so the pre-reveal audience narrative must withhold it too.
+    r"|\b(?:champions?|championships?|trophy|trophies|podium|medals?|medalists?|"
+    r"runners?[-\s]?up|victor(?:y|ies|ious)|outscored|out[-\s]?performed|"
+    r"undefeated|unbeaten)\b"
+    r"|\b(?:grand|first|top)[-\s]+prize\b"
+    r"|\bprize[-\s]?win(?:ner|ners|ning)\b"
+    r"|\bbest[-\s]+in[-\s]+show\b"
+    r"|\bbeat[-\s]+(?:out|every|all|everyone|the\s+(?:other|others|competition|field|rest))\b"
     r"|\b\d+(?:\.\d+)?\s*(?:/|out\s+of|of)\s*\d+\b"
     r"|(?:#\s*\d+|\bnumber\s+(?:one|two|three|four|five|six|seven|eight|nine|ten)\b)"
     r"|\b(?:\d+(?:\.\d+)?|zero|one|two|three|four|five|six|seven|eight|nine|ten)"

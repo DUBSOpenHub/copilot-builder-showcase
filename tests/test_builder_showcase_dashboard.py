@@ -15,6 +15,7 @@ from builder_showcase_dashboard import (
     AwardReveal,
     BuilderDashboard,
     BundleState,
+    SidePanel,
     _progress_label,
     _submission_table_rows,
     _verdict_cell,
@@ -126,3 +127,51 @@ def test_award_reveal_ignores_malformed_shared_podium_recipients():
     }
 
     assert reveal.render() is not None
+
+
+def test_side_panel_hides_awards_when_not_revealed():
+    panel = SidePanel()
+    panel.set_state(type("State", (), {
+        "run_id": "run-1",
+        "mode": "review",
+        "status": "collecting",
+        "is_sealed": False,
+        "model_name": "pending",
+        "shadow": None,
+        "evaluation_progress": None,
+        "is_revealed": False,
+        "shadow_assessment": None,
+        "operator": False,
+        "verdicts": [],
+        "awards": {"awards": [{"award_name": "First Place", "emoji": "🥇"}]},
+        "sub_count": 0,
+    })())
+
+    rendered = panel.render()
+    text = rendered.renderable.plain
+    assert "🏆 Awards" not in text
+    assert "First Place" not in text
+
+
+def test_side_panel_shows_awards_after_reveal():
+    panel = SidePanel()
+    panel.set_state(type("State", (), {
+        "run_id": "run-1",
+        "mode": "review",
+        "status": "awarded",
+        "is_sealed": True,
+        "model_name": "3-model panel",
+        "shadow": None,
+        "evaluation_progress": None,
+        "is_revealed": True,
+        "shadow_assessment": None,
+        "operator": False,
+        "verdicts": [],
+        "awards": {"awards": [{"award_name": "First Place", "emoji": "🥇"}]},
+        "sub_count": 0,
+    })())
+
+    rendered = panel.render()
+    text = rendered.renderable.plain
+    assert "🏆 Awards" in text
+    assert "First Place" in text

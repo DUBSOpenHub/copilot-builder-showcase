@@ -16,6 +16,7 @@ import os
 import re
 import subprocess
 import sys
+import tarfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -503,6 +504,122 @@ class TestShowtimeDelight:
 
         confirm.assert_called_once()
 
+    def test_top3_feedback_cards_use_builder_evidence_only(self):
+        awards_card = {
+            "awards": [
+                {
+                    "placement": 1,
+                    "award_id": "grand-prize",
+                    "award_name": "First Place — Copilot Builder Award",
+                    "emoji": "🥇",
+                    "winner_submission_id": "sub-a",
+                    "project_name": "Aurora",
+                    "winner_builder_name": "Team Aurora",
+                },
+                {
+                    "placement": 2,
+                    "award_id": "second-place",
+                    "award_name": "Second Place — Builder Silver",
+                    "emoji": "🥈",
+                    "winner_submission_id": "sub-b",
+                    "project_name": "Beacon",
+                    "winner_builder_name": "Team Beacon",
+                },
+            ]
+        }
+        feedback = {
+            "sub-a": {
+                "next_commit": "Add a focused onboarding walkthrough.",
+                "copilot_next_moves": ["Generate an acceptance-test checklist for onboarding."],
+                "copilot_use": {
+                    "status": "evidenced",
+                    "source": "builder-provided",
+                    "evidence": "Used Copilot to scaffold onboarding prompts.",
+                },
+            },
+            "sub-b": {
+                "next_commit": "Document one complete user flow.",
+                "copilot_next_moves": ["Draft API contract test cases."],
+                "copilot_use": {
+                    "status": "not_provided",
+                    "source": "not-provided",
+                },
+            },
+        }
+
+        cards = cbp._build_top3_feedback_cards(awards_card, feedback)
+
+        assert len(cards) == 2
+        assert cards[0]["copilot_used_well"] == (
+            "Builder-provided: Used Copilot to scaffold onboarding prompts."
+        )
+        assert cards[1]["copilot_used_well"] == (
+            "No Copilot-use evidence was provided; no usage claim is made."
+        )
+
+    def test_top3_feedback_cards_use_podium_placements_not_award_order(self):
+        awards_card = {
+            "awards": [
+                {
+                    "placement": 4,
+                    "award_id": "crowd-favorite",
+                    "award_name": "Crowd Favorite",
+                    "winner_submission_id": "sub-d",
+                    "project_name": "Delta",
+                    "winner_builder_name": "Team Delta",
+                },
+                {
+                    "placement": 2,
+                    "award_id": "second-place",
+                    "award_name": "Second Place",
+                    "winner_submission_id": "sub-b",
+                    "project_name": "Beacon",
+                    "winner_builder_name": "Team Beacon",
+                },
+                {
+                    "placement": 1,
+                    "award_id": "grand-prize",
+                    "award_name": "First Place",
+                    "winner_submission_id": "sub-a",
+                    "project_name": "Aurora",
+                    "winner_builder_name": "Team Aurora",
+                },
+                {
+                    "placement": 1,
+                    "award_id": "grand-prize-tie",
+                    "award_name": "First Place (Tie)",
+                    "winner_submission_id": "sub-c",
+                    "project_name": "Cinder",
+                    "winner_builder_name": "Team Cinder",
+                },
+                {
+                    "placement": 3,
+                    "award_id": "third-place",
+                    "award_name": "Third Place",
+                    "winner_submission_id": "sub-e",
+                    "project_name": "Echo",
+                    "winner_builder_name": "Team Echo",
+                },
+            ]
+        }
+        feedback = {
+            "sub-a": {"next_commit": "A", "copilot_next_moves": []},
+            "sub-b": {"next_commit": "B", "copilot_next_moves": []},
+            "sub-c": {"next_commit": "C", "copilot_next_moves": []},
+            "sub-d": {"next_commit": "D", "copilot_next_moves": []},
+            "sub-e": {"next_commit": "E", "copilot_next_moves": []},
+        }
+
+        cards = cbp._build_top3_feedback_cards(awards_card, feedback)
+
+        assert [card["winner_submission_id"] for card in cards] == [
+            "sub-a",
+            "sub-c",
+            "sub-b",
+            "sub-e",
+        ]
+        assert "sub-d" not in [card["winner_submission_id"] for card in cards]
+
     def test_textual_status_rejects_untested_major_version(self):
         with patch.object(cbp.importlib.util, "find_spec", return_value=object()):
             with patch.object(cbp.importlib.metadata, "version", return_value="9.0.0"):
@@ -612,6 +729,21 @@ class TestShowtimeDelight:
 
         assert cbp._audience_safe_commentary(commentary, "safe fallback") == commentary
 
+    @pytest.mark.parametrize(
+        "spoiler",
+        [
+            "This build is the clear champion of the night.",
+            "They just took the gold medal.",
+            "The trophy is basically theirs.",
+            "Top of the podium, no question.",
+            "This is the grand prize project.",
+            "The runner-up is set.",
+            "It outscored every other entry.",
+        ],
+    )
+    def test_audience_chatter_redacts_award_language(self, spoiler):
+        assert cbp._audience_safe_commentary(spoiler, "safe fallback") == "safe fallback"
+
 
 # ---------------------------------------------------------------------------
 # Layer 2 — Bundle I/O Tests
@@ -668,6 +800,35 @@ class TestBundleIO:
         assert "SEAL" not in names
         assert "data.json" in names
 
+    def test_collect_bundle_artifacts_seals_nested_hashes_seal(self, tmp_path):
+        """Only the root seal files are exempt; nested same-named files must seal."""
+        (tmp_path / "HASHES").write_text("h")
+        (tmp_path / "SEAL").write_text("s")
+        nested = tmp_path / "evidence"
+        nested.mkdir()
+        (nested / "HASHES").write_text("nested-hashes")
+        (nested / "SEAL").write_text("nested-seal")
+        (nested / "data.json").write_text("{}")
+
+        rels = {
+            p.relative_to(tmp_path).as_posix()
+            for p in cbp.collect_bundle_artifacts(tmp_path)
+        }
+        # Root seal files remain excluded from the artifact set...
+        assert "HASHES" not in rels
+        assert "SEAL" not in rels
+        # ...but a nested file that merely shares the name must be hashed/sealed,
+        # otherwise it could be added or tampered with undetected.
+        assert "evidence/HASHES" in rels
+        assert "evidence/SEAL" in rels
+        assert "evidence/data.json" in rels
+
+        hashes = cbp.hash_artifacts(tmp_path)
+        assert "evidence/HASHES" in hashes
+        assert "evidence/SEAL" in hashes
+        assert "HASHES" not in hashes
+        assert "SEAL" not in hashes
+
     def test_hash_artifacts_and_seal(self, tmp_path):
         (tmp_path / "manifest").mkdir()
         (tmp_path / "manifest" / "bundle.json").write_text('{"run_id": "test"}')
@@ -682,6 +843,68 @@ class TestBundleIO:
         cbp.write_hashes_and_seal(tmp_path)
         with pytest.raises(cbp.BundleSealError):
             cbp.write_hashes_and_seal(tmp_path)
+
+
+# ---------------------------------------------------------------------------
+# Safe replay-archive extraction (resource limits)
+# ---------------------------------------------------------------------------
+
+class TestSafeArchiveExtraction:
+    def _make_archive(self, tmp_path: Path, files: Dict[str, bytes]) -> Path:
+        src = tmp_path / "src"
+        src.mkdir()
+        archive_path = tmp_path / "bundle.tar.gz"
+        with tarfile.open(archive_path, "w:gz") as tar:
+            for arcname, data in files.items():
+                member_file = src / arcname.replace("/", "_")
+                member_file.write_bytes(data)
+                tar.add(member_file, arcname=arcname)
+        return archive_path
+
+    def test_safe_extract_allows_normal_archive(self, tmp_path):
+        archive_path = self._make_archive(
+            tmp_path, {"run/manifest/bundle.json": b"{}", "run/HASHES": b"x"}
+        )
+        dest = tmp_path / "out"
+        dest.mkdir()
+        with tarfile.open(archive_path, "r:gz") as tar:
+            cbp._safe_extract_tar(tar, dest)
+        assert (dest / "run" / "manifest" / "bundle.json").read_bytes() == b"{}"
+
+    def test_safe_extract_rejects_oversized_member(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cbp, "MAX_REPLAY_ARCHIVE_MEMBER_BYTES", 8)
+        archive_path = self._make_archive(
+            tmp_path, {"run/big.bin": b"0123456789"}  # 10 bytes > 8
+        )
+        dest = tmp_path / "out"
+        dest.mkdir()
+        with tarfile.open(archive_path, "r:gz") as tar:
+            with pytest.raises(cbp.ConfigValidationError):
+                cbp._safe_extract_tar(tar, dest)
+        # Nothing should have been written when a member is rejected.
+        assert not any(dest.iterdir())
+
+    def test_safe_extract_rejects_total_size(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cbp, "MAX_REPLAY_ARCHIVE_TOTAL_BYTES", 12)
+        archive_path = self._make_archive(
+            tmp_path, {"run/a.bin": b"01234567", "run/b.bin": b"01234567"}  # 16 total
+        )
+        dest = tmp_path / "out"
+        dest.mkdir()
+        with tarfile.open(archive_path, "r:gz") as tar:
+            with pytest.raises(cbp.ConfigValidationError):
+                cbp._safe_extract_tar(tar, dest)
+
+    def test_safe_extract_rejects_too_many_members(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cbp, "MAX_REPLAY_ARCHIVE_MEMBERS", 1)
+        archive_path = self._make_archive(
+            tmp_path, {"run/a.txt": b"a", "run/b.txt": b"b"}
+        )
+        dest = tmp_path / "out"
+        dest.mkdir()
+        with tarfile.open(archive_path, "r:gz") as tar:
+            with pytest.raises(cbp.ConfigValidationError):
+                cbp._safe_extract_tar(tar, dest)
 
 
 # ---------------------------------------------------------------------------
@@ -1508,6 +1731,46 @@ class TestBulkUrlImport:
         with pytest.raises(cbp.FreshnessGateBlock):
             cbp.run_freshness_gate(bundle_path, rubric, gw, fixed_clock)
 
+    def test_gate_blocks_underconfigured_panel_strict(self, tmp_path):
+        """A strict event must block when fewer models are configured than the
+        declared minimum, instead of silently downgrading the panel size."""
+        bundle_path = make_run(tmp_path)
+        rubric = cbp.load_rubric(bundle_path)
+        rubric["freshness_gate"].update(
+            {
+                "policy_mode": "strict",
+                "preferred_model": "claude-opus-4.8",
+                # Only two models configured...
+                "panel_models": ["claude-opus-4.8", "gpt-5.6-terra"],
+                # ...but the event policy requires three.
+                "minimum_panel_size": 3,
+                "minimum_distinct_providers": 1,
+            }
+        )
+        with pytest.raises(cbp.FreshnessGateBlock):
+            cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
+        gate = cbp.load_json(bundle_path / "freshness_gate.json")
+        assert gate["status"] == "blocked"
+        assert gate["minimum_panel_size"] == 3
+
+    def test_gate_underconfigured_panel_permissive_does_not_block(self, tmp_path):
+        """Permissive mode still proceeds (auto-filling or labelling a fallback)
+        even when the configured panel is smaller than the declared minimum."""
+        bundle_path = make_run(tmp_path)
+        rubric = cbp.load_rubric(bundle_path)
+        rubric["freshness_gate"].update(
+            {
+                "policy_mode": "permissive",
+                "preferred_model": "claude-opus-4.8",
+                "panel_models": ["claude-opus-4.8", "gpt-5.6-terra"],
+                "minimum_panel_size": 3,
+                "minimum_distinct_providers": 1,
+            }
+        )
+        result = cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
+        assert result["status"] in ("pass", "fallback")
+        assert result["minimum_panel_size"] == 3
+
 
 class TestCopilotCLIGateway:
 
@@ -1655,6 +1918,7 @@ class TestCommandFlows:
             "--tie-resolution",
             "rank:1=sub-a",
             "--require-live-terminal",
+            "--reduced-motion",
         ])
         submit_args = parser.parse_args([
             "submit", "demo-day", "--builder-name", "Team Aurora",
@@ -1672,11 +1936,19 @@ class TestCommandFlows:
         assert quick_args.tie_resolution == ["rank:1=sub-a"]
         assert workshop_args.tie_resolution == ["rank:1=sub-a"]
         assert workshop_args.require_live_terminal is True
+        assert workshop_args.reduced_motion is True
         assert submit_args.problem_statement == "Reduce follow-up gaps"
         assert submit_args.intended_user == "Account executives"
         assert submit_args.demo_url == "https://demo.example"
         assert submit_args.builder_notes == "Daily workflow demo"
         assert award_args.tie_resolution == ["rank:1=sub-a"]
+
+    def test_registry_path_falls_back_to_runs_dir_when_default_unwritable(self, tmp_path):
+        with patch.dict(os.environ, {"HJ_RUNS_DIR": str(tmp_path / "runs")}, clear=True):
+            with patch.object(cbp.os, "access", return_value=False):
+                registry_path = cbp.get_registry_path()
+
+        assert registry_path == (tmp_path / "runs" / "registry" / "log.ndjson")
 
     def test_workshop_blocks_when_current_output_is_not_a_real_terminal(self, tmp_path, capsys):
         args = build_args(
@@ -1731,6 +2003,125 @@ class TestCommandFlows:
             "osascript" not in str(call.args)
             for call in run.call_args_list
         )
+
+    def test_award_writes_top3_feedback_artifact(self, tmp_path):
+        run_id = "top3-feedback"
+        bundle_path = make_run(tmp_path, run_id, event_spec=_podium_event_spec())
+        submissions = [
+            {
+                "submission_id": "sub-a",
+                "builder_name": "Team Aurora",
+                "project_name": "Aurora",
+                "description": "A",
+                "copilot_evidence": "Used Copilot to draft onboarding logic.",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+            {
+                "submission_id": "sub-b",
+                "builder_name": "Team Beacon",
+                "project_name": "Beacon",
+                "description": "B",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+            {
+                "submission_id": "sub-c",
+                "builder_name": "Team Cinder",
+                "project_name": "Cinder",
+                "description": "C",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+        ]
+        for submission in submissions:
+            cbp.write_once_json(
+                bundle_path / "inputs" / f"{submission['submission_id']}.json",
+                submission,
+            )
+        cbp.update_status(bundle_path, "collecting", fixed_clock)
+        full_judge_run(bundle_path, MockGateway())
+        winner_id = cbp._winner_id_from_award_selection(bundle_path, {}, fixed_clock)
+        assert winner_id is not None
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            rc = cbp.cmd_award(
+                build_args("award", run_id=run_id, winner=winner_id, no_suspense=True),
+                MockGateway(),
+                fixed_clock,
+            )
+
+        assert rc == 0
+        top3_path = tmp_path / run_id / "winner" / "top3_feedback.json"
+        assert top3_path.exists()
+        cards = cbp.load_json(top3_path)["cards"]
+        assert len(cards) == 3
+        assert any(
+            card["copilot_used_well"].startswith("Builder-provided:")
+            for card in cards
+        )
+        assert any(
+            card["copilot_used_well"] == "No Copilot-use evidence was provided; no usage claim is made."
+            for card in cards
+        )
+
+    def test_recap_includes_top3_growth_cards_section(self, tmp_path):
+        run_id = "top3-recap"
+        bundle_path = make_run(tmp_path, run_id, event_spec=_podium_event_spec())
+        submissions = [
+            {
+                "submission_id": "sub-a",
+                "builder_name": "Team Aurora",
+                "project_name": "Aurora",
+                "description": "A",
+                "copilot_evidence": "Used Copilot for onboarding scaffolding.",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+            {
+                "submission_id": "sub-b",
+                "builder_name": "Team Beacon",
+                "project_name": "Beacon",
+                "description": "B",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+            {
+                "submission_id": "sub-c",
+                "builder_name": "Team Cinder",
+                "project_name": "Cinder",
+                "description": "C",
+                "artifacts": [],
+                "submitted_at": FIXED_TS,
+                "file_size_bytes": 0,
+            },
+        ]
+        for submission in submissions:
+            cbp.write_once_json(
+                bundle_path / "inputs" / f"{submission['submission_id']}.json",
+                submission,
+            )
+        cbp.update_status(bundle_path, "collecting", fixed_clock)
+        full_judge_run(bundle_path, MockGateway())
+        winner_id = cbp._winner_id_from_award_selection(bundle_path, {}, fixed_clock)
+        assert winner_id is not None
+        env = self._env(tmp_path)
+        with patch.dict(os.environ, env):
+            assert cbp.cmd_award(
+                build_args("award", run_id=run_id, winner=winner_id, no_suspense=True),
+                MockGateway(),
+                fixed_clock,
+            ) == 0
+            assert cbp.cmd_recap(build_args("recap", run_id=run_id, out=None), MockGateway(), fixed_clock) == 0
+
+        recap_text = (tmp_path / run_id / "recap.md").read_text(encoding="utf-8")
+        assert "## Top-3 Growth Cards" in recap_text
+        assert "Copilot next:" in recap_text
 
     def test_bundled_demo_runs_the_complete_single_screen_show(self, tmp_path, capsys):
         args = build_args(
@@ -1798,6 +2189,30 @@ class TestCommandFlows:
         assert "cannot continue with practice judges" in capsys.readouterr().err
         assert not (bundle_path / "freshness_gate.json").exists()
         assert not list((bundle_path / "verdicts").glob("*.json"))
+
+    def test_showcase_scorecards_keep_configured_panel_requirements(self, tmp_path):
+        class ScorecardGateway(MockGateway):
+            supports_showcase_scorecards = True
+
+        run_id = "scorecard-panel-policy"
+        env = self._env(tmp_path)
+        captured = {}
+
+        def fake_gate(_bundle_path, gate_rubric, _gateway, _clock):
+            captured["panel_models"] = gate_rubric["freshness_gate"]["panel_models"]
+            raise cbp.ModelAPIError("stop after policy check")
+
+        with patch.dict(os.environ, env):
+            cbp.cmd_init(build_args("init", run_id=run_id), None, fixed_clock)
+            with patch.object(cbp, "run_freshness_gate", side_effect=fake_gate):
+                rc = cbp.cmd_judge(
+                    build_args("judge", run_id=run_id),
+                    ScorecardGateway(),
+                    fixed_clock,
+                )
+
+        assert rc == 8
+        assert captured["panel_models"] == cbp.DEFAULT_EVENT_SPEC["model_policy"]["panel_models"]
 
     def test_projector_tui_refuses_captured_output(self, capsys):
         args = argparse.Namespace(
@@ -2574,6 +2989,42 @@ class TestCommandFlows:
         assert card["copilot_use"]["status"] == "not_provided"
         assert card["frontier_use"]["status"] == "not_provided"
         assert card["innovation_signal"]["status"] == "assessed"
+        assert card["tone_checked"] is True
+
+    def test_feedback_cards_tolerate_null_model_text_fields(self, tmp_path):
+        """A model may emit explicit JSON null for text fields. The card build
+        must coerce them to safe defaults, not raise AttributeError on .strip()."""
+        class NullTextGateway:
+            def call_model(self, _prompt, _model_id):
+                return json.dumps({
+                    "bright_spot": None,
+                    "next_commit": None,
+                    "panel_notes": None,
+                    "copilot_next_move": None,
+                    "frontier_experiment": None,
+                    "grounding_refs": None,
+                })
+
+        bundle_path = make_run(tmp_path, "fb-null-fields")
+        sid = add_submission(bundle_path)
+
+        # No eval steps exist yet, so this exercises the legacy generation path
+        # where parsed model text flows straight into the card build.
+        cards = cbp.build_feedback_cards(
+            [{"submission_id": sid}],
+            cbp._load_submissions(bundle_path),
+            cbp.load_rubric(bundle_path),
+            ["model-a", "model-b", "model-c"],
+            bundle_path,
+            NullTextGateway(),
+            fixed_clock,
+        )
+
+        assert len(cards) == 1
+        card = cards[0]
+        assert isinstance(card["bright_spot"], str) and card["bright_spot"].strip()
+        assert isinstance(card["next_commit"], str) and card["next_commit"].strip()
+        assert isinstance(card["panel_notes"], str) and card["panel_notes"].strip()
         assert card["tone_checked"] is True
 
     def test_doctor_passes_clean_env(self, tmp_path, capsys):

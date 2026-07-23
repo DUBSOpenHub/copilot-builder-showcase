@@ -85,6 +85,11 @@ SCHEMA_VERSION = "1.0"
 RUN_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 
 MAX_SUBMISSION_SIZE_DEFAULT = 5 * 1024 * 1024  # 5 MiB
+# Bound replay-archive extraction so a crafted bundle cannot exhaust disk or CPU
+# (decompression-bomb / resource-exhaustion protection).
+MAX_REPLAY_ARCHIVE_MEMBERS = 10_000
+MAX_REPLAY_ARCHIVE_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB uncompressed
+MAX_REPLAY_ARCHIVE_MEMBER_BYTES = 512 * 1024 * 1024  # 512 MiB per file
 # Reserve most of the two-minute showcase for reading and model work; animation
 # itself must never turn a short ceremony into a long wait.
 SHOWTIME_PAUSE_BUDGET_SECONDS = 18.0
@@ -671,6 +676,10 @@ def _suspense_enabled(args: Optional[argparse.Namespace] = None) -> bool:
         return False
     if getattr(args, "no_suspense", False):
         return False
+    if getattr(args, "reduced_motion", False):
+        return False
+    if os.environ.get("CBS_REDUCED_MOTION", "").lower() in {"1", "true", "yes", "on"}:
+        return False
     color_setting = os.environ.get("CBS_COLOR", os.environ.get("HJ_COLOR", ""))
     return sys.stdout.isatty() or color_setting.lower() == "always"
 
@@ -1025,11 +1034,18 @@ def read_ndjson(path: Path) -> List[Any]:
 
 
 def collect_bundle_artifacts(bundle_path: Path) -> List[Path]:
-    """Return all regular files under bundle_path, excluding HASHES and SEAL."""
+    """Return all regular files under bundle_path, excluding the root HASHES and SEAL."""
+    reserved = {Path("HASHES"), Path("SEAL")}
     artifacts = []
     for p in sorted(bundle_path.rglob("*")):
-        if p.is_file() and p.name not in ("HASHES", "SEAL") and not p.name.endswith(".tmp"):
-            artifacts.append(p)
+        if not p.is_file() or p.name.endswith(".tmp"):
+            continue
+        # Exclude only the seal files at the bundle root. A nested artifact that
+        # happens to be named HASHES/SEAL must still be hashed and sealed, or it
+        # would escape the integrity seal entirely.
+        if p.relative_to(bundle_path) in reserved:
+            continue
+        artifacts.append(p)
     return artifacts
 
 
@@ -1119,7 +1135,13 @@ def get_registry_path() -> Path:
         "CBS_REGISTRY_PATH",
         os.environ.get("HJ_REGISTRY_PATH"),
     )
-    return Path(configured or DEFAULT_REGISTRY_PATH)
+    if configured:
+        return Path(configured)
+    default_path = Path(DEFAULT_REGISTRY_PATH)
+    parent = default_path.parent
+    if os.access(parent, os.W_OK):
+        return default_path
+    return get_runs_dir() / "registry" / "log.ndjson"
 
 
 def _textual_status() -> tuple[bool, str]:
@@ -2334,19 +2356,22 @@ def _resolve_model_panel(
         else:
             selected.append(model_id)
 
-    minimum_panel_size = gate_config.get("minimum_panel_size", len(configured))
-    if not isinstance(minimum_panel_size, int) or isinstance(minimum_panel_size, bool):
-        minimum_panel_size = len(configured)
-    minimum_panel_size = max(1, min(minimum_panel_size, len(configured)))
+    configured_minimum = gate_config.get("minimum_panel_size", len(configured))
+    if not isinstance(configured_minimum, int) or isinstance(configured_minimum, bool):
+        configured_minimum = len(configured)
+    # Never clamp an explicit minimum down to the configured panel size. Doing so
+    # would silently downgrade a strict event whenever it is under-configured
+    # (e.g. minimum_panel_size=3 with only two panel_models), which the strict
+    # panel invariant forbids. Keeping the declared floor lets _panel_is_complete
+    # correctly report the panel as incomplete so strict mode blocks.
+    minimum_panel_size = max(1, configured_minimum)
 
-    minimum_distinct_providers = gate_config.get("minimum_distinct_providers", 1)
-    if not isinstance(minimum_distinct_providers, int) or isinstance(
-        minimum_distinct_providers, bool
+    configured_providers = gate_config.get("minimum_distinct_providers", 1)
+    if not isinstance(configured_providers, int) or isinstance(
+        configured_providers, bool
     ):
-        minimum_distinct_providers = 1
-    minimum_distinct_providers = max(
-        1, min(minimum_distinct_providers, len(configured))
-    )
+        configured_providers = 1
+    minimum_distinct_providers = max(1, configured_providers)
     return selected, failures, minimum_panel_size, minimum_distinct_providers
 
 
@@ -4711,9 +4736,9 @@ def build_feedback_cards(
             ]
 
         parsed = panel_responses[0]
-        bright_spot = parsed.get("bright_spot", "")
-        next_commit = parsed.get("next_commit", "")
-        panel_notes = parsed.get("panel_notes", "")
+        bright_spot = _compact_text(parsed.get("bright_spot"))
+        next_commit = _compact_text(parsed.get("next_commit"))
+        panel_notes = _compact_text(parsed.get("panel_notes"))
 
         # Ensure non-empty, brand-safe defaults
         if not bright_spot.strip():
@@ -5759,10 +5784,11 @@ def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] 
         if awards:
             _sideline(f"Envelope {idx}/{len(awards)}", "✉️", "gold")
         if idx == len(awards):
+            _sideline("Final envelope. This one decides the crown.", "👑", "gold")
             _audience_reveal_moment(args)
             _countdown_reveal(args)
         else:
-            _sideline("Opening the next envelope.", "✉️", "gold")
+            _drumroll("Opening the next envelope.", args)
         _showtime_pause(args, 0.6)
 
         emoji = award.get("emoji", "🏆")
@@ -5804,6 +5830,120 @@ def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] 
                 print(_paint("║" + line + "║", "yellow"))
         print(_paint("╚" + "═" * width + "╝", "magenta", bold=True))
         _showtime_pause(args, 0.4)
+
+
+def _copilot_used_well_text(assessment: Any) -> str:
+    """Render Copilot-use feedback only from explicit builder-provided evidence."""
+    if (
+        isinstance(assessment, dict)
+        and assessment.get("status") == "evidenced"
+        and assessment.get("source") == "builder-provided"
+    ):
+        evidence = _compact_text(assessment.get("evidence", ""))
+        if evidence:
+            return f"Builder-provided: {evidence}"
+    return "No Copilot-use evidence was provided; no usage claim is made."
+
+
+def _build_top3_feedback_cards(
+    awards_card: Dict,
+    feedback_by_submission: Dict[str, Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Create top-three growth cards from sealed award + feedback artifacts."""
+    cards: List[Dict[str, Any]] = []
+    awards = [
+        award
+        for award in awards_card.get("awards", [])
+        if isinstance(award, dict) and isinstance(award.get("placement"), int)
+        and int(award.get("placement")) in {1, 2, 3}
+    ]
+    awards.sort(
+        key=lambda award: (
+            int(award.get("placement", 99)),
+            str(award.get("award_id", "")),
+            str(award.get("winner_submission_id", "")),
+        )
+    )
+    if not awards:
+        awards = [
+            award for award in awards_card.get("awards", [])[:3]
+            if isinstance(award, dict)
+        ]
+
+    for award in awards:
+        if not isinstance(award, dict):
+            continue
+        placement_raw = award.get("placement")
+        try:
+            placement = int(placement_raw) if placement_raw is not None else len(cards) + 1
+        except (TypeError, ValueError):
+            placement = len(cards) + 1
+        submission_id = str(award.get("winner_submission_id", ""))
+        feedback = feedback_by_submission.get(submission_id, {})
+        copilot_moves = feedback.get("copilot_next_moves", [])
+        leverage = (
+            _compact_text(copilot_moves[0])
+            if isinstance(copilot_moves, list) and copilot_moves
+            else "Use Copilot to convert the core user journey into an implementation checklist."
+        )
+        improve_next = _compact_text(feedback.get("next_commit", ""))
+        if not improve_next:
+            improve_next = "Consider extending the strongest part of this project with one focused next release."
+        cards.append(
+            {
+                "placement": placement,
+                "award_id": str(award.get("award_id", "")),
+                "award_name": str(award.get("award_name", "Award")),
+                "emoji": str(award.get("emoji", "🏆")),
+                "winner_submission_id": submission_id,
+                "project_name": str(award.get("project_name", "Unknown")),
+                "winner_builder_name": str(award.get("winner_builder_name", "Unknown")),
+                "shared_placement": bool(award.get("shared_placement", False)),
+                "improve_next": improve_next,
+                "copilot_leverage_next": leverage,
+                "copilot_used_well": _copilot_used_well_text(feedback.get("copilot_use")),
+            }
+        )
+    return cards
+
+
+def _print_top3_feedback_cards(cards: List[Dict[str, Any]], args: Optional[argparse.Namespace] = None) -> None:
+    """Render concise post-award growth cards for podium recipients."""
+    if not cards:
+        return
+    if not _showtime_enabled(args):
+        return
+    width = min(76, _terminal_width(max_width=80))
+    _sideline("Top-three growth cards are in. Keep building.", "🧬", "cyan")
+    for card in cards:
+        emoji = card.get("emoji", "🏆")
+        award_name = str(card.get("award_name", "Award"))
+        project = str(card.get("project_name", "Unknown"))
+        builder = str(card.get("winner_builder_name", "Unknown"))
+        print()
+        print(_paint("┌" + "─" * width + "┐", "blue", bold=True))
+        print(
+            _paint(
+                "│"
+                + _center_terminal_text(
+                    _truncate(f"{emoji} {award_name} — {project}", width - 2),
+                    width,
+                )
+                + "│",
+                "blue",
+                bold=True,
+            )
+        )
+        for line in _boxed_terminal_lines("  👥 Built by: ", builder, width):
+            print(_paint("│" + line + "│", "cyan"))
+        for line in _boxed_terminal_lines("  🎯 Improve next: ", str(card.get("improve_next", "")), width):
+            print(_paint("│" + line + "│", "yellow"))
+        for line in _boxed_terminal_lines("  🧠 Copilot next: ", f"Try: {card.get('copilot_leverage_next', '')}", width):
+            print(_paint("│" + line + "│", "blue"))
+        for line in _boxed_terminal_lines("  ✅ Copilot used well: ", str(card.get("copilot_used_well", "")), width):
+            print(_paint("│" + line + "│", "green"))
+        print(_paint("└" + "─" * width + "┘", "blue", bold=True))
+        _showtime_pause(args, 0.3)
 
 
 def _share_card(awards_card: Dict, run_id: str) -> None:
@@ -6077,6 +6217,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         run_id=run_id,
         showtime=showtime,
         no_suspense=getattr(args, "no_suspense", False),
+        reduced_motion=getattr(args, "reduced_motion", False),
         projector=projector,
         result_status=result_status,
         status_color=status_color,
@@ -6099,6 +6240,8 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         return rc
 
     event_spec = load_event_spec(bundle_path)
+    if event_spec.get("accessibility", {}).get("reduced_motion"):
+        show_args.reduced_motion = True
     active_awards = [
         award
         for award in event_spec["awards"]
@@ -6179,6 +6322,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
             run_id=run_id,
             showtime=showtime,
             no_suspense=getattr(args, "no_suspense", False),
+            reduced_motion=show_args.reduced_motion,
         ),
         gateway,
         clock,
@@ -6196,6 +6340,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
             run_id=run_id,
             showtime=showtime,
             no_suspense=getattr(args, "no_suspense", False),
+            reduced_motion=show_args.reduced_motion,
         ),
         gateway,
         clock,
@@ -6230,6 +6375,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
         tie_resolution=getattr(args, "tie_resolution", None),
         showtime=showtime,
         no_suspense=getattr(args, "no_suspense", False),
+        reduced_motion=show_args.reduced_motion,
     ), gateway, clock)
     if rc:
         return rc
@@ -6432,20 +6578,6 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     showtime = _showtime_enabled(args)
     showcase_scorecards = _uses_showcase_scorecards(_gateway)
-    gate_rubric = rubric
-    if showcase_scorecards:
-        fast_model = str(
-            getattr(_gateway, "showcase_model_id", "gpt-5.4-mini")
-        )
-        gate_rubric = copy.deepcopy(rubric)
-        gate_rubric.setdefault("freshness_gate", {}).update({
-            "preferred_model": fast_model,
-            "panel_models": [fast_model],
-            "minimum_panel_size": 1,
-            "minimum_distinct_providers": 1,
-            "required_tier": "standard",
-            "required_reasoning": "medium",
-        })
     evaluation_started_at = time.monotonic()
     stage_seconds: Dict[str, float] = {}
 
@@ -6475,7 +6607,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             interval=2.0,
         ):
             gate_result = run_freshness_gate(
-                bundle_path, gate_rubric, _gateway, clock
+                bundle_path, rubric, _gateway, clock
             )
     except FreshnessGateBlock as e:
         log_command(bundle_path, "judge", "blocked", str(e), clock)
@@ -7133,6 +7265,12 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if not audience_locked and awards_card:
         print()
         _print_award_ceremony(awards_card, args)
+        top3_path = bundle_path / "winner" / "top3_feedback.json"
+        if top3_path.exists():
+            cards = load_json(top3_path).get("cards", [])
+        else:
+            cards = _build_top3_feedback_cards(awards_card, feedback)
+        _print_top3_feedback_cards(cards, args)
     else:
         _sideline("The envelopes are sealed and waiting for the award reveal.", "🎬", "yellow")
 
@@ -7217,6 +7355,7 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
     feedback = {
         card.get("submission_id"): card for card in _load_feedback(bundle_path)
     }
+    top3_feedback_cards = _build_top3_feedback_cards(awards_card, feedback)
     winner_feedback = feedback.get(winner_id, {})
     shared_winner_projects = [
         submission.get("project_name", submission.get("submission_id", "Unknown"))
@@ -7251,6 +7390,7 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
 
     write_once_json(winner_path, winner_card)
     write_once_json(bundle_path / "winner" / "awards.json", awards_card)
+    write_once_json(bundle_path / "winner" / "top3_feedback.json", {"cards": top3_feedback_cards})
     _write_awards_markdown(bundle_path, awards_card)
     winner_md = (
         f"# 🏆 {grand_prize_name}\n\n"
@@ -7290,6 +7430,10 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
     local_registry = bundle_path / "registry" / "log.ndjson"
     append_ndjson(local_registry, registry_entry)
 
+    if not getattr(args, "quiet", False):
+        _print_award_ceremony(awards_card, args)
+        _print_top3_feedback_cards(top3_feedback_cards, args)
+
     update_status(bundle_path, "awarded", clock)
     log_command(
         bundle_path,
@@ -7302,8 +7446,6 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
         clock,
     )
 
-    if not getattr(args, "quiet", False):
-        _print_award_ceremony(awards_card, args)
     if not _showtime_enabled(args) and not getattr(args, "quiet", False):
         _warning("Winner card requires human approval before external publishing.")
     return 0
@@ -7326,6 +7468,12 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if winner_path.exists():
         winner = load_json(winner_path)
     awards_card = _load_awards(bundle_path)
+    top3_feedback_path = bundle_path / "winner" / "top3_feedback.json"
+    top3_feedback_cards = (
+        load_json(top3_feedback_path).get("cards", [])
+        if top3_feedback_path.exists()
+        else []
+    )
     event_name = _event_name(bundle_path)
     scores_revealed = manifest.get("status") in {"awarded", "exported"}
 
@@ -7357,6 +7505,22 @@ def cmd_recap(args: argparse.Namespace, _gateway: Optional[Any] = None,
             f"**Winner:** {winner.get('winner_builder_name', 'Unknown')}",
             "",
         ]
+    if top3_feedback_cards:
+        lines += ["## Top-3 Growth Cards", ""]
+        for card in top3_feedback_cards:
+            if not isinstance(card, dict):
+                continue
+            lines += [
+                f"### {card.get('emoji', '🏆')} {card.get('award_name', 'Award')}",
+                "",
+                f"**Project:** {card.get('project_name', 'Unknown')}  ",
+                f"**Built by:** {card.get('winner_builder_name', 'Unknown')}  ",
+                "",
+                f"- **Improve next:** {card.get('improve_next', '')}",
+                f"- **Copilot next:** Try: {card.get('copilot_leverage_next', '')}",
+                f"- **Copilot used well:** {card.get('copilot_used_well', '')}",
+                "",
+            ]
     lines += ["## Project Spotlights", ""]
     for v in verdicts:
         sid = v.get("submission_id")
@@ -7773,6 +7937,12 @@ def _safe_extract_tar(archive: tarfile.TarFile, destination: Path) -> None:
     """Extract only regular files and directories contained by destination."""
     destination = destination.resolve()
     members = archive.getmembers()
+    if len(members) > MAX_REPLAY_ARCHIVE_MEMBERS:
+        raise ConfigValidationError(
+            f"Replay archive has too many entries ({len(members)} > "
+            f"{MAX_REPLAY_ARCHIVE_MEMBERS}); refusing to extract."
+        )
+    total_bytes = 0
     for member in members:
         target = (destination / member.name).resolve()
         try:
@@ -7785,6 +7955,16 @@ def _safe_extract_tar(archive: tarfile.TarFile, destination: Path) -> None:
             raise ConfigValidationError(
                 f"Replay archive contains an unsupported link or device entry: {member.name}"
             )
+        if member.isfile():
+            if member.size > MAX_REPLAY_ARCHIVE_MEMBER_BYTES:
+                raise ConfigValidationError(
+                    f"Replay archive entry is too large to extract safely: {member.name}"
+                )
+            total_bytes += member.size
+            if total_bytes > MAX_REPLAY_ARCHIVE_TOTAL_BYTES:
+                raise ConfigValidationError(
+                    "Replay archive exceeds the maximum safe extraction size."
+                )
     for member in members:
         archive.extract(member, path=destination)
 
@@ -8575,6 +8755,12 @@ def build_parser() -> argparse.ArgumentParser:
                             help="Ask before each stage instead of auto-running.")
     p_workshop.add_argument("--no-suspense", action="store_true", dest="no_suspense",
                             help="Disable live countdown pauses for CI or fast demos.")
+    p_workshop.add_argument(
+        "--reduced-motion",
+        action="store_true",
+        dest="reduced_motion",
+        help="Prefer low-motion live output while preserving the single-terminal ceremony.",
+    )
     p_workshop.add_argument(
         "--projector",
         action="store_true",

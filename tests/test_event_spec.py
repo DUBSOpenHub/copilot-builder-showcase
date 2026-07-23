@@ -166,6 +166,23 @@ def test_event_spec_rejects_invalid_podium_rank(tmp_path: Path):
         )
 
 
+def test_event_spec_rejects_duplicate_podium_rank(tmp_path: Path):
+    """Two custom awards both claiming rank=1 must be rejected instead of
+    silently producing an ambiguous, duplicate podium placement."""
+    event = copy.deepcopy(DEFAULT_EVENT_SPEC)
+    event["awards"][0]["rank"] = 1
+
+    with pytest.raises(cbp.ConfigValidationError):
+        cbp.init_bundle(
+            "duplicate-podium-rank",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            tmp_path / "duplicate-podium-rank",
+            fixed_clock,
+            event,
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value"),
     [
@@ -231,6 +248,91 @@ def test_event_spec_rejects_invalid_tie_policy(
             "workshop",
             copy.deepcopy(cbp.DEFAULT_RUBRIC),
             tmp_path / "invalid-tie-policy",
+            fixed_clock,
+            event,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("policy_mode", "Strict"),
+        ("policy_mode", "strictt"),
+        ("policy_mode", ""),
+        ("required_tier", "gold"),
+        ("required_tier", "Premium"),
+        ("required_reasoning", "extreme"),
+        ("required_reasoning", ""),
+        ("preferred_model", ""),
+        ("preferred_model", None),
+        ("preferred_model", 123),
+    ],
+)
+def test_event_spec_rejects_invalid_model_policy_enums(
+    tmp_path: Path, field: str, value: object
+):
+    """A misspelled/miscased policy_mode (e.g. 'Strict') must be rejected here.
+
+    Without this check, ``model_policy.policy_mode == "strict"`` in
+    ``run_freshness_gate`` silently evaluates False, converting a strict event
+    into a permissive one instead of blocking it — the exact silent downgrade
+    the strict-panel invariant forbids.
+    """
+    event = copy.deepcopy(DEFAULT_EVENT_SPEC)
+    event["model_policy"][field] = value
+
+    with pytest.raises(cbp.ConfigValidationError):
+        cbp.init_bundle(
+            "invalid-model-policy-enum",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            tmp_path / "invalid-model-policy-enum",
+            fixed_clock,
+            event,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("high_contrast", "true"),
+        ("high_contrast", 1),
+        ("reduced_motion", "false"),
+        ("reduced_motion", 0),
+    ],
+)
+def test_event_spec_rejects_non_boolean_accessibility_fields(
+    tmp_path: Path, field: str, value: object
+):
+    """A string like ``"false"`` is truthy in Python, so without this check a
+    hand-edited config could silently invert the organizer's intended
+    accessibility setting."""
+    event = copy.deepcopy(DEFAULT_EVENT_SPEC)
+    event["accessibility"] = {field: value}
+
+    with pytest.raises(cbp.ConfigValidationError):
+        cbp.init_bundle(
+            "invalid-accessibility-type",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            tmp_path / "invalid-accessibility-type",
+            fixed_clock,
+            event,
+        )
+
+
+def test_event_spec_rejects_unknown_accessibility_key(tmp_path: Path):
+    """A typo such as ``reduced_moton`` must be rejected rather than silently
+    ignored while ``reduced_motion`` quietly stays at its default value."""
+    event = copy.deepcopy(DEFAULT_EVENT_SPEC)
+    event["accessibility"] = {"reduced_moton": True}
+
+    with pytest.raises(cbp.ConfigValidationError):
+        cbp.init_bundle(
+            "invalid-accessibility-key",
+            "workshop",
+            copy.deepcopy(cbp.DEFAULT_RUBRIC),
+            tmp_path / "invalid-accessibility-key",
             fixed_clock,
             event,
         )

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   analyze:
-    name: Analyze Python
+    name: Analyze Python and Actions
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -23,7 +23,9 @@ jobs:
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: python
+          # "actions" scans the workflow YAML in .github/workflows itself
+          # (e.g. for script-injection risk from interpolated variables).
+          languages: python, actions
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
