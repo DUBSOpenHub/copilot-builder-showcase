@@ -808,7 +808,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="board-head">
         <div>
           <div class="bt" id="boardTitle">Open for submissions</div>
-          <div class="bsub" id="boardSub">Two ways to add projects: drop the links, or have participants scan the QR.</div>
+          <div class="bsub" id="boardSub">Every accepted project gets a spotlight on the big screen.</div>
         </div>
         <div class="counts">
           <div class="count"><b id="cEntries">0</b><span>Projects</span></div>
@@ -1211,7 +1211,7 @@ var QRClean = (function () {
     var tt = titles[state.status] || titles.open;
     $("boardTitle").textContent = tt[0];
     $("boardSub").textContent = (state.status === "open")
-      ? (isDemo ? "Sample projects roll in automatically — illustrative demo." : "Two ways to add projects: drop the links, or have participants scan the QR to add their own.")
+      ? (isDemo ? "Sample projects roll in automatically — illustrative demo." : "Every accepted project gets a spotlight on the big screen.")
       : tt[1];
     if (state.status === "open") {
       $("emptyTitle").textContent = isDemo ? "Warming up the demo…" : "Add projects to begin";
