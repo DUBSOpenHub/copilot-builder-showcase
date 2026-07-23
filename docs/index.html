@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<title>Copilot Builder Showcase — end every build session on a podium</title>
+<meta name="description" content="Turn a loose list of workshop project links into a live, Copilot-judged showcase with a real podium: Builder Bronze, Builder Silver, and the Copilot Builder Award." />
+<script>
+  (function () {
+    try {
+      var p = new URLSearchParams(location.search).get("scoutTheme");
+      var stored = null;
+      try { stored = localStorage.getItem("cbs_theme"); } catch (e) {}
+      var theme = p || stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef;
+  --cp-bg-elevated: #fcfbf8;
+  --cp-surface: #ffffff;
+  --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede;
+  --cp-border-strong: #919191;
+  --cp-text: #242424;
+  --cp-text-muted: #5c5c5c;
+  --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b;
+  --cp-accent-hover: #9a1a41;
+  --cp-accent-soft: rgba(177, 31, 75, 0.08);
+  --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a;
+  --cp-danger: #dc2626;
+  --cp-warning: #f59e0b;
+  --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+  --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86);
+  --cp-panel-strong: rgba(255, 255, 255, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+  --cp-gold: #d4a017;
+  --cp-silver: #8a8f98;
+  --cp-bronze: #b06a3a;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a;
+  --cp-bg-elevated: #343231;
+  --cp-surface: #292929;
+  --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747;
+  --cp-border-strong: #5f5f5f;
+  --cp-text: #dedede;
+  --cp-text-muted: #919191;
+  --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1;
+  --cp-accent-hover: #fb7b91;
+  --cp-accent-soft: rgba(253, 142, 161, 0.14);
+  --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80;
+  --cp-danger: #f87171;
+  --cp-warning: #fbbf24;
+  --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+  --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72);
+  --cp-panel-strong: rgba(41, 41, 41, 0.96);
+  --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+  --cp-gold: #f2c94c;
+  --cp-silver: #c9ced6;
+  --cp-bronze: #d08a52;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--cp-bg);
+  color: var(--cp-text);
+  font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+  line-height: 1.5;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 82% -8%, var(--cp-accent-soft), transparent 60%),
+    radial-gradient(900px 500px at -10% 12%, var(--cp-highlight), transparent 55%);
+}
+a { color: var(--cp-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font-family: inherit; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+
+/* ---------- shared primitives ---------- */
+.wrap { width: min(1140px, 100% - 3rem); margin-inline: auto; position: relative; z-index: 1; }
+.badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--cp-accent-soft); color: var(--cp-accent);
+  font-size: 12.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 7px 14px; border-radius: 0.625rem; width: fit-content;
+}
+.badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-accent); animation: pulse-dot 2s ease-in-out infinite; }
+@keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .5; transform: scale(.8);} }
+.eyebrow { color: var(--cp-accent); font-size: 12.5px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid transparent; border-radius: 0.75rem; padding: 13px 22px;
+  font-size: 15.5px; font-weight: 700; letter-spacing: 0.01em; color: var(--cp-text);
+  background: var(--cp-surface); border-color: var(--cp-border);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+}
+.btn:hover { transform: translateY(-2px); box-shadow: var(--cp-shadow); text-decoration: none; }
+.btn:active { transform: translateY(0); }
+.btn-primary { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); box-shadow: 0 10px 26px -12px var(--cp-accent); }
+.btn-primary:hover { background: var(--cp-accent-hover); border-color: var(--cp-accent-hover); }
+.btn-ghost { background: transparent; }
+.btn-lg { padding: 16px 28px; font-size: 17px; border-radius: 0.85rem; }
+.btn-sm { padding: 9px 15px; font-size: 13.5px; border-radius: 0.6rem; }
+.btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  width: 42px; height: 42px; border-radius: 0.7rem; background: var(--cp-surface);
+  border: 1px solid var(--cp-border); color: var(--cp-text); font-size: 18px;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.icon-btn:hover { transform: translateY(-1px); box-shadow: var(--cp-shadow); border-color: var(--cp-border-strong); }
+
+.pill {
+  display: inline-flex; align-items: center; gap: 7px; padding: 5px 12px;
+  border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+  border: 1px solid var(--cp-border); background: var(--cp-surface-soft); color: var(--cp-text-soft);
+}
+.status-pill { text-transform: uppercase; letter-spacing: 0.08em; }
+.status-pill .badge-dot { background: var(--cp-warning); }
+
+.gh-mark { width: 22px; height: 22px; display: inline-flex; }
+.gh-mark svg { fill: currentColor; width: 100%; height: 100%; }
+
+/* ---------- accent bar ---------- */
+.accent-bar { position: fixed; left: 0; right: 0; top: 0; height: 4px; z-index: 60;
+  background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning), var(--cp-success), var(--cp-link)); }
+
+/* ---------- topbar ---------- */
+.topbar { position: sticky; top: 4px; z-index: 40; }
+.topbar-inner {
+  display: flex; align-items: center; gap: 14px; margin-top: 14px;
+  padding: 12px 16px; border-radius: 1rem;
+  background: var(--cp-panel); border: 1px solid var(--cp-border);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--cp-shadow);
+}
+.brand { display: flex; align-items: center; gap: 11px; font-weight: 800; letter-spacing: -0.01em; }
+.brand .logo {
+  width: 34px; height: 34px; border-radius: 9px; flex: none;
+  background: linear-gradient(150deg, var(--cp-accent), var(--cp-accent-hover));
+  display: grid; place-items: center; color: var(--cp-accent-fg); font-size: 18px;
+  box-shadow: 0 8px 20px -10px var(--cp-accent);
+}
+.brand .brand-name { font-size: 15.5px; }
+.brand .brand-sub { display: block; font-size: 11.5px; font-weight: 600; color: var(--cp-text-soft); letter-spacing: 0.02em; }
+.topbar-spacer { flex: 1; }
+.topbar .status-pill { display: none; }
+@media (min-width: 720px) { .topbar .status-pill { display: inline-flex; } }
+
+/* ---------- hero ---------- */
+.hero { padding: clamp(40px, 7vw, 92px) 0 clamp(30px, 5vw, 60px); }
+.hero-grid { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: clamp(28px, 5vw, 64px); align-items: center; }
+@media (max-width: 940px) { .hero-grid { grid-template-columns: 1fr; } }
+.hero h1 {
+  font-size: clamp(38px, 6.4vw, 66px); font-weight: 800; line-height: 1.03; letter-spacing: -0.03em;
+  margin: 18px 0 0; max-width: 15ch;
+}
+.hero h1 .accent { color: var(--cp-accent); }
+.hero .lede { font-size: clamp(17px, 2.1vw, 21px); color: var(--cp-text-muted); margin-top: 20px; max-width: 46ch; }
+.hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; align-items: center; }
+.command-chip {
+  display: inline-flex; align-items: center; gap: 12px; margin-top: 26px;
+  padding: 12px 16px; border-radius: 0.8rem; border: 1px solid var(--cp-border);
+  background: var(--cp-bg-elevated); font-family: Consolas, "Courier New", monospace; font-size: 15px;
+  width: fit-content; box-shadow: var(--cp-shadow);
+}
+.command-chip .dots { display: inline-flex; gap: 5px; }
+.command-chip .dots i { width: 10px; height: 10px; border-radius: 50%; display: block; }
+.command-chip .dots i:nth-child(1){ background:#ff5f56;} .command-chip .dots i:nth-child(2){ background:#ffbd2e;} .command-chip .dots i:nth-child(3){ background:#27c93f;}
+.command-chip .prompt { color: var(--cp-accent); font-weight: 700; }
+.command-chip .cmd { color: var(--cp-text); font-weight: 600; }
+.command-chip .caret { width: 9px; height: 18px; background: var(--cp-accent); display: inline-block; animation: blink 1.1s steps(1) infinite; border-radius: 1px; }
+@keyframes blink { 50% { opacity: 0; } }
+.hero-note { margin-top: 16px; font-size: 13.5px; color: var(--cp-text-soft); display: flex; align-items: center; gap: 8px; }
+
+/* hero visual: mini stage preview */
+.preview {
+  position: relative; border-radius: 1.1rem; border: 1px solid var(--cp-border);
+  background: var(--cp-surface); box-shadow: var(--cp-shadow); overflow: hidden; padding: 18px;
+}
+.preview::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
+  background: linear-gradient(90deg, var(--cp-bronze), var(--cp-silver), var(--cp-gold)); }
+.preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.preview-head .t { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.mini-podium { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; align-items: end; }
+.mini-col { border-radius: 0.7rem; border: 1px solid var(--cp-border); background: var(--cp-surface-soft); padding: 12px 10px; text-align: center; }
+.mini-col .medal { font-size: 24px; }
+.mini-col .mp { font-size: 12.5px; font-weight: 800; margin-top: 4px; color: var(--cp-text); }
+.mini-col .mt { font-size: 10.5px; color: var(--cp-text-soft); }
+.mini-col.c1 { padding-top: 20px; border-color: color-mix(in srgb, var(--cp-gold) 55%, var(--cp-border)); }
+.mini-col.c2 { border-color: color-mix(in srgb, var(--cp-silver) 45%, var(--cp-border)); }
+.mini-col.c3 { border-color: color-mix(in srgb, var(--cp-bronze) 45%, var(--cp-border)); }
+.mini-spot { margin-top: 12px; display: flex; gap: 8px; }
+.mini-spot .s { flex: 1; height: 40px; border-radius: 0.55rem; border: 1px solid var(--cp-border); background: var(--cp-bg-elevated);
+  display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: var(--cp-text-soft); overflow: hidden; position: relative; }
+.mini-spot .s::after { content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, var(--cp-sheen), transparent); transform: translateX(-120%); animation: sheen 3.2s ease-in-out infinite; }
+.mini-spot .s:nth-child(2)::after { animation-delay: .5s; } .mini-spot .s:nth-child(3)::after { animation-delay: 1s; }
+@keyframes sheen { 0%{ transform: translateX(-120%);} 55%,100%{ transform: translateX(120%);} }
+
+/* ---------- generic section ---------- */
+.section { padding: clamp(40px, 6vw, 74px) 0; }
+.section-head { max-width: 62ch; }
+.section-head h2 { font-size: clamp(26px, 3.6vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin-top: 12px; line-height: 1.1; }
+.section-head p { color: var(--cp-text-muted); font-size: 17px; margin-top: 14px; }
+
+/* problem cards */
+.prob-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; margin-top: 34px; }
+.prob {
+  border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 1rem; padding: 22px;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.prob:hover { transform: translateY(-3px); box-shadow: var(--cp-shadow); border-color: var(--cp-border-strong); }
+.prob .ic { font-size: 24px; }
+.prob h3 { font-size: 16.5px; margin-top: 12px; }
+.prob p { color: var(--cp-text-muted); font-size: 14.5px; margin-top: 7px; }
+
+/* pillars */
+.pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 36px; }
+@media (max-width: 900px) { .pillars { grid-template-columns: 1fr; } }
+.pillar {
+  position: relative; border: 1px solid var(--cp-border); background: var(--cp-surface);
+  border-radius: 1.1rem; padding: 26px 24px; overflow: hidden;
+  transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.pillar:hover { transform: translateY(-4px); box-shadow: var(--cp-shadow); border-color: var(--cp-accent); }
+.pillar .num {
+  position: absolute; right: 18px; top: 14px; font-size: 54px; font-weight: 800; line-height: 1;
+  color: var(--cp-accent-soft); letter-spacing: -0.04em;
+}
+.pillar .p-ic { width: 46px; height: 46px; border-radius: 0.7rem; display: grid; place-items: center;
+  background: var(--cp-accent-soft); color: var(--cp-accent); font-size: 22px; }
+.pillar h3 { font-size: 20px; margin-top: 16px; letter-spacing: -0.01em; }
+.pillar p { color: var(--cp-text-muted); font-size: 15px; margin-top: 8px; }
+.pillar ul { list-style: none; margin-top: 14px; display: flex; flex-direction: column; gap: 9px; }
+.pillar li { display: flex; gap: 10px; font-size: 14px; color: var(--cp-text); align-items: flex-start; }
+.pillar li .ck { color: var(--cp-success); font-weight: 800; flex: none; }
+
+/* guardrails */
+.guards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 32px; }
+.guard { display: flex; gap: 13px; padding: 18px; border: 1px solid var(--cp-border); border-radius: 0.9rem; background: var(--cp-bg-elevated); }
+.guard .g-ic { font-size: 20px; flex: none; }
+.guard h4 { font-size: 14.5px; }
+.guard p { font-size: 13px; color: var(--cp-text-soft); margin-top: 4px; }
+
+.cta-band {
+  margin-top: 8px; padding: clamp(28px, 5vw, 48px); border-radius: 1.3rem; text-align: center;
+  border: 1px solid var(--cp-border); background:
+    linear-gradient(180deg, var(--cp-accent-soft), transparent 70%), var(--cp-surface); box-shadow: var(--cp-shadow);
+}
+.cta-band h2 { font-size: clamp(24px, 3.4vw, 38px); font-weight: 800; letter-spacing: -0.02em; }
+.cta-band p { color: var(--cp-text-muted); margin-top: 12px; font-size: 17px; }
+.cta-band .hero-cta { justify-content: center; }
+
+/* footer */
+footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px 0 46px; }
+.foot { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between; color: var(--cp-text-soft); font-size: 13.5px; }
+.foot .foot-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--cp-text-muted); }
+
+/* ---------- STAGE (big screen) ---------- */
+.stage { position: fixed; inset: 0; z-index: 80; background: var(--cp-bg); display: none; flex-direction: column; overflow: hidden; }
+.stage.on { display: flex; animation: stage-in .5s ease both; }
+@keyframes stage-in { from { opacity: 0; transform: scale(.99);} to { opacity: 1; transform: none; } }
+.stage::before { content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(1400px 700px at 78% -10%, var(--cp-accent-soft), transparent 60%), radial-gradient(900px 500px at 0% 110%, var(--cp-highlight), transparent 55%); }
+.stage-top { position: relative; z-index: 2; display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding: 16px clamp(16px, 3vw, 34px); border-bottom: 1px solid var(--cp-border); background: var(--cp-panel); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.stage-title { font-size: clamp(16px, 2vw, 21px); font-weight: 800; letter-spacing: -0.01em; display: flex; align-items: center; gap: 11px; }
+.stage-title .logo { width: 30px; height: 30px; border-radius: 8px; background: linear-gradient(150deg, var(--cp-accent), var(--cp-accent-hover)); display: grid; place-items: center; color: var(--cp-accent-fg); font-size: 16px; }
+.stage-top .spacer { flex: 1; }
+
+/* stepper */
+.stepper { display: flex; align-items: center; gap: 6px; }
+.step { display: flex; align-items: center; gap: 9px; padding: 7px 13px; border-radius: 999px; border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text-soft); font-size: 12.5px; font-weight: 700; letter-spacing: 0.03em; }
+.step .n { width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; background: var(--cp-surface-soft); color: var(--cp-text-soft); border: 1px solid var(--cp-border); }
+.step.active { border-color: var(--cp-accent); color: var(--cp-accent); background: var(--cp-accent-soft); }
+.step.active .n { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+.step.done { color: var(--cp-success); border-color: color-mix(in srgb, var(--cp-success) 45%, var(--cp-border)); }
+.step.done .n { background: var(--cp-success); color: #fff; border-color: var(--cp-success); }
+.step-sep { width: 18px; height: 2px; background: var(--cp-border); border-radius: 2px; }
+@media (max-width: 780px) { .step .lbl { display: none; } .stepper { gap: 4px; } }
+
+.stage-body { position: relative; z-index: 2; flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 340px; gap: 0; }
+@media (max-width: 900px) { .stage-body { grid-template-columns: 1fr; grid-template-rows: 1fr auto; } }
+
+.board { position: relative; min-height: 0; overflow: auto; padding: clamp(18px, 3vw, 34px); }
+.board-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 20px; flex-wrap: wrap; }
+.board-head .bt { font-size: clamp(20px, 2.6vw, 30px); font-weight: 800; letter-spacing: -0.02em; }
+.board-head .bsub { color: var(--cp-text-muted); font-size: 14.5px; margin-top: 3px; }
+.counts { display: flex; gap: 10px; flex-wrap: wrap; }
+.count { display: flex; flex-direction: column; align-items: center; min-width: 78px; padding: 9px 14px; border-radius: 0.8rem; border: 1px solid var(--cp-border); background: var(--cp-surface); }
+.count b { font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
+.count span { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--cp-text-soft); font-weight: 700; }
+
+/* spotlight grid */
+.spotlights { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; }
+.spot {
+  position: relative; border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 1rem;
+  padding: 18px; overflow: hidden; animation: spot-in .55s cubic-bezier(.2,.7,.2,1) both;
+}
+.spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning)); }
+@keyframes spot-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
+.spot .spot-tag { position: absolute; right: 12px; top: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cp-accent); background: var(--cp-accent-soft); padding: 4px 9px; border-radius: 999px; }
+.spot .proj { font-size: 18.5px; font-weight: 800; letter-spacing: -0.01em; padding-right: 74px; line-height: 1.2; }
+.spot .link { font-size: 12.5px; color: var(--cp-link); margin-top: 6px; word-break: break-all; display: inline-flex; align-items: center; gap: 6px; }
+.spot .desc { font-size: 13.5px; color: var(--cp-text-muted); margin-top: 10px; }
+.spot .meta { display: flex; align-items: center; gap: 8px; margin-top: 13px; flex-wrap: wrap; }
+.spot .team { font-size: 11.5px; font-weight: 700; color: var(--cp-text-soft); display: inline-flex; align-items: center; gap: 6px; }
+.spot .num-badge { margin-left: auto; font-size: 11px; font-weight: 800; color: var(--cp-text-soft); background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 3px 9px; }
+
+.board-empty { display: grid; place-items: center; text-align: center; min-height: 46vh; color: var(--cp-text-soft); }
+.board-empty .big { font-size: 60px; margin-bottom: 8px; animation: float 3.4s ease-in-out infinite; }
+@keyframes float { 0%,100%{ transform: translateY(0);} 50%{ transform: translateY(-8px);} }
+.board-empty h3 { color: var(--cp-text); font-size: 21px; }
+.board-empty p { max-width: 40ch; margin: 8px auto 0; font-size: 14.5px; }
+
+/* side panel */
+.sidepanel { position: relative; border-left: 1px solid var(--cp-border); background: var(--cp-bg-elevated); padding: 20px; overflow: auto; display: flex; flex-direction: column; gap: 18px; }
+@media (max-width: 900px) { .sidepanel { border-left: none; border-top: 1px solid var(--cp-border); } }
+.qr-card { border: 1px solid var(--cp-border); border-radius: 1rem; background: var(--cp-surface); padding: 18px; text-align: center; }
+.qr-card h4 { font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.qr-card .qr-sub { font-size: 12.5px; color: var(--cp-text-soft); margin-top: 4px; }
+.qr-frame { margin: 14px auto 12px; width: fit-content; padding: 12px; background: #ffffff; border-radius: 0.8rem; border: 1px solid var(--cp-border); box-shadow: 0 8px 22px -14px rgba(0,0,0,.5); }
+.qr-frame canvas { display: block; image-rendering: pixelated; border-radius: 3px; }
+.qr-url { font-family: Consolas, "Courier New", monospace; font-size: 11px; color: var(--cp-text-soft); word-break: break-all; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 0.6rem; padding: 8px 10px; margin-top: 4px; }
+.qr-actions { display: flex; gap: 8px; margin-top: 12px; }
+.qr-actions .btn { flex: 1; }
+
+.op { border: 1px dashed var(--cp-border-strong); border-radius: 1rem; padding: 16px; background: var(--cp-surface); }
+.op .op-t { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); display: flex; align-items: center; gap: 7px; }
+.op .op-hint { font-size: 12.5px; color: var(--cp-text-soft); margin: 9px 0 12px; }
+.op .btn { width: 100%; }
+.op .op-row { display: flex; gap: 8px; margin-top: 8px; }
+.op .op-row .btn { flex: 1; }
+
+.ticker { border: 1px solid var(--cp-border); border-radius: 1rem; background: var(--cp-surface); padding: 14px 16px; }
+.ticker .op-t { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.ticker ul { list-style: none; margin-top: 10px; display: flex; flex-direction: column; gap: 9px; max-height: 168px; overflow: hidden; }
+.ticker li { font-size: 12.5px; color: var(--cp-text-muted); display: flex; gap: 8px; align-items: flex-start; animation: spot-in .4s ease both; }
+.ticker li .tk-dot { color: var(--cp-accent); flex: none; }
+
+/* judging overlay */
+.judging { position: absolute; inset: 0; z-index: 5; display: none; place-items: center; padding: 24px;
+  background: color-mix(in srgb, var(--cp-bg) 78%, transparent); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.judging.on { display: grid; animation: stage-in .4s ease both; }
+.judge-card { width: min(560px, 100%); border: 1px solid var(--cp-border); background: var(--cp-panel-strong); border-radius: 1.2rem; box-shadow: var(--cp-shadow); padding: 26px; text-align: center; }
+.judge-card .badge { margin: 0 auto; }
+.judge-card h3 { font-size: 24px; font-weight: 800; margin-top: 14px; letter-spacing: -0.01em; }
+.judge-card .sub { color: var(--cp-text-muted); font-size: 14px; margin-top: 6px; }
+.panel-judges { display: flex; justify-content: center; gap: 10px; margin: 20px 0 6px; flex-wrap: wrap; }
+.judge { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 108px; }
+.judge .dot { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: var(--cp-surface); border: 1px solid var(--cp-border); position: relative; }
+.judge .dot.thinking { animation: judge-pulse 1.1s ease-in-out infinite; }
+.judge .dot.done { border-color: var(--cp-success); color: var(--cp-success); }
+@keyframes judge-pulse { 0%,100%{ box-shadow: 0 0 0 0 var(--cp-accent-soft);} 50%{ box-shadow: 0 0 0 10px transparent; border-color: var(--cp-accent); } }
+.judge .jn { font-size: 11.5px; font-weight: 700; color: var(--cp-text-soft); }
+.judge .js { font-size: 10.5px; color: var(--cp-text-soft); }
+.progress { height: 10px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; margin-top: 18px; }
+.progress > i { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning)); transition: width .4s ease; }
+.judge-now { margin-top: 14px; font-size: 13.5px; color: var(--cp-text); min-height: 20px; }
+.judge-now b { color: var(--cp-accent); }
+.judge-agg { margin-top: 6px; font-size: 12px; color: var(--cp-text-soft); }
+.reveal-cue { margin-top: 20px; display: none; }
+.reveal-cue.on { display: block; animation: spot-in .4s ease both; }
+.reveal-cue .drum { font-size: 34px; animation: shake 1.4s ease-in-out infinite; }
+@keyframes shake { 0%,100%{ transform: rotate(-8deg);} 50%{ transform: rotate(8deg);} }
+
+/* podium */
+.podium-wrap { position: absolute; inset: 0; z-index: 6; display: none; flex-direction: column; padding: clamp(16px,3vw,30px); overflow: auto; }
+.podium-wrap.on { display: flex; }
+.podium-head { text-align: center; margin-bottom: 8px; }
+.podium-head .badge { margin: 0 auto 10px; }
+.podium-head h2 { font-size: clamp(24px, 3.6vw, 40px); font-weight: 800; letter-spacing: -0.02em; }
+.podium-head p { color: var(--cp-text-muted); margin-top: 8px; font-size: 15px; }
+.podium { display: grid; grid-template-columns: 1fr 1.14fr 1fr; gap: 16px; align-items: end; max-width: 940px; margin: 22px auto 0; width: 100%; }
+@media (max-width: 760px) { .podium { grid-template-columns: 1fr; } }
+.award { position: relative; border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 1.1rem; padding: 22px; text-align: center; opacity: 0; transform: translateY(24px); box-shadow: var(--cp-shadow); }
+.award.show { animation: award-in .7s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes award-in { to { opacity: 1; transform: none; } }
+.award .rosette { font-size: 44px; line-height: 1; }
+.award .place { font-size: 11.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; margin-top: 8px; }
+.award .aname { font-size: 15px; font-weight: 800; margin-top: 3px; }
+.award .aproj { font-size: 21px; font-weight: 800; letter-spacing: -0.01em; margin-top: 12px; line-height: 1.15; }
+.award .ateam { font-size: 12.5px; color: var(--cp-text-soft); margin-top: 5px; }
+.award .why { font-size: 13px; color: var(--cp-text-muted); margin-top: 12px; border-top: 1px dashed var(--cp-border); padding-top: 12px; text-align: left; }
+.award .why b { color: var(--cp-text); }
+.award .consensus { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11.5px; font-weight: 700; color: var(--cp-text-soft); background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 11px; }
+.award.first { border-color: color-mix(in srgb, var(--cp-gold) 60%, var(--cp-border)); background: linear-gradient(180deg, color-mix(in srgb, var(--cp-gold) 12%, var(--cp-surface)), var(--cp-surface)); padding-top: 30px; }
+.award.first::before { content: ""; position: absolute; inset: -1px; border-radius: 1.1rem; padding: 1px; background: linear-gradient(180deg, var(--cp-gold), transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+.award.first .place { color: var(--cp-gold); }
+.award.second { border-color: color-mix(in srgb, var(--cp-silver) 50%, var(--cp-border)); }
+.award.second .place { color: var(--cp-silver); }
+.award.third { border-color: color-mix(in srgb, var(--cp-bronze) 50%, var(--cp-border)); }
+.award.third .place { color: var(--cp-bronze); }
+.growth { max-width: 940px; margin: 22px auto 8px; width: 100%; border: 1px solid var(--cp-border); border-radius: 1rem; background: var(--cp-bg-elevated); padding: 18px; opacity: 0; }
+.growth.show { animation: award-in .6s ease .1s both; }
+.growth .op-t { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.growth-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+@media (max-width: 760px) { .growth-grid { grid-template-columns: 1fr; } }
+.growth-grid .gc { border: 1px solid var(--cp-border); border-radius: 0.8rem; background: var(--cp-surface); padding: 13px; }
+.growth-grid .gc .gp { font-size: 13.5px; font-weight: 800; }
+.growth-grid .gc .gl { font-size: 12.5px; color: var(--cp-text-muted); margin-top: 6px; }
+.podium-actions { display: flex; gap: 12px; justify-content: center; margin: 22px auto 6px; flex-wrap: wrap; }
+
+#confetti { position: absolute; inset: 0; z-index: 7; pointer-events: none; display: none; }
+#confetti.on { display: block; }
+
+/* ---------- SUBMIT (mobile) ---------- */
+.submit-view { display: none; min-height: 100vh; align-items: flex-start; justify-content: center; padding: 24px 18px 48px; position: relative; z-index: 1; }
+.submit-view.on { display: flex; }
+.submit-card { width: min(460px, 100%); }
+.submit-brand { display: flex; align-items: center; gap: 10px; justify-content: center; margin-bottom: 18px; }
+.submit-brand .logo { width: 34px; height: 34px; border-radius: 9px; background: linear-gradient(150deg, var(--cp-accent), var(--cp-accent-hover)); display: grid; place-items: center; color: var(--cp-accent-fg); font-size: 18px; }
+.submit-brand b { font-size: 15.5px; }
+.submit-panel { border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 1.2rem; box-shadow: var(--cp-shadow); padding: 24px; }
+.submit-panel .badge { margin-bottom: 14px; }
+.submit-panel h1 { font-size: 25px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.12; }
+.submit-panel .sh-sub { color: var(--cp-text-muted); font-size: 14.5px; margin-top: 8px; }
+.field { margin-top: 16px; }
+.field label { display: block; font-size: 12.5px; font-weight: 700; color: var(--cp-text-soft); letter-spacing: 0.02em; margin-bottom: 6px; }
+.field label .opt { color: var(--cp-text-soft); font-weight: 500; text-transform: none; letter-spacing: 0; }
+.field input, .field textarea {
+  width: 100%; font-family: inherit; font-size: 15px; color: var(--cp-text);
+  background: var(--cp-bg-elevated); border: 1px solid var(--cp-border); border-radius: 0.7rem; padding: 12px 13px;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+.field textarea { resize: vertical; min-height: 64px; }
+.field .err { color: var(--cp-danger); font-size: 12px; margin-top: 6px; display: none; }
+.field.invalid .err { display: block; }
+.field.invalid input { border-color: var(--cp-danger); }
+.submit-panel .btn-primary { width: 100%; margin-top: 20px; }
+.submit-foot { text-align: center; font-size: 12.5px; color: var(--cp-text-soft); margin-top: 16px; }
+.submit-closed { text-align: center; padding: 10px 0 4px; }
+.submit-closed .big { font-size: 52px; }
+.submit-closed h2 { font-size: 21px; margin-top: 6px; }
+.submit-closed p { color: var(--cp-text-muted); font-size: 14.5px; margin-top: 8px; }
+.submit-success { text-align: center; }
+.submit-success .big { font-size: 56px; animation: pop .5s cubic-bezier(.2,.9,.3,1.4) both; }
+@keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+.submit-success h2 { font-size: 23px; font-weight: 800; margin-top: 8px; }
+.submit-success .done-proj { margin-top: 14px; border: 1px solid var(--cp-border); border-radius: 0.9rem; background: var(--cp-bg-elevated); padding: 16px; text-align: left; position: relative; overflow: hidden; }
+.submit-success .done-proj::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning)); }
+.submit-success .done-proj .p { font-size: 17px; font-weight: 800; }
+.submit-success .done-proj .l { font-size: 12px; color: var(--cp-link); word-break: break-all; margin-top: 4px; }
+.submit-success .done-proj .t { font-size: 12px; color: var(--cp-text-soft); margin-top: 8px; }
+
+/* toast */
+.toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(20px); z-index: 200;
+  background: var(--cp-text); color: var(--cp-bg); padding: 12px 18px; border-radius: 0.8rem; font-size: 14px; font-weight: 600;
+  box-shadow: var(--cp-shadow); opacity: 0; pointer-events: none; transition: opacity .25s ease, transform .25s ease; max-width: 90vw; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+.resume-banner { display: none; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 18px; padding: 14px 18px; border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, var(--cp-accent) 40%, var(--cp-border)); background: var(--cp-accent-soft); }
+.resume-banner.on { display: flex; }
+.resume-banner .rb-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--cp-accent); animation: pulse-dot 1.6s ease-in-out infinite; }
+.resume-banner b { font-size: 14px; }
+.resume-banner .rb-spacer { flex: 1; }
+
+/* ===== v2 additions ===== */
+/* new-entry pulse (cross-tab + local) */
+.spot.pulse { animation: spot-in .5s cubic-bezier(.2,.7,.2,1) both, pulse-ring 1.25s ease-out 1; }
+@keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 var(--cp-accent-soft); } 70% { box-shadow: 0 0 0 14px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+/* hero-sized rotating spotlight — every project gets its projector moment */
+.hero-spot { position: relative; border: 1px solid var(--cp-border); border-radius: 1.2rem;
+  background: linear-gradient(158deg, var(--cp-accent-soft), transparent 55%), var(--cp-surface);
+  box-shadow: var(--cp-shadow); padding: clamp(18px,3vw,30px); margin-bottom: 18px; overflow: hidden; min-height: 188px; }
+.hero-spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning), var(--cp-success)); }
+.hero-spot::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, var(--cp-highlight), transparent 70%); pointer-events: none; }
+.hs-eyebrow { position: relative; display: flex; align-items: center; gap: 9px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-accent); }
+.hs-eyebrow .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-accent); animation: pulse-dot 1.6s ease-in-out infinite; }
+.hs-body { position: relative; animation: hs-in .5s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes hs-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.hs-proj { font-size: clamp(26px, 4.2vw, 46px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.04; margin-top: 12px; }
+.hs-link { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--cp-link); margin-top: 10px; word-break: break-all; }
+.hs-desc { font-size: clamp(14px,1.7vw,16.5px); color: var(--cp-text-muted); margin-top: 12px; max-width: 62ch; }
+.hs-foot { display: flex; align-items: center; gap: 12px; margin-top: 18px; flex-wrap: wrap; }
+.hs-team { font-size: 13px; font-weight: 700; color: var(--cp-text-soft); display: inline-flex; align-items: center; gap: 7px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 6px 13px; }
+.hs-nav { display: inline-flex; gap: 6px; }
+.hs-nav button { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); cursor: pointer; font-size: 15px; line-height: 1; transition: border-color .15s, transform .15s; }
+.hs-nav button:hover { border-color: var(--cp-border-strong); transform: translateY(-1px); }
+.hs-dots { display: flex; gap: 6px; margin-left: auto; align-items: center; }
+.hs-dots button { width: 9px; height: 9px; border-radius: 50%; border: none; padding: 0; background: var(--cp-border-strong); opacity: .45; cursor: pointer; transition: opacity .2s, transform .2s, background .2s; }
+.hs-dots button.on { opacity: 1; background: var(--cp-accent); transform: scale(1.3); }
+
+/* reaction pills (named panelists) */
+.rx-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; min-height: 30px; }
+.rx-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--cp-text); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 12px; animation: spot-in .4s ease both; }
+.rx-pill b { font-size: 13px; font-weight: 700; }
+.rx-pill .who { color: var(--cp-text-soft); font-weight: 700; }
+
+/* operator cue step */
+.cue-lead { margin: 6px 0 14px; color: var(--cp-text-muted); font-size: 14px; }
+.cue-choices { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.cue-btn { font-size: 15px; }
+#cueOverlay { position: absolute; inset: 0; z-index: 8; display: none; place-items: center; text-align: center;
+  background: color-mix(in srgb, var(--cp-bg) 72%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+#cueOverlay.on { display: grid; }
+#cueBig { font-size: clamp(72px, 17vw, 180px); font-weight: 800; letter-spacing: -0.04em; color: var(--cp-accent); line-height: 1; animation: cue-pop .45s cubic-bezier(.2,.9,.3,1.5) both; }
+#cueBig .cue-sub { display: block; font-size: clamp(16px,2.4vw,22px); font-weight: 700; color: var(--cp-text-muted); letter-spacing: 0; margin-top: 10px; }
+@keyframes cue-pop { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+.cue-shake { animation: cue-pop .45s cubic-bezier(.2,.9,.3,1.5) both, shake .5s ease-in-out infinite; }
+
+/* try-it-yourself modal */
+.modal { position: fixed; inset: 0; z-index: 120; display: none; align-items: flex-start; justify-content: center; padding: 5vh 18px; overflow: auto; background: rgba(0,0,0,.45); }
+.modal.on { display: flex; animation: stage-in .3s ease both; }
+.modal-card { width: min(460px, 100%); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 1.2rem; box-shadow: var(--cp-shadow); padding: 22px; position: relative; }
+.modal-close { position: absolute; right: 14px; top: 14px; width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text); cursor: pointer; font-size: 15px; }
+.modal-close:hover { border-color: var(--cp-border-strong); }
+.modal-title { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-accent); margin-bottom: 6px; }
+.btn-try { width: 100%; margin-top: 10px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}
+</style>
+</head>
+<body>
+<div class="accent-bar"></div>
+
+<!-- ============ MAIN APP / LANDING ============ -->
+<div id="app">
+  <header class="topbar">
+    <div class="wrap">
+      <div class="topbar-inner">
+        <div class="brand">
+          <span class="logo" aria-hidden="true">🏆</span>
+          <span>
+            <span class="brand-name">Copilot Builder Showcase</span>
+            <span class="brand-sub">the finale for anything you build together</span>
+          </span>
+        </div>
+        <div class="topbar-spacer"></div>
+        <span class="pill status-pill" id="topStatus"><span class="badge-dot"></span> Practice showcase</span>
+        <button class="icon-btn" id="themeToggleApp" title="Toggle theme" aria-label="Toggle color theme">🌙</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="badge"><span class="badge-star">✦</span> One command · <code style="font-family:Consolas,monospace">showcase</code></span>
+          <h1>End every build session on a <span class="accent">podium.</span></h1>
+          <p class="lede">
+            Copilot Builder Showcase turns a loose list of project links into a live,
+            <strong>Copilot-judged</strong> finale — every project gets a spotlight, the room scans in,
+            and a real podium lands: Builder Bronze, Builder Silver, and the Copilot Builder Award.
+          </p>
+          <div class="hero-cta">
+            <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Launch the experience</button>
+            <a class="btn btn-ghost btn-lg" href="#how">See how it works</a>
+          </div>
+          <div class="command-chip" aria-hidden="true">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="prompt">$</span><span class="cmd">showcase</span><span class="caret"></span>
+          </div>
+          <div class="hero-note">🛈 No judging panel to recruit. No dashboard to wire up. Just paste links and go.</div>
+          <div class="resume-banner" id="resumeBanner">
+            <span class="rb-dot"></span>
+            <b id="resumeText">A live event is in progress.</b>
+            <span class="rb-spacer"></span>
+            <button class="btn btn-sm btn-primary" id="resumeBtn">Return to the big screen</button>
+          </div>
+        </div>
+
+        <div class="preview" aria-hidden="true">
+          <div class="preview-head">
+            <span class="t">Big-screen preview</span>
+            <span class="pill"><span class="badge-dot" style="background:var(--cp-success)"></span> Awarded</span>
+          </div>
+          <div class="mini-podium">
+            <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div></div>
+            <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">Copilot Builder Award</div></div>
+            <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div></div>
+          </div>
+          <div class="mini-spot">
+            <div class="s">PixelForge</div><div class="s">LatencyLab</div><div class="s">+ live entries</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROBLEM -->
+    <section class="section" id="why">
+      <div class="section-head">
+        <span class="eyebrow">The awkward last ten minutes</span>
+        <h2>Workshops are great at building. Bad at ending.</h2>
+        <p>Links scatter across chat threads, docs, and browser tabs. A few people get demo time, most projects get no review, and the session just… stops. A human judging panel would fix it — but recruiting judges is too much overhead for most sessions.</p>
+      </div>
+      <div class="prob-grid">
+        <div class="prob"><div class="ic">🔗</div><h3>Links everywhere</h3><p>Project URLs sit in a spreadsheet or a chat thread and never get seen together.</p></div>
+        <div class="prob"><div class="ic">🎤</div><h3>Only a few demo</h3><p>Time runs out. Most builders never get their moment on screen.</p></div>
+        <div class="prob"><div class="ic">⚖️</div><h3>Inconsistent review</h3><p>Quality depends on who speaks up loudest, not one shared rubric.</p></div>
+        <div class="prob"><div class="ic">🫥</div><h3>No shared ending</h3><p>Feedback and decisions disappear the moment everyone closes their laptop.</p></div>
+      </div>
+    </section>
+
+    <!-- HOW / PILLARS -->
+    <section class="section" id="how">
+      <div class="section-head">
+        <span class="eyebrow">Run of show</span>
+        <h2>Three moves from link list to trophy.</h2>
+        <p>The whole thing runs on one screen the room watches together. Here is the flow you will drive on stage.</p>
+      </div>
+      <div class="pillars">
+        <article class="pillar">
+          <span class="num">1</span>
+          <div class="p-ic">▶</div>
+          <h3>Launch the experience</h3>
+          <p>Flip the page into a big-screen audience view. The event moves through clear stages the whole room can follow.</p>
+          <ul>
+            <li><span class="ck">✓</span> Open for submissions → Judging → Awarded</li>
+            <li><span class="ck">✓</span> Live entry count &amp; run-of-show board</li>
+            <li><span class="ck">✓</span> Projector-ready, reduced-motion friendly</li>
+          </ul>
+        </article>
+        <article class="pillar">
+          <span class="num">2</span>
+          <div class="p-ic">▦</div>
+          <h3>Scan to submit</h3>
+          <p>A real, scannable QR code appears. Builders scan it, paste a project link, and their project lands on the board — project first.</p>
+          <ul>
+            <li><span class="ck">✓</span> Live QR generated on-device</li>
+            <li><span class="ck">✓</span> Lightweight mobile submit view</li>
+            <li><span class="ck">✓</span> Every accepted project gets a spotlight</li>
+          </ul>
+        </article>
+        <article class="pillar">
+          <span class="num">3</span>
+          <div class="p-ic">🏆</div>
+          <h3>Run the panel &amp; reveal</h3>
+          <p>A Copilot judging panel reviews every project through the same rubric, the room joins the cue, and the podium lands.</p>
+          <ul>
+            <li><span class="ck">✓</span> Median consensus of a Copilot CLI panel</li>
+            <li><span class="ck">✓</span> Scores stay sealed until the reveal</li>
+            <li><span class="ck">✓</span> Builder Bronze · Silver · Copilot Builder Award</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <!-- GUARDRAILS -->
+    <section class="section" id="fair">
+      <div class="section-head">
+        <span class="eyebrow">Fair by default</span>
+        <h2>Credible judging, not a gimmick.</h2>
+        <p>Copilot judging combines a configured Copilot CLI panel by median consensus. The audience view never leaks a result early.</p>
+      </div>
+      <div class="guards">
+        <div class="guard"><span class="g-ic">🔒</span><div><h4>Sealed scores</h4><p>No scores, ranks, or awards on the big screen until the reveal.</p></div></div>
+        <div class="guard"><span class="g-ic">✨</span><div><h4>Equal spotlight</h4><p>Every accepted project appears before the ceremony.</p></div></div>
+        <div class="guard"><span class="g-ic">📐</span><div><h4>Same rubric</h4><p>Every entry is reviewed against one declared rubric.</p></div></div>
+        <div class="guard"><span class="g-ic">🤝</span><div><h4>Median consensus</h4><p>A multi-model Copilot panel is combined, never one hidden judge.</p></div></div>
+        <div class="guard"><span class="g-ic">🧾</span><div><h4>Evidence, not inference</h4><p>Copilot use is only claimed from builder-provided evidence.</p></div></div>
+        <div class="guard"><span class="g-ic">🏷️</span><div><h4>Status always visible</h4><p>Practice or Official Copilot Panel is labeled throughout the run.</p></div></div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="section">
+      <div class="cta-band">
+        <span class="badge" style="margin:0 auto 12px">Ready when you are</span>
+        <h2>Give the room a finale worth staying for.</h2>
+        <p>Launch the big screen, let builders scan in, and run the Copilot judging panel — live.</p>
+        <div class="hero-cta">
+          <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Launch the experience</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span class="foot-brand"><span class="gh-mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></span> Built with the GitHub Copilot CLI</span>
+      <span>Practice showcase · illustrative results · no judging panel required</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ============ STAGE / BIG SCREEN ============ -->
+<div class="stage" id="stage" aria-hidden="true">
+  <div class="stage-top">
+    <div class="stage-title"><span class="logo">🏆</span> Copilot Builder Showcase</div>
+    <div class="stepper" id="stepper">
+      <div class="step" data-step="open"><span class="n">1</span><span class="lbl">Open for submissions</span></div>
+      <span class="step-sep"></span>
+      <div class="step" data-step="judging"><span class="n">2</span><span class="lbl">Copilot judging</span></div>
+      <span class="step-sep"></span>
+      <div class="step" data-step="awarded"><span class="n">3</span><span class="lbl">Awarded</span></div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill status-pill"><span class="badge-dot"></span> Practice · illustrative</span>
+    <button class="icon-btn" id="themeToggleStage" title="Toggle theme" aria-label="Toggle color theme">🌙</button>
+    <button class="btn btn-sm btn-ghost" id="exitStage" title="Back to landing">✕ Exit</button>
+  </div>
+
+  <div class="stage-body">
+    <section class="board">
+      <div class="board-head">
+        <div>
+          <div class="bt" id="boardTitle">Open for submissions</div>
+          <div class="bsub" id="boardSub">Scan the code to add your project to the showcase.</div>
+        </div>
+        <div class="counts">
+          <div class="count"><b id="cEntries">0</b><span>Projects</span></div>
+          <div class="count"><b id="cStage">Open</b><span>Stage</span></div>
+          <div class="count"><b id="cCalls">0</b><span>Panel calls</span></div>
+        </div>
+      </div>
+
+      <div id="heroStage" class="hero-spot" style="display:none"></div>
+
+      <div id="spotlights" class="spotlights"></div>
+
+      <div id="boardEmpty" class="board-empty">
+        <div class="big">📥</div>
+        <h3>Waiting for the first project…</h3>
+        <p>Point a phone camera at the QR code to submit a project link. Entries appear here the moment they land.</p>
+      </div>
+
+      <!-- judging overlay -->
+      <div class="judging" id="judging">
+        <div class="judge-card">
+          <span class="badge"><span class="badge-dot"></span> Copilot judging panel</span>
+          <h3>Reviewing every project…</h3>
+          <div class="sub">One shared rubric — Innovation, Build Quality, Impact — combined by median consensus of a Copilot CLI panel. Scores stay sealed.</div>
+          <div class="panel-judges" id="panelJudges"></div>
+          <div class="progress"><i id="judgeBar"></i></div>
+          <div class="judge-now" id="judgeNow">Warming up the panel…</div>
+          <div class="rx-row" id="judgeReacts"></div>
+          <div class="judge-agg" id="judgeAgg"></div>
+          <div class="reveal-cue" id="revealCue">
+            <p class="cue-lead">Review complete &amp; sealed. Pick a cue for the room, then reveal the podium:</p>
+            <div class="cue-choices" id="cueChoices">
+              <button class="btn cue-btn" data-cue="drumroll">🥁 Drumroll</button>
+              <button class="btn cue-btn" data-cue="countdown">⏱️ 3 · 2 · 1</button>
+              <button class="btn cue-btn btn-primary" data-cue="applause">👏 Applause &amp; reveal</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- podium overlay -->
+      <div class="podium-wrap" id="podiumWrap">
+        <div class="podium-head">
+          <span class="badge">🎉 The podium</span>
+          <h2>Copilot Builder Showcase — winners</h2>
+          <p>Chosen by median consensus of a Copilot CLI panel · practice showcase, illustrative results</p>
+        </div>
+        <div class="podium" id="podium"></div>
+        <div class="growth" id="growth">
+          <div class="op-t">Top-three growth cards · one level-up move each</div>
+          <div class="growth-grid" id="growthGrid"></div>
+        </div>
+        <div class="podium-actions">
+          <button class="btn btn-ghost" id="replayBtn">↺ Show spotlights again</button>
+          <button class="btn btn-primary" id="newRunBtn">＋ Run another showcase</button>
+        </div>
+      </div>
+
+      <div id="cueOverlay"><div id="cueBig"></div></div>
+      <canvas id="confetti"></canvas>
+    </section>
+
+    <aside class="sidepanel">
+      <div class="qr-card" id="qrCard">
+        <h4>▦ Scan to submit your project</h4>
+        <div class="qr-sub">Open the mobile submit view — paste a link, tap submit.</div>
+        <div class="qr-frame"><canvas id="qrCanvas" width="220" height="220" role="img" aria-label="QR code linking to the project submission page"></canvas></div>
+        <div class="qr-url" id="qrUrl">…</div>
+        <div class="qr-actions">
+          <button class="btn btn-sm" id="copyUrl">⧉ Copy link</button>
+          <button class="btn btn-sm btn-primary" id="openSubmit">Open submit ↗</button>
+        </div>
+        <button class="btn btn-try" id="tryBtn">▦ Try it yourself · no phone</button>
+      </div>
+
+      <div class="op" id="opPanel">
+        <div class="op-t">◆ Operator controls</div>
+        <div class="op-hint" id="opHint">When the room has submitted, run the Copilot judging panel. You need at least 3 projects for a podium.</div>
+        <button class="btn btn-primary" id="runPanelBtn" disabled>Run the Copilot judging panel</button>
+        <div class="op-row">
+          <button class="btn btn-sm" id="seedBtn" title="Add a sample project for the demo">＋ Demo entry</button>
+          <button class="btn btn-sm" id="resetBtn" title="Clear entries and reopen">↺ Reset</button>
+        </div>
+      </div>
+
+      <div class="ticker">
+        <div class="op-t">↯ Live feed</div>
+        <ul id="tickerList"><li><span class="tk-dot">•</span> Waiting for the showcase to begin…</li></ul>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ============ SUBMIT (mobile) ============ -->
+<div class="submit-view" id="submitView" aria-hidden="true">
+  <div class="submit-card">
+    <div class="submit-brand"><span class="logo">🏆</span><b>Copilot Builder Showcase</b></div>
+    <div class="submit-panel" id="submitPanel"><!-- filled by JS --></div>
+    <div class="submit-foot"><a href="#" id="backToShow">← Back to the showcase</a> · <button class="icon-btn" id="themeToggleSubmit" style="width:auto;height:auto;padding:4px 10px;font-size:13px;border-radius:8px;display:inline-flex" title="Toggle theme">🌙 Theme</button></div>
+  </div>
+</div>
+
+<!-- ============ TRY-IT-YOURSELF MODAL ============ -->
+<div class="modal" id="tryModal" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Try the submit flow">
+  <div class="modal-card">
+    <button class="modal-close" id="tryClose" aria-label="Close">✕</button>
+    <div class="modal-title">Try it yourself · no phone needed</div>
+    <div id="tryBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ============================================================
+   Clean-room byte-mode QR encoder (versions 1-10, ECC L/M/Q/H).
+   Validated byte-for-byte against a reference implementation.
+   Returns { size, version, mask, modules: bool[][] }.
+   ============================================================ */
+var QRClean = (function () {
+  var EXP = new Uint8Array(512), LOG = new Uint8Array(256);
+  (function () { var x = 1; for (var i = 0; i < 255; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11d; } for (var j = 255; j < 512; j++) EXP[j] = EXP[j - 255]; })();
+  function gmul(a, b) { return (a === 0 || b === 0) ? 0 : EXP[LOG[a] + LOG[b]]; }
+  function rsGen(n) { var poly = [1]; for (var i = 0; i < n; i++) { var next = new Array(poly.length + 1); for (var k = 0; k < next.length; k++) next[k] = 0; for (var j = 0; j < poly.length; j++) { next[j] ^= poly[j]; next[j + 1] ^= gmul(poly[j], EXP[i]); } poly = next; } return poly; }
+  function rsEnc(data, ecLen) { var gen = rsGen(ecLen), res = new Uint8Array(ecLen); for (var i = 0; i < data.length; i++) { var factor = data[i] ^ res[0]; for (var j = 0; j < ecLen - 1; j++) res[j] = res[j + 1]; res[ecLen - 1] = 0; for (var k = 0; k < ecLen; k++) res[k] ^= gmul(gen[k + 1], factor); } return res; }
+  var ECC = {
+    1: { L: [7, [[1, 19]]], M: [10, [[1, 16]]], Q: [13, [[1, 13]]], H: [17, [[1, 9]]] },
+    2: { L: [10, [[1, 34]]], M: [16, [[1, 28]]], Q: [22, [[1, 22]]], H: [28, [[1, 16]]] },
+    3: { L: [15, [[1, 55]]], M: [26, [[1, 44]]], Q: [18, [[2, 17]]], H: [22, [[2, 13]]] },
+    4: { L: [20, [[1, 80]]], M: [18, [[2, 32]]], Q: [26, [[2, 24]]], H: [16, [[4, 9]]] },
+    5: { L: [26, [[1, 108]]], M: [24, [[2, 43]]], Q: [18, [[2, 15], [2, 16]]], H: [22, [[2, 11], [2, 12]]] },
+    6: { L: [18, [[2, 68]]], M: [16, [[4, 27]]], Q: [24, [[4, 19]]], H: [28, [[4, 15]]] },
+    7: { L: [20, [[2, 78]]], M: [18, [[4, 31]]], Q: [18, [[2, 14], [4, 15]]], H: [26, [[4, 13], [1, 14]]] },
+    8: { L: [24, [[2, 97]]], M: [22, [[2, 38], [2, 39]]], Q: [22, [[4, 18], [2, 19]]], H: [26, [[4, 14], [2, 15]]] },
+    9: { L: [30, [[2, 116]]], M: [22, [[3, 36], [2, 37]]], Q: [20, [[4, 16], [4, 17]]], H: [24, [[4, 12], [4, 13]]] },
+    10: { L: [18, [[2, 68], [2, 69]]], M: [26, [[4, 43], [1, 44]]], Q: [24, [[6, 19], [2, 20]]], H: [28, [[6, 15], [2, 16]]] }
+  };
+  var ALIGN = { 1: [], 2: [6, 18], 3: [6, 22], 4: [6, 26], 5: [6, 30], 6: [6, 34], 7: [6, 22, 38], 8: [6, 24, 42], 9: [6, 26, 46], 10: [6, 28, 50] };
+  var REMAINDER = { 1: 0, 2: 7, 3: 7, 4: 7, 5: 7, 6: 7, 7: 0, 8: 0, 9: 0, 10: 0 };
+  function utf8(str) { var out = []; for (var i = 0; i < str.length; i++) { var c = str.charCodeAt(i); if (c < 0x80) out.push(c); else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 0x3f)); else if (c >= 0xd800 && c <= 0xdbff) { var c2 = str.charCodeAt(++i); var cp = 0x10000 + ((c & 0x3ff) << 10) + (c2 & 0x3ff); out.push(0xf0 | (cp >> 18), 0x80 | ((cp >> 12) & 0x3f), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f)); } else out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 0x3f), 0x80 | (c & 0x3f)); } return out; }
+  function dataCw(version, level) { var e = ECC[version][level], g = e[1], n = 0; for (var i = 0; i < g.length; i++) n += g[i][0] * g[i][1]; return n; }
+  function encode(text, level, forceVersion, forceMask) {
+    level = level || 'M'; var bytes = utf8(text), version = forceVersion || 0;
+    if (!version) { for (var v = 1; v <= 10; v++) { var cc = v < 10 ? 8 : 16; if (4 + cc + bytes.length * 8 <= dataCw(v, level) * 8) { version = v; break; } } if (!version) throw new Error('QR: data too long for versions 1-10'); }
+    var ccBits = version < 10 ? 8 : 16, totalData = dataCw(version, level), bits = [];
+    function push(val, len) { for (var i = len - 1; i >= 0; i--) bits.push((val >> i) & 1); }
+    push(4, 4); push(bytes.length, ccBits); for (var i = 0; i < bytes.length; i++) push(bytes[i], 8);
+    var cap = totalData * 8, term = Math.min(4, cap - bits.length); for (var t = 0; t < term; t++) bits.push(0);
+    while (bits.length % 8 !== 0) bits.push(0);
+    var dataBytes = []; for (var b = 0; b < bits.length; b += 8) { var v8 = 0; for (var q = 0; q < 8; q++) v8 = (v8 << 1) | bits[b + q]; dataBytes.push(v8); }
+    var pad = [0xec, 0x11], pi = 0; while (dataBytes.length < totalData) { dataBytes.push(pad[pi & 1]); pi++; }
+    var e = ECC[version][level], ecLen = e[0], groups = e[1], blocks = [], eccBlocks = [], pos = 0;
+    for (var g = 0; g < groups.length; g++) for (var nb = 0; nb < groups[g][0]; nb++) { var blk = dataBytes.slice(pos, pos + groups[g][1]); pos += groups[g][1]; blocks.push(blk); eccBlocks.push(rsEnc(blk, ecLen)); }
+    var maxData = 0; for (var bd = 0; bd < blocks.length; bd++) maxData = Math.max(maxData, blocks[bd].length);
+    var finalBytes = [];
+    for (var col = 0; col < maxData; col++) for (var bl = 0; bl < blocks.length; bl++) if (col < blocks[bl].length) finalBytes.push(blocks[bl][col]);
+    for (var ec = 0; ec < ecLen; ec++) for (var be = 0; be < eccBlocks.length; be++) finalBytes.push(eccBlocks[be][ec]);
+    var finalBits = []; for (var fb = 0; fb < finalBytes.length; fb++) for (var z = 7; z >= 0; z--) finalBits.push((finalBytes[fb] >> z) & 1);
+    for (var r = 0; r < REMAINDER[version]; r++) finalBits.push(0);
+    return build(version, level, finalBits, forceMask);
+  }
+  function build(version, level, dataBits, forceMask) {
+    var size = version * 4 + 17, mods = [], fn = [];
+    for (var i = 0; i < size; i++) { mods.push(new Array(size).fill(false)); fn.push(new Array(size).fill(false)); }
+    function setF(r, c, v) { mods[r][c] = v; fn[r][c] = true; }
+    function finder(r, c) { for (var dr = -1; dr <= 7; dr++) for (var dc = -1; dc <= 7; dc++) { var rr = r + dr, cc = c + dc; if (rr < 0 || rr >= size || cc < 0 || cc >= size) continue; var ring = (dr >= 0 && dr <= 6 && (dc === 0 || dc === 6)) || (dc >= 0 && dc <= 6 && (dr === 0 || dr === 6)); var core = dr >= 2 && dr <= 4 && dc >= 2 && dc <= 4; setF(rr, cc, ring || core); } }
+    finder(0, 0); finder(0, size - 7); finder(size - 7, 0);
+    for (var tt = 8; tt < size - 8; tt++) { if (!fn[6][tt]) setF(6, tt, tt % 2 === 0); if (!fn[tt][6]) setF(tt, 6, tt % 2 === 0); }
+    var ap = ALIGN[version];
+    if (ap.length) { var aF = ap[0], aL = ap[ap.length - 1]; for (var a1 = 0; a1 < ap.length; a1++) for (var a2 = 0; a2 < ap.length; a2++) { var ar = ap[a1], ac = ap[a2]; if ((ar === aF && ac === aF) || (ar === aF && ac === aL) || (ar === aL && ac === aF)) continue; for (var ddr = -2; ddr <= 2; ddr++) for (var ddc = -2; ddc <= 2; ddc++) { var m = Math.max(Math.abs(ddr), Math.abs(ddc)); setF(ar + ddr, ac + ddc, m !== 1); } } }
+    setF(size - 8, 8, true);
+    for (var q = 0; q <= 8; q++) { fn[8][q] = true; fn[q][8] = true; }
+    for (var s = 0; s < 8; s++) { fn[8][size - 1 - s] = true; fn[size - 1 - s][8] = true; }
+    if (version >= 7) for (var vr = 0; vr < 6; vr++) for (var vc = 0; vc < 3; vc++) { fn[vr][size - 11 + vc] = true; fn[size - 11 + vc][vr] = true; }
+    var bitIdx = 0, dir = -1, row = size - 1;
+    for (var colPair = size - 1; colPair > 0; colPair -= 2) { if (colPair === 6) colPair--; for (var cnt = 0; cnt < size; cnt++) { for (var ci = 0; ci < 2; ci++) { var cc2 = colPair - ci; if (fn[row][cc2]) continue; var bit = bitIdx < dataBits.length ? dataBits[bitIdx] : 0; bitIdx++; mods[row][cc2] = bit === 1; } row += dir; if (row < 0) { row = 0; dir = 1; break; } if (row >= size) { row = size - 1; dir = -1; break; } } }
+    function maskFn(m, r, c) { switch (m) { case 0: return (r + c) % 2 === 0; case 1: return r % 2 === 0; case 2: return c % 3 === 0; case 3: return (r + c) % 3 === 0; case 4: return (Math.floor(r / 2) + Math.floor(c / 3)) % 2 === 0; case 5: return ((r * c) % 2) + ((r * c) % 3) === 0; case 6: return (((r * c) % 2) + ((r * c) % 3)) % 2 === 0; case 7: return (((r + c) % 2) + ((r * c) % 3)) % 2 === 0; } }
+    function applyMask(g, m) { for (var r = 0; r < size; r++) for (var c = 0; c < size; c++) if (!fn[r][c] && maskFn(m, r, c)) g[r][c] = !g[r][c]; }
+    function eclBits(l) { return l === 'L' ? 1 : l === 'M' ? 0 : l === 'Q' ? 3 : 2; }
+    function bchDigit(x) { var n = 0; while (x !== 0) { n++; x >>>= 1; } return n; }
+    function placeFormat(g, m) { var data = (eclBits(level) << 3) | m, d = data << 10; while (bchDigit(d) - 11 >= 0) d ^= (0x537 << (bchDigit(d) - 11)); var bits = (((data << 10) | d) ^ 0x5412); for (var i = 0; i < 15; i++) { var mod = ((bits >> i) & 1) === 1; if (i < 6) g[i][8] = mod; else if (i < 8) g[i + 1][8] = mod; else g[size - 15 + i][8] = mod; if (i < 8) g[8][size - i - 1] = mod; else if (i < 9) g[8][15 - i - 1 + 1] = mod; else g[8][15 - i - 1] = mod; } g[size - 8][8] = true; }
+    function placeVersion(g) { if (version < 7) return; var d = version << 12; while (bchDigit(d) - 13 >= 0) d ^= (0x1f25 << (bchDigit(d) - 13)); var bits = (version << 12) | d; for (var i = 0; i < 18; i++) { var rr = Math.floor(i / 3), cc = (i % 3) + size - 11, mod = ((bits >> i) & 1) === 1; g[rr][cc] = mod; g[cc][rr] = mod; } }
+    function penalty(g) {
+      var p = 0, n = size;
+      for (var r = 0; r < n; r++) { var rc = 1, rl = 1; for (var c = 1; c < n; c++) { if (g[r][c] === g[r][c - 1]) { rc++; if (rc === 5) p += 3; else if (rc > 5) p++; } else rc = 1; if (g[c][r] === g[c - 1][r]) { rl++; if (rl === 5) p += 3; else if (rl > 5) p++; } else rl = 1; } }
+      for (var r2 = 0; r2 < n - 1; r2++) for (var c2 = 0; c2 < n - 1; c2++) { var v = g[r2][c2]; if (v === g[r2][c2 + 1] && v === g[r2 + 1][c2] && v === g[r2 + 1][c2 + 1]) p += 3; }
+      var p1 = [true, false, true, true, true, false, true, false, false, false, false], p2 = [false, false, false, false, true, false, true, true, true, false, true];
+      function mt(a, i, j, h) { for (var k = 0; k < 11; k++) { var val = h ? g[i][j + k] : g[i + k][j]; if (val !== a[k]) return false; } return true; }
+      for (var r3 = 0; r3 < n; r3++) for (var c3 = 0; c3 < n; c3++) { if (c3 + 11 <= n && (mt(p1, r3, c3, true) || mt(p2, r3, c3, true))) p += 40; if (r3 + 11 <= n && (mt(p1, r3, c3, false) || mt(p2, r3, c3, false))) p += 40; }
+      var dark = 0; for (var r4 = 0; r4 < n; r4++) for (var c4 = 0; c4 < n; c4++) if (g[r4][c4]) dark++;
+      p += Math.floor(Math.abs(dark * 100 / (n * n) - 50) / 5) * 10; return p;
+    }
+    function clone(g) { return g.map(function (r) { return r.slice(); }); }
+    var best = null, bestMask = 0, bestPen = Infinity, masks = forceMask != null ? [forceMask] : [0, 1, 2, 3, 4, 5, 6, 7];
+    for (var mi = 0; mi < masks.length; mi++) { var m = masks[mi], g = clone(mods); applyMask(g, m); placeFormat(g, m); placeVersion(g); var pen = penalty(g); if (pen < bestPen) { bestPen = pen; best = g; bestMask = m; } }
+    return { size: size, version: version, mask: bestMask, level: level, modules: best };
+  }
+  return { encode: encode };
+})();
+
+/* ============================================================
+   Copilot Builder Showcase — live experience controller
+   ============================================================ */
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var doc = document, root = doc.documentElement;
+
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function toast(msg) { var t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove("on"); }, 2600); }
+  function safeURL(u) { try { var p = new URL(u, location.href); return (p.protocol === "http:" || p.protocol === "https:") ? p.href : null; } catch (e) { return null; } }
+
+  /* ---- theme ---- */
+  var THEME_KEY = "cbs_theme";
+  function currentTheme() { return root.getAttribute("data-theme") === "dark" ? "dark" : "light"; }
+  function applyThemeIcon() { var d = currentTheme() === "dark"; ["themeToggleApp", "themeToggleStage"].forEach(function (id) { var b = $(id); if (b) b.textContent = d ? "☀️" : "🌙"; }); var s = $("themeToggleSubmit"); if (s) s.textContent = (d ? "☀️" : "🌙") + " Theme"; }
+  function toggleTheme() { var next = currentTheme() === "dark" ? "light" : "dark"; root.setAttribute("data-theme", next); try { localStorage.setItem(THEME_KEY, next); } catch (e) {} applyThemeIcon(); if (view === "stage") drawStageQR(); }
+  ["themeToggleApp", "themeToggleStage", "themeToggleSubmit"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", toggleTheme); });
+  applyThemeIcon();
+
+  /* ---- shared state ---- */
+  var STORE_KEY = "cbs_showcase_v1";
+  var CH = null; try { CH = ("BroadcastChannel" in window) ? new BroadcastChannel("cbs_showcase") : null; } catch (e) { CH = null; }
+  var mem = null;
+  function freshState() { return { status: "idle", runId: "", startedAt: 0, calls: 0, entries: [], podium: null, seeded: 0 }; }
+  function readState() { try { var s = localStorage.getItem(STORE_KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; }
+  function writeState(st) { mem = st; try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {} }
+  var state = readState() || freshState();
+  function save(opts) { writeState(state); try { if (CH) CH.postMessage({ t: "sync", s: state, from: TAB }); } catch (e) {} if (!(opts && opts.silent)) {} }
+  var TAB = Math.random().toString(36).slice(2);
+
+  function onRemote(st) {
+    var prevStatus = state.status, prevN = state.entries.length;
+    state = st;
+    if (view === "stage") {
+      renderStage();
+      if (state.status === "open" && state.entries.length > prevN) pulseNewEntries(prevN);
+      if (state.status === "awarded" && prevStatus !== "awarded") showPodium(true);
+      if (state.status === "idle" && prevStatus !== "idle") resetStageUI();
+    } else if (view === "submit") {
+      renderSubmit();
+    } else {
+      renderResume();
+    }
+  }
+  if (CH) CH.onmessage = function (ev) { if (ev && ev.data && ev.data.t === "sync" && ev.data.from !== TAB && ev.data.s) onRemote(ev.data.s); };
+  window.addEventListener("storage", function (ev) { if (ev.key === STORE_KEY) { var s = readState(); if (s) onRemote(s); } });
+
+  /* ---- URLs ---- */
+  function baseURL() { var o = location.origin; if (o && o !== "null") return o + location.pathname; return location.href.split("#")[0].split("?")[0]; }
+  function submitURL() { return baseURL() + "#submit"; }
+
+  /* ---- QR ---- */
+  function drawQR(canvas, text) {
+    var q; try { q = QRClean.encode(text, "M"); } catch (e) { try { q = QRClean.encode(text, "L"); } catch (e2) { return false; } }
+    var n = q.size, quiet = 4, total = n + quiet * 2, target = 224;
+    var px = Math.max(3, Math.floor(target / total)), cssSize = total * px, dpr = Math.min(3, window.devicePixelRatio || 1);
+    canvas.width = cssSize * dpr; canvas.height = cssSize * dpr; canvas.style.width = cssSize + "px"; canvas.style.height = cssSize + "px";
+    var ctx = canvas.getContext && canvas.getContext("2d"); if (!ctx) return false; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    /* Fixed white background + pure-black modules in BOTH themes so phones scan reliably. */
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, cssSize, cssSize); ctx.fillStyle = "#000000";
+    for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) if (q.modules[r][c]) ctx.fillRect((c + quiet) * px, (r + quiet) * px, px, px);
+    return true;
+  }
+  function drawStageQR() { var ok = drawQR($("qrCanvas"), submitURL()); $("qrUrl").textContent = submitURL(); if (!ok) $("qrUrl").textContent = "Open " + submitURL() + " on another device."; }
+
+  /* ---- demo projects ---- */
+  var DEMO = [
+    { proj: "Aurora Recall", link: "https://demo.example.dev/aurora", team: "Team Aurora", desc: "A retrieval agent that resurfaces the follow-ups you forgot to send." },
+    { proj: "Commit Coach", link: "https://github.com/example/commit-coach", team: "Team Commit Coach", desc: "PR review that teaches the fix instead of just flagging it." },
+    { proj: "Reef Guardian", link: "https://demo.example.dev/reef", team: "Reef Guardian", desc: "Early coral-bleaching warnings from low-cost sonar buoys." },
+    { proj: "PixelForge", link: "https://pixelforge.example.app", team: "Team PixelForge", desc: "A browser-native sprite studio with AI in-betweening." },
+    { proj: "LatencyLab", link: "https://latencylab.example.io", team: "LatencyLab", desc: "An edge cache that pre-fetches the next request before you ask." },
+    { proj: "Signal Garden", link: "https://github.com/example/signal-garden", team: "Team Signal Garden", desc: "Turns noisy alerts into one calm, prioritized morning digest." }
+  ];
+
+  /* ---- deterministic Copilot-panel scoring (practice, illustrative) ---- */
+  function hash(str) { var h = 2166136261 >>> 0; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+  var LENSES = ["Innovation", "Build Quality", "Impact"];
+  function scoreEntry(e) {
+    var per = {};
+    LENSES.forEach(function (L) {
+      var vals = [0, 1, 2].map(function (j) { return 6.5 + (hash(e.link + "|" + e.proj + "|" + L + "|" + j) % 350) / 100; });
+      vals.sort(function (a, b) { return a - b; });
+      per[L] = vals[1]; /* median of the 3-family panel */
+    });
+    var total = LENSES.reduce(function (s, L) { return s + per[L]; }, 0);
+    var topLens = Object.keys(per).sort(function (a, b) { return per[b] - per[a]; })[0];
+    return { per: per, total: total, topLens: topLens };
+  }
+  function rankEntries() {
+    var scored = state.entries.map(function (e) { return { e: e, sc: scoreEntry(e) }; });
+    scored.sort(function (a, b) {
+      if (b.sc.total !== a.sc.total) return b.sc.total - a.sc.total;
+      if (b.sc.per.Impact !== a.sc.per.Impact) return b.sc.per.Impact - a.sc.per.Impact;
+      return hash(a.e.link) - hash(b.e.link);
+    });
+    return scored;
+  }
+
+  /* ---- view routing ---- */
+  var view = "app";
+  var feed = [];
+  var seedRunning = false;
+  var heroIdx = 0, heroTimer = null;
+  function setView(v) {
+    view = v;
+    $("app").style.display = v === "app" ? "" : "none";
+    var st = $("stage"); st.classList.toggle("on", v === "stage"); st.setAttribute("aria-hidden", v === "stage" ? "false" : "true");
+    var sv = $("submitView"); sv.classList.toggle("on", v === "submit"); sv.setAttribute("aria-hidden", v === "submit" ? "false" : "true");
+    document.body.style.overflow = v === "stage" ? "hidden" : "";
+  }
+
+  function renderResume() {
+    var live = state.status !== "idle";
+    var b = $("resumeBanner"); b.classList.toggle("on", live);
+    if (live) {
+      var map = { open: "Open for submissions", judging: "Copilot judging in progress", awarded: "Winners revealed" };
+      $("resumeText").textContent = "A live showcase is running — " + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
+    }
+    $("topStatus").innerHTML = '<span class="badge-dot"></span> ' + (live ? "Live · " + state.entries.length + " projects" : "Practice showcase");
+  }
+
+  /* ---- landing actions ---- */
+  function launch() {
+    if (state.status === "idle") {
+      state = freshState();
+      state.status = "open";
+      state.runId = "run-" + Date.now().toString(36);
+      state.startedAt = Date.now();
+      save();
+      feed = [];
+      pushFeed("Showcase is open — the room can scan in now.");
+    }
+    enterStage();
+    if (state.status === "open" && state.entries.length === 0 && !seedRunning) scheduleSeed();
+  }
+  $("launchHero").addEventListener("click", launch);
+  $("launchCta").addEventListener("click", launch);
+  $("resumeBtn").addEventListener("click", enterStage);
+
+  function enterStage() {
+    setView("stage");
+    resetStageUI();
+    renderStage();
+    drawStageQR();
+    if (state.status === "judging") showJudging(true);
+    if (state.status === "awarded") showPodium(false);
+  }
+  $("exitStage").addEventListener("click", function () { stopHeroTimer(); setView("app"); location.hash = ""; renderResume(); });
+
+  /* ---- stage rendering ---- */
+  function setStepper() {
+    var order = ["open", "judging", "awarded"], cur = state.status === "idle" ? "open" : state.status;
+    var ci = order.indexOf(cur);
+    Array.prototype.forEach.call(document.querySelectorAll("#stepper .step"), function (el) {
+      var s = el.getAttribute("data-step"), i = order.indexOf(s);
+      el.classList.toggle("active", i === ci);
+      el.classList.toggle("done", i < ci);
+    });
+  }
+  function renderStage() {
+    setStepper();
+    $("cEntries").textContent = state.entries.length;
+    $("cStage").textContent = { open: "Open", judging: "Judging", awarded: "Awarded", idle: "Ready" }[state.status] || state.status;
+    $("cCalls").textContent = state.calls || 0;
+    var titles = {
+      open: ["Open for submissions", "Scan the code — every project that lands gets a spotlight."],
+      judging: ["Copilot judging in progress", "One rubric, applied to every project. Scores stay sealed."],
+      awarded: ["The winners are in", "Chosen by median consensus of a Copilot CLI panel."]
+    };
+    var tt = titles[state.status] || titles.open;
+    $("boardTitle").textContent = tt[0]; $("boardSub").textContent = tt[1];
+    /* operator */
+    var canRun = state.status === "open" && state.entries.length >= 3;
+    var rp = $("runPanelBtn"); rp.disabled = !canRun;
+    $("seedBtn").style.display = state.status === "open" ? "" : "none";
+    if (state.status === "open") { $("opHint").textContent = state.entries.length < 3 ? ("Need at least 3 projects for a podium — " + state.entries.length + "/3 so far.") : "The room is ready. Run the Copilot judging panel when you are."; }
+    else if (state.status === "judging") $("opHint").textContent = "The Copilot panel is reviewing every project…";
+    else $("opHint").textContent = "Showcase complete. Start another run whenever you like.";
+    $("qrCard").style.opacity = state.status === "open" ? "1" : "0.55";
+    syncSpotlights();
+    renderHeroSpot();
+    if (state.status === "open" && state.entries.length > 1) { if (!heroTimer) startHeroTimer(); } else if (state.status !== "open") { stopHeroTimer(); }
+    renderTicker();
+    $("topStatus").innerHTML = '<span class="badge-dot"></span> Live · ' + state.entries.length + " projects";
+  }
+  function spotCard(e, idx) {
+    var link = safeURL(e.link);
+    var linkHTML = link ? '<a class="link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(e.link) + "</a>" : '<span class="link">🔗 ' + esc(e.link) + "</span>";
+    var tag = e.source === "live" ? "Spotlight" : "Spotlight";
+    return '<div class="spot" data-id="' + esc(e.id) + '">' +
+      '<span class="spot-tag">' + tag + "</span>" +
+      '<div class="proj">' + esc(e.proj) + "</div>" +
+      linkHTML +
+      (e.desc ? '<div class="desc">' + esc(e.desc) + "</div>" : "") +
+      '<div class="meta"><span class="team">👥 ' + esc(e.team || "Project team") + "</span>" +
+      '<span class="num-badge">Project #' + (idx + 1) + "</span></div>" +
+      "</div>";
+  }
+  function syncSpotlights() {
+    var host = $("spotlights"), empty = $("boardEmpty");
+    empty.style.display = state.entries.length ? "none" : "";
+    var have = {};
+    Array.prototype.forEach.call(host.children, function (c) { have[c.getAttribute("data-id")] = c; });
+    /* remove stale */
+    Object.keys(have).forEach(function (id) { if (!state.entries.some(function (e) { return e.id === id; })) host.removeChild(have[id]); });
+    /* add new in order */
+    state.entries.forEach(function (e, i) {
+      var existing = host.querySelector('[data-id="' + cssEsc(e.id) + '"]');
+      if (!existing) { var tmp = document.createElement("div"); tmp.innerHTML = spotCard(e, i); host.appendChild(tmp.firstChild); }
+      else { var nb = existing.querySelector(".num-badge"); if (nb) nb.textContent = "Project #" + (i + 1); }
+    });
+  }
+  function cssEsc(s) { return String(s).replace(/["\\]/g, "\\$&"); }
+
+  function renderTicker() {
+    var host = $("tickerList");
+    if (!feed.length) { host.innerHTML = '<li><span class="tk-dot">•</span> Waiting for the first project…</li>'; return; }
+    host.innerHTML = feed.map(function (f) { return '<li><span class="tk-dot">•</span> ' + esc(f.m) + "</li>"; }).join("");
+  }
+  function pushFeed(m) { feed.unshift({ m: m, ts: Date.now() }); feed = feed.slice(0, 7); if (view === "stage") renderTicker(); }
+
+  /* ---- hero rotating spotlight (each project gets a projector moment) ---- */
+  function heroSpotMarkup() {
+    var n = state.entries.length; if (!n) return "";
+    if (heroIdx >= n) heroIdx = 0; if (heroIdx < 0) heroIdx = n - 1;
+    var e = state.entries[heroIdx], link = safeURL(e.link);
+    var linkHTML = link ? '<a class="hs-link" href="' + esc(link) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(e.link) + "</a>" : '<span class="hs-link">🔗 ' + esc(e.link) + "</span>";
+    var dots = state.entries.map(function (_, i) { return '<button class="' + (i === heroIdx ? "on" : "") + '" data-i="' + i + '" aria-label="Feature project ' + (i + 1) + '"></button>'; }).join("");
+    return '<div class="hs-eyebrow"><span class="live-dot"></span> ▶ Now showing · project ' + (heroIdx + 1) + " of " + n + "</div>" +
+      '<div class="hs-body"><div class="hs-proj">' + esc(e.proj) + "</div>" + linkHTML +
+      (e.desc ? '<div class="hs-desc">' + esc(e.desc) + "</div>" : "") +
+      '<div class="hs-foot"><span class="hs-team">👥 ' + esc(e.team || "Project team") + "</span>" +
+      '<span class="hs-nav"><button class="js-hprev" aria-label="Previous project">‹</button><button class="js-hnext" aria-label="Next project">›</button></span>' +
+      '<span class="hs-dots">' + dots + "</span></div></div>";
+  }
+  function renderHeroSpot() {
+    var host = $("heroStage"); if (!host) return;
+    var show = state.entries.length > 0 && state.status === "open";
+    host.style.display = show ? "" : "none";
+    if (!show) return;
+    host.innerHTML = heroSpotMarkup();
+    var prev = host.querySelector(".js-hprev"), next = host.querySelector(".js-hnext");
+    if (prev) prev.addEventListener("click", function () { heroIdx = (heroIdx - 1 + state.entries.length) % state.entries.length; renderHeroSpot(); restartHeroTimer(); });
+    if (next) next.addEventListener("click", function () { heroIdx = (heroIdx + 1) % state.entries.length; renderHeroSpot(); restartHeroTimer(); });
+    Array.prototype.forEach.call(host.querySelectorAll(".hs-dots button"), function (b) { b.addEventListener("click", function () { heroIdx = +b.getAttribute("data-i"); renderHeroSpot(); restartHeroTimer(); }); });
+  }
+  function startHeroTimer() {
+    stopHeroTimer(); if (reduceMotion) return;
+    heroTimer = setInterval(function () {
+      if (view !== "stage" || state.status !== "open" || state.entries.length < 2) return;
+      heroIdx = (heroIdx + 1) % state.entries.length; renderHeroSpot();
+    }, 4500);
+  }
+  function stopHeroTimer() { if (heroTimer) { clearInterval(heroTimer); heroTimer = null; } }
+  function restartHeroTimer() { startHeroTimer(); }
+
+  /* ---- new-entry pulse (fixes cross-tab render; formerly undefined -> threw) ---- */
+  function pulseNewEntries(prevN) {
+    for (var i = prevN; i < state.entries.length; i++) { var e = state.entries[i]; pushFeed((e.source === "live" ? "🚀 " : "✨ ") + "“" + e.proj + "” joined the showcase."); }
+    heroIdx = state.entries.length - 1; renderHeroSpot(); restartHeroTimer();
+    var host = $("spotlights");
+    for (var j = prevN; j < state.entries.length; j++) { var e2 = state.entries[j]; var card = host.querySelector('[data-id="' + cssEsc(e2.id) + '"]'); if (card) { card.classList.remove("pulse"); void card.offsetWidth; card.classList.add("pulse"); } }
+    var last = state.entries[state.entries.length - 1]; if (last) toast("New project on the board: " + last.proj);
+  }
+
+  /* ---- add entry ---- */
+  function addEntry(entry, opts) {
+    entry.id = "e" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    entry.ts = Date.now();
+    state.entries.push(entry);
+    save();
+    pushFeed((entry.source === "live" ? "🚀 " : "✨ ") + "“" + entry.proj + "” joined the showcase.");
+    if (view === "stage") { heroIdx = state.entries.length - 1; renderStage(); restartHeroTimer(); if (!(opts && opts.quiet)) toast("New project on the board: " + entry.proj); }
+    return entry;
+  }
+
+  /* ---- auto seed for demo polish ---- */
+  function scheduleSeed() {
+    var pool = DEMO.slice(0).sort(function () { return hash("" + Date.now() + Math.random()) % 2 ? 1 : -1; });
+    var picks = pool.slice(0, 3), i = 0;
+    seedRunning = true;
+    function drip() {
+      if (state.status !== "open" || i >= picks.length) { seedRunning = false; return; }
+      var p = picks[i++];
+      addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" }, { quiet: i > 1 });
+      setTimeout(drip, 1400 + (hash(p.proj) % 900));
+    }
+    setTimeout(drip, 1500); /* let the empty state + QR breathe before entries land */
+    setTimeout(function () { if (state.status === "open") pushFeed("Tip: scan the QR to add a real project alongside the demo entries."); }, 1200);
+  }
+  $("seedBtn").addEventListener("click", function () {
+    if (state.status !== "open") return;
+    var used = {}; state.entries.forEach(function (e) { used[e.proj] = 1; });
+    var avail = DEMO.filter(function (d) { return !used[d.proj]; });
+    var p = avail.length ? avail[hash("" + Date.now()) % avail.length] : DEMO[hash("" + Date.now()) % DEMO.length];
+    addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" });
+  });
+
+  /* ---- QR + operator actions ---- */
+  $("copyUrl").addEventListener("click", function () {
+    var u = submitURL();
+    function ok() { toast("Submit link copied"); }
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(u).then(ok, function () { legacyCopy(u); }); } else legacyCopy(u); } catch (e) { legacyCopy(u); }
+    function legacyCopy(t) { var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy this: " + t); } document.body.removeChild(ta); }
+  });
+  $("openSubmit").addEventListener("click", function () { try { window.open(submitURL(), "_blank", "noopener"); } catch (e) { location.hash = "#submit"; } });
+
+  $("runPanelBtn").addEventListener("click", function () {
+    if (state.status !== "open" || state.entries.length < 3) return;
+    state.status = "judging"; state.calls = 0; save();
+    renderStage(); showJudging(true);
+    pushFeed("Operator started the Copilot judging panel.");
+  });
+  $("resetBtn").addEventListener("click", function () { newRun(); });
+  $("newRunBtn").addEventListener("click", function () { newRun(); });
+  $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on"); });
+
+  function newRun() {
+    state = freshState(); state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
+    save(); feed = []; heroIdx = 0; pushFeed("Fresh showcase — open for submissions.");
+    resetStageUI(); renderStage(); drawStageQR(); scheduleSeed();
+  }
+  function resetStageUI() {
+    stopHeroTimer();
+    $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
+  }
+
+  /* ---- judging sequence ---- */
+  var JUDGES = [{ n: "Copilot · Panel A", ic: "🧭" }, { n: "Copilot · Panel B", ic: "🛠️" }, { n: "Copilot · Panel C", ic: "🎯" }];
+  var REACTIONS = ["clean build", "clear problem", "strong demo", "thoughtful UX", "ambitious scope", "tidy code", "genuinely useful", "nice polish", "well scoped", "solid docs"];
+  function renderJudges() {
+    $("panelJudges").innerHTML = JUDGES.map(function (j) { return '<div class="judge"><div class="dot thinking">' + j.ic + "</div><div class=\"jn\">" + esc(j.n) + '</div><div class="js">median</div></div>'; }).join("");
+  }
+  function pick3(e) { var out = [], seen = {}; for (var k = 0; k < 3; k++) { var r = REACTIONS[hash(e.proj + "|" + e.link + "|" + k) % REACTIONS.length]; if (seen[r]) r = REACTIONS[(hash(e.proj + k) + k * 7) % REACTIONS.length]; seen[r] = 1; out.push(r); } return out; }
+  var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function showJudging(run) {
+    $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on");
+    $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); $("judgeReacts").innerHTML = "";
+    if (!run) { $("judgeNow").innerHTML = "Copilot panel reviewing every project…"; $("judgeAgg").textContent = "Aggregate progress only — scores stay sealed."; $("judgeBar").style.width = "66%"; return; }
+    runJudgeSequence();
+  }
+  function runJudgeSequence() {
+    var entries = state.entries.slice(0), total = entries.length, idx = 0;
+    $("judgeBar").style.width = "0%";
+    var stepMs = reduceMotion ? 120 : Math.max(430, Math.min(900, Math.round(5200 / Math.max(1, total))));
+    (function step() {
+      if (view !== "stage" || state.status !== "judging") return;
+      if (idx >= total) { finishJudging(); return; }
+      var e = entries[idx]; idx++;
+      state.calls = (state.calls || 0) + JUDGES.length; save({ silent: true });
+      $("judgeBar").style.width = Math.round(idx / total * 100) + "%";
+      var picks = pick3(e);
+      $("judgeNow").innerHTML = "Reviewing <b>" + esc(e.proj) + "</b>";
+      $("judgeReacts").innerHTML = JUDGES.map(function (j, ix) { return '<span class="rx-pill"><b>' + j.ic + '</b> <span class="who">' + esc(j.n.replace(/^Copilot · /, "")) + ":</span> " + esc(picks[ix]) + "</span>"; }).join("");
+      $("judgeAgg").textContent = "Project " + idx + " of " + total + " · " + state.calls + " Copilot panel calls · scores sealed";
+      $("cCalls").textContent = state.calls;
+      var dots = document.querySelectorAll("#panelJudges .dot");
+      Array.prototype.forEach.call(dots, function (d, i) { d.classList.remove("done"); d.classList.add("thinking"); setTimeout(function () { d.classList.remove("thinking"); d.classList.add("done"); }, stepMs * (0.4 + i * 0.15)); });
+      setTimeout(step, stepMs);
+    })();
+  }
+  function finishJudging() {
+    Array.prototype.forEach.call(document.querySelectorAll("#panelJudges .dot"), function (d) { d.classList.remove("thinking"); d.classList.add("done"); });
+    $("judgeBar").style.width = "100%";
+    $("judgeNow").innerHTML = "Every project reviewed. Consensus sealed. 🔒";
+    $("judgeReacts").innerHTML = "";
+    $("judgeAgg").textContent = state.entries.length + " projects · " + state.calls + " Copilot panel calls · median consensus locked";
+    $("revealCue").classList.add("on");
+    pushFeed("Copilot panel finished — scores sealed until the reveal.");
+  }
+  Array.prototype.forEach.call(document.querySelectorAll("#cueChoices .cue-btn"), function (b) { b.addEventListener("click", function () { playCue(b.getAttribute("data-cue")); }); });
+  function playCue(type) {
+    if (state.status !== "judging") return;
+    pushFeed("Operator cued the room (" + type + ") — revealing the podium…");
+    if (reduceMotion) { reveal(); return; }
+    var ov = $("cueOverlay"), big = $("cueBig");
+    ov.classList.add("on");
+    function finish() { ov.classList.remove("on"); reveal(); }
+    if (type === "countdown") {
+      var seq = ["3", "2", "1", "🎉"], i = 0;
+      (function tick() { if (i >= seq.length) { finish(); return; } big.className = ""; big.innerHTML = seq[i]; void big.offsetWidth; i++; setTimeout(tick, 620); })();
+    } else if (type === "drumroll") {
+      big.className = "cue-shake"; big.innerHTML = '🥁<span class="cue-sub">Drumroll…</span>'; setTimeout(finish, 1700);
+    } else {
+      big.className = ""; big.innerHTML = '👏<span class="cue-sub">Applause!</span>'; setTimeout(finish, 1500);
+    }
+  }
+  function reveal() {
+    var ranked = rankEntries();
+    state.podium = ranked.slice(0, 3).map(function (r) { return r.e.id; });
+    state.status = "awarded"; save();
+    showPodium(true);
+    pushFeed("🏆 Copilot Builder Award goes to “" + ranked[0].e.proj + "”.");
+  }
+
+  /* ---- podium ---- */
+  var AWARD_META = [
+    { cls: "first", place: "First place", name: "Copilot Builder Award", rosette: "🏆" },
+    { cls: "second", place: "Second place", name: "Builder Silver", rosette: "🥈" },
+    { cls: "third", place: "Third place", name: "Builder Bronze", rosette: "🥉" }
+  ];
+  function whyText(rank, sc) {
+    var lens = sc.topLens.toLowerCase();
+    var base = { 0: "The Copilot panel reached the strongest consensus here — it kept coming back to the project's " + lens + ".", 1: "A close, well-rounded result. The panel especially rated its " + lens + ".", 2: "Rounded out the podium on the strength of its " + lens + "." }[rank];
+    return base;
+  }
+  function levelUp(sc) {
+    var low = Object.keys(sc.per).sort(function (a, b) { return sc.per[a] - sc.per[b]; })[0];
+    var moves = { "Innovation": "Optional next move: push one bolder idea the demo only hints at.", "Build Quality": "Optional next move: add a test or two around the core path and tidy the README.", "Impact": "Optional next move: show the before/after for one real user to sharpen the impact story." };
+    return moves[low] || "Optional next move: sharpen the demo's single clearest win.";
+  }
+  function showPodium(animate) {
+    stopHeroTimer();
+    $("judging").classList.remove("on");
+    $("podiumWrap").classList.add("on");
+    setStepper(); $("cStage").textContent = "Awarded"; $("boardTitle").textContent = "The winners are in"; $("boardSub").textContent = "Chosen by median consensus of a Copilot CLI panel."; $("qrCard").style.opacity = "0.55";
+    var rp = $("runPanelBtn"); rp.disabled = true; $("opHint").textContent = "Showcase complete. Start another run whenever you like.";
+    var ranked = rankEntries(), order = [];
+    if (state.podium && state.podium.length) { state.podium.forEach(function (id) { var f = ranked.filter(function (r) { return r.e.id === id; })[0]; if (f) order.push(f); }); }
+    if (order.length < 3) order = ranked.slice(0, 3);
+    var top3 = order.slice(0, 3);
+    /* visual order: 2nd, 1st, 3rd */
+    var visual = [top3[1], top3[0], top3[2]], rankOf = [1, 0, 2];
+    $("podium").innerHTML = visual.map(function (r, i) { return r ? awardCard(rankOf[i], r) : ""; }).join("");
+    $("growthGrid").innerHTML = top3.map(function (r) { return r ? '<div class="gc"><div class="gp">' + esc(r.e.proj) + '</div><div class="gl">' + levelUp(r.sc) + "</div></div>" : ""; }).join("");
+    var cards = document.querySelectorAll("#podium .award");
+    var delays = { 0: animate ? 900 : 0, 1: animate ? 450 : 0, 2: animate ? 0 : 0 };
+    Array.prototype.forEach.call(cards, function (card) { var rk = +card.getAttribute("data-rank"); setTimeout(function () { card.classList.add("show"); }, reduceMotion ? 0 : delays[rk] || 0); });
+    setTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : (animate ? 1500 : 0));
+    if (animate && !reduceMotion) setTimeout(confetti, 950);
+    renderStage();
+  }
+  function awardCard(rank, r) {
+    var m = AWARD_META[rank], e = r.e, sc = r.sc;
+    return '<div class="award ' + m.cls + '" data-rank="' + rank + '">' +
+      '<div class="rosette">' + m.rosette + "</div>" +
+      '<div class="place">' + m.place + "</div>" +
+      '<div class="aname">' + m.name + "</div>" +
+      '<div class="aproj">' + esc(e.proj) + "</div>" +
+      '<div class="ateam">👥 ' + esc(e.team || "Project team") + "</div>" +
+      '<div class="why"><b>Why it placed:</b> ' + whyText(rank, sc) + "</div>" +
+      '<div class="consensus">🤝 Panel consensus ' + sc.total.toFixed(1) + "/30 · median</div>" +
+      "</div>";
+  }
+
+  /* ---- confetti ---- */
+  function confetti() {
+    var cv = $("confetti"); if (!cv) return; var stage = $("stage");
+    cv.classList.add("on"); cv.width = stage.clientWidth || 1200; cv.height = stage.clientHeight || 700;
+    var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; } var colors = ["#b11f4b", "#f59e0b", "#16a34a", "#0078d4", "#fd8ea1", "#fbbf24", "#d4a017", "#c9ced6", "#d08a52"];
+    var parts = [], N = Math.min(240, Math.max(90, Math.round(cv.width / 6)));
+    for (var i = 0; i < N; i++) parts.push({ x: cv.width * (0.28 + Math.random() * 0.44), y: cv.height * 0.26 + Math.random() * 50, vx: (Math.random() - 0.5) * 8, vy: -7 - Math.random() * 7, g: 0.16 + Math.random() * 0.13, s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.34, c: colors[i % colors.length], life: 0, ttl: 130 + Math.random() * 70, shape: Math.random() < 0.5 ? 0 : 1 });
+    var t0 = performance.now();
+    function frame(now) {
+      ctx.clearRect(0, 0, cv.width, cv.height); var alive = false;
+      for (var i = 0; i < parts.length; i++) { var p = parts[i]; p.life++; if (p.life > p.ttl) continue; alive = true; p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.rot += p.vr; var a = Math.max(0, 1 - p.life / p.ttl); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; if (p.shape === 0) ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); else { ctx.beginPath(); ctx.arc(0, 0, p.s * 0.5, 0, 6.28); ctx.fill(); } ctx.restore(); }
+      if (alive && now - t0 < 4400) cv._raf = requestAnimationFrame(frame); else { ctx.clearRect(0, 0, cv.width, cv.height); cv.classList.remove("on"); }
+    }
+    if (cv._raf) cancelAnimationFrame(cv._raf); cv._raf = requestAnimationFrame(frame);
+  }
+
+  /* ---- submit view ---- */
+  function normalizeLink(raw) {
+    raw = (raw || "").trim();
+    if (!raw) return null;
+    if (/^[\w.-]+\/[\w.-]+$/.test(raw) && raw.indexOf(" ") === -1 && raw.indexOf(".") === -1) return "https://github.com/" + raw; /* owner/repo shorthand */
+    if (!/^https?:\/\//i.test(raw)) raw = "https://" + raw;
+    return safeURL(raw);
+  }
+  function deriveProject(link) {
+    var u = null; try { u = new URL(link, location.href); } catch (e) {}
+    if (u && /(^|\.)github\.com$/i.test(u.hostname)) {
+      var parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length >= 2) return { proj: parts[1], team: parts[0] + " team" };
+      if (parts.length === 1) return { proj: parts[0], team: parts[0] + " team" };
+    }
+    if (u) { var seg = u.pathname.split("/").filter(Boolean); var last = seg.length ? seg[seg.length - 1] : u.hostname; last = last.replace(/\.(html?|php|aspx?)$/i, ""); return { proj: last || u.hostname, team: "Project team" }; }
+    return { proj: link, team: "Project team" };
+  }
+  /* ---- shared submit (used by #submit route AND the Try-it-yourself modal) ---- */
+  function closedMarkup() {
+    var m = { idle: ["🕓", "The showcase hasn’t started yet", "Submissions open when the host launches the experience."], judging: ["🔒", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."], awarded: ["🎉", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"] }[state.status] || ["🕓", "Not open yet", "Check back soon."];
+    return '<div class="submit-closed"><div class="big">' + m[0] + '</div><h2>' + m[1] + "</h2><p>" + m[2] + "</p></div>";
+  }
+  function successMarkup(entry) {
+    return '<div class="submit-success"><div class="big">🎉</div><h2>You’re on the board!</h2>' +
+      '<div class="done-proj"><div class="p">' + esc(entry.proj) + "</div>" +
+      '<div class="l">🔗 ' + esc(entry.link) + "</div>" +
+      '<div class="t">👥 ' + esc(entry.team) + "</div></div>" +
+      '<button class="btn btn-primary js-again" style="width:100%;margin-top:18px">Submit another project</button></div>';
+  }
+  function formFieldsMarkup() {
+    return '<form novalidate>' +
+      '<div class="field js-flink"><label>Project or demo link <span class="opt">· required</span></label><input class="js-link" type="text" inputmode="url" autocomplete="off" placeholder="https://… or owner/repo" /><div class="err">Enter a valid http(s) link or a GitHub owner/repo.</div></div>' +
+      '<div class="field"><label>Project name <span class="opt">· optional, we’ll derive it</span></label><input class="js-proj" type="text" autocomplete="off" placeholder="e.g. Aurora Recall" /></div>' +
+      '<div class="field"><label>Team or builder <span class="opt">· optional</span></label><input class="js-team" type="text" autocomplete="off" placeholder="e.g. Team Aurora" /></div>' +
+      '<div class="field"><label>One line: what does it do? <span class="opt">· optional</span></label><textarea class="js-desc" maxlength="140" placeholder="A retrieval agent that resurfaces missed follow-ups."></textarea></div>' +
+      '<button class="btn btn-primary" type="submit">Submit to the showcase →</button>' +
+      "</form>";
+  }
+  function renderSubmitInto(container, ctx, opts) {
+    opts = opts || {};
+    if (state.status !== "open") { ctx.done = false; ctx.entry = null; container.innerHTML = closedMarkup(); return; }
+    if (ctx.done && ctx.entry) {
+      container.innerHTML = successMarkup(ctx.entry);
+      var ag = container.querySelector(".js-again"); if (ag) ag.addEventListener("click", function () { ctx.done = false; ctx.entry = null; renderSubmitInto(container, ctx, opts); });
+      return;
+    }
+    container.innerHTML = (opts.heading || "") + formFieldsMarkup();
+    var form = container.querySelector("form"), fLink = container.querySelector(".js-flink"), inLink = container.querySelector(".js-link");
+    form.addEventListener("submit", function (ev) {
+      ev.preventDefault();
+      var link = normalizeLink(inLink.value);
+      if (!link) { fLink.classList.add("invalid"); inLink.focus(); return; }
+      fLink.classList.remove("invalid");
+      if (state.status !== "open") { renderSubmitInto(container, ctx, opts); return; }
+      var derived = deriveProject(link);
+      var proj = (container.querySelector(".js-proj").value || "").trim() || derived.proj;
+      var team = (container.querySelector(".js-team").value || "").trim() || derived.team;
+      var desc = (container.querySelector(".js-desc").value || "").trim();
+      addEntry({ proj: proj, link: link, team: team, desc: desc, source: "live" });
+      ctx.done = true; ctx.entry = { proj: proj, link: link, team: team };
+      renderSubmitInto(container, ctx, opts);
+    });
+    inLink.addEventListener("input", function () { fLink.classList.remove("invalid"); });
+  }
+  var submitViewCtx = { done: false, entry: null }, modalCtx = { done: false, entry: null };
+  function renderSubmit() { renderSubmitInto($("submitPanel"), submitViewCtx, { heading: '<span class="badge"><span class="badge-dot"></span> Live · open for submissions</span><h1>Add your project</h1><p class="sh-sub">Paste a link to your project or demo. It appears on the big screen right away — project first.</p>' }); }
+
+  /* ---- Try-it-yourself modal (leader demos the submit flow, no phone) ---- */
+  function showTryModal() {
+    modalCtx.done = false; modalCtx.entry = null;
+    renderSubmitInto($("tryBody"), modalCtx, { heading: '<p class="sh-sub" style="margin:0 0 6px">Add a project from the leader’s screen — it lands on the board instantly, exactly like a phone submission.</p>' });
+    var m = $("tryModal"); m.classList.add("on"); m.setAttribute("aria-hidden", "false");
+    var f = $("tryBody").querySelector(".js-link"); if (f) try { f.focus(); } catch (e) {}
+  }
+  function hideTryModal() { var m = $("tryModal"); m.classList.remove("on"); m.setAttribute("aria-hidden", "true"); }
+  $("tryBtn").addEventListener("click", showTryModal);
+  $("tryClose").addEventListener("click", hideTryModal);
+  $("tryModal").addEventListener("click", function (ev) { if (ev.target === $("tryModal")) hideTryModal(); });
+  document.addEventListener("keydown", function (ev) { if (ev.key === "Escape" && $("tryModal").classList.contains("on")) hideTryModal(); });
+  $("backToShow").addEventListener("click", function (ev) { ev.preventDefault(); location.hash = ""; setView("app"); renderResume(); });
+
+  /* ---- init ---- */
+  function boot() {
+    var h = (location.hash || "").toLowerCase();
+    if (h.indexOf("submit") !== -1) { setView("submit"); renderSubmit(); }
+    else if (h.indexOf("stage") !== -1 && state.status !== "idle") { enterStage(); }
+    else { setView("app"); renderResume(); }
+    applyThemeIcon();
+  }
+  window.addEventListener("hashchange", function () {
+    var h = (location.hash || "").toLowerCase();
+    if (h.indexOf("submit") !== -1) { setView("submit"); renderSubmit(); }
+    else if (h === "" || h === "#") { if (view !== "stage") { setView("app"); renderResume(); } }
+  });
+  boot();
+})();
+</script>
+</body>
+</html>
