@@ -12,69 +12,86 @@
       var p = new URLSearchParams(location.search).get("scoutTheme");
       var stored = null;
       try { stored = localStorage.getItem("cbs_theme"); } catch (e) {}
-      var theme = p || stored || (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      document.documentElement.setAttribute("data-theme", theme === "dark" ? "dark" : "light");
-    } catch (e) { document.documentElement.setAttribute("data-theme", "light"); }
+      var theme = p || stored || "dark";
+      document.documentElement.setAttribute("data-theme", theme === "light" ? "light" : "dark");
+    } catch (e) { document.documentElement.setAttribute("data-theme", "dark"); }
   })();
 </script>
 <style>
 :root {
-  color-scheme: light;
-  --cp-bg: #f7f4ef;
-  --cp-bg-elevated: #fcfbf8;
-  --cp-surface: #ffffff;
-  --cp-surface-soft: #f5f5f5;
-  --cp-border: #dedede;
-  --cp-border-strong: #919191;
-  --cp-text: #242424;
-  --cp-text-muted: #5c5c5c;
-  --cp-text-soft: #6f6f6f;
-  --cp-accent: #b11f4b;
-  --cp-accent-hover: #9a1a41;
-  --cp-accent-soft: rgba(177, 31, 75, 0.08);
-  --cp-accent-fg: #ffffff;
-  --cp-success: #16a34a;
-  --cp-danger: #dc2626;
-  --cp-warning: #f59e0b;
-  --cp-link: #0078d4;
-  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
-  --cp-overlay: rgba(255, 255, 255, 0.8);
-  --cp-panel: rgba(255, 255, 255, 0.86);
-  --cp-panel-strong: rgba(255, 255, 255, 0.96);
-  --cp-sheen: rgba(255, 255, 255, 0.55);
-  --cp-highlight: rgba(177, 31, 75, 0.12);
-  --cp-gold: #d4a017;
-  --cp-silver: #8a8f98;
-  --cp-bronze: #b06a3a;
-}
-html[data-theme="dark"] {
   color-scheme: dark;
-  --cp-bg: #3d3b3a;
-  --cp-bg-elevated: #343231;
-  --cp-surface: #292929;
-  --cp-surface-soft: #2e2e2e;
-  --cp-border: #474747;
-  --cp-border-strong: #5f5f5f;
-  --cp-text: #dedede;
-  --cp-text-muted: #919191;
-  --cp-text-soft: #b0b0b0;
-  --cp-accent: #fd8ea1;
-  --cp-accent-hover: #fb7b91;
-  --cp-accent-soft: rgba(253, 142, 161, 0.14);
-  --cp-accent-fg: #1a1a1a;
-  --cp-success: #4ade80;
-  --cp-danger: #f87171;
-  --cp-warning: #fbbf24;
-  --cp-link: #4da6ff;
-  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
-  --cp-overlay: rgba(41, 41, 41, 0.88);
-  --cp-panel: rgba(41, 41, 41, 0.72);
-  --cp-panel-strong: rgba(41, 41, 41, 0.96);
-  --cp-sheen: rgba(255, 255, 255, 0.04);
-  --cp-highlight: rgba(253, 142, 161, 0.12);
-  --cp-gold: #f2c94c;
-  --cp-silver: #c9ced6;
-  --cp-bronze: #d08a52;
+  --radius: 0.5rem;
+
+  /* shadcn/ui token layer — dark is the default surface (TechCrunch editorial) */
+  --background: 0 0% 4.5%;
+  --foreground: 0 0% 96%;
+  --card: 0 0% 7.5%;
+  --card-foreground: 0 0% 96%;
+  --popover: 0 0% 6%;
+  --popover-foreground: 0 0% 96%;
+  --primary: 156 90% 42%;            /* TechCrunch green (#00A562), brightened for dark */
+  --primary-foreground: 150 65% 6%;  /* near-black on green = crisp, editorial */
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 96%;
+  --muted: 0 0% 12.5%;
+  --muted-foreground: 0 0% 64%;
+  --accent: 0 0% 15%;
+  --accent-foreground: 0 0% 96%;
+  --destructive: 0 72% 55%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 0 0% 16%;
+  --input: 0 0% 20%;
+  --ring: 156 90% 42%;
+
+  /* --cp-* compatibility layer mapped onto shadcn tokens (re-resolves per active theme) */
+  --cp-bg: hsl(var(--background));
+  --cp-bg-elevated: hsl(var(--card));
+  --cp-surface: hsl(var(--card));
+  --cp-surface-soft: hsl(var(--muted));
+  --cp-border: hsl(var(--border));
+  --cp-border-strong: hsl(var(--input));
+  --cp-text: hsl(var(--foreground));
+  --cp-text-muted: hsl(var(--muted-foreground));
+  --cp-text-soft: hsl(var(--muted-foreground));
+  --cp-accent: hsl(var(--primary));
+  --cp-accent-hover: hsl(var(--primary) / 0.88);
+  --cp-accent-soft: hsl(var(--primary) / 0.16);
+  --cp-accent-fg: hsl(var(--primary-foreground));
+  --cp-success: hsl(142 71% 45%);
+  --cp-danger: hsl(var(--destructive));
+  --cp-warning: hsl(45 98% 51%);            /* TechCrunch amber (#FDC006) */
+  --cp-link: hsl(var(--primary));
+  --cp-shadow: 0 10px 30px -14px hsl(0 0% 0% / 0.6);
+  --cp-overlay: hsl(var(--background) / 0.85);
+  --cp-panel: hsl(var(--card) / 0.82);
+  --cp-panel-strong: hsl(var(--card) / 0.97);
+  --cp-sheen: hsl(0 0% 100% / 0.05);
+  --cp-highlight: hsl(var(--primary) / 0.12);
+  --cp-gold: hsl(45 98% 51%);               /* amber gold for the Copilot Builder Award */
+  --cp-silver: hsl(220 10% 78%);
+  --cp-bronze: hsl(24 55% 58%);
+}
+html[data-theme="light"] {
+  color-scheme: light;
+  --background: 0 0% 100%;
+  --foreground: 0 0% 9%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 9%;
+  --primary: 156 100% 27%;            /* deeper green for contrast on white */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 96%;
+  --secondary-foreground: 0 0% 9%;
+  --muted: 0 0% 96.5%;
+  --muted-foreground: 0 0% 40%;
+  --accent: 0 0% 95%;
+  --accent-foreground: 0 0% 9%;
+  --destructive: 0 72% 48%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 90%;
+  --input: 0 0% 87%;
+  --ring: 156 100% 27%;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -101,7 +118,7 @@ body::before {
 a { color: var(--cp-link); text-decoration: none; }
 a:hover { text-decoration: underline; }
 button { font-family: inherit; cursor: pointer; }
-:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 2px; border-radius: 6px; }
+:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; border-radius: var(--radius); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 
 /* ---------- shared primitives ---------- */
@@ -109,8 +126,9 @@ button { font-family: inherit; cursor: pointer; }
 .badge {
   display: inline-flex; align-items: center; gap: 8px;
   background: var(--cp-accent-soft); color: var(--cp-accent);
+  border: 1px solid hsl(var(--primary) / 0.32);
   font-size: 12.5px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
-  padding: 7px 14px; border-radius: 0.625rem; width: fit-content;
+  padding: 6px 13px; border-radius: 999px; width: fit-content;
 }
 .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-accent); animation: pulse-dot 2s ease-in-out infinite; }
 @keyframes pulse-dot { 0%,100% { opacity: 1; transform: scale(1);} 50% { opacity: .5; transform: scale(.8);} }
@@ -118,7 +136,7 @@ button { font-family: inherit; cursor: pointer; }
 
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 10px;
-  border: 1px solid transparent; border-radius: 0.75rem; padding: 13px 22px;
+  border: 1px solid transparent; border-radius: var(--radius); padding: 13px 22px;
   font-size: 15.5px; font-weight: 700; letter-spacing: 0.01em; color: var(--cp-text);
   background: var(--cp-surface); border-color: var(--cp-border);
   transition: transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
@@ -1384,7 +1402,7 @@ var QRClean = (function () {
   function confetti() {
     var cv = $("confetti"); if (!cv) return; var stage = $("stage");
     cv.classList.add("on"); cv.width = stage.clientWidth || 1200; cv.height = stage.clientHeight || 700;
-    var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; } var colors = ["#b11f4b", "#f59e0b", "#16a34a", "#0078d4", "#fd8ea1", "#fbbf24", "#d4a017", "#c9ced6", "#d08a52"];
+    var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; } var colors = ["#00A562", "#FDC006", "#00d67f", "#22c55e", "#e5e7eb", "#f59e0b", "#facc15", "#c9ced6", "#d08a52"];
     var parts = [], N = Math.min(240, Math.max(90, Math.round(cv.width / 6)));
     for (var i = 0; i < N; i++) parts.push({ x: cv.width * (0.28 + Math.random() * 0.44), y: cv.height * 0.26 + Math.random() * 50, vx: (Math.random() - 0.5) * 8, vy: -7 - Math.random() * 7, g: 0.16 + Math.random() * 0.13, s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.34, c: colors[i % colors.length], life: 0, ttl: 130 + Math.random() * 70, shape: Math.random() < 0.5 ? 0 : 1 });
     var t0 = performance.now();
