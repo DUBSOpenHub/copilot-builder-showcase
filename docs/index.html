@@ -237,12 +237,7 @@ button { font-family: inherit; cursor: pointer; }
 .mini-col.c1 { padding-top: 20px; border-color: color-mix(in srgb, var(--cp-gold) 55%, var(--cp-border)); }
 .mini-col.c2 { border-color: color-mix(in srgb, var(--cp-silver) 45%, var(--cp-border)); }
 .mini-col.c3 { border-color: color-mix(in srgb, var(--cp-bronze) 45%, var(--cp-border)); }
-.mini-spot { margin-top: 12px; display: flex; gap: 8px; }
-.mini-spot .s { flex: 1; height: 40px; border-radius: 0.55rem; border: 1px solid var(--cp-border); background: var(--cp-bg-elevated);
-  display: grid; place-items: center; font-size: 10.5px; font-weight: 700; color: var(--cp-text-soft); overflow: hidden; position: relative; }
-.mini-spot .s::after { content:""; position:absolute; inset:0; background: linear-gradient(120deg, transparent, var(--cp-sheen), transparent); transform: translateX(-120%); animation: sheen 3.2s ease-in-out infinite; }
-.mini-spot .s:nth-child(2)::after { animation-delay: .5s; } .mini-spot .s:nth-child(3)::after { animation-delay: 1s; }
-@keyframes sheen { 0%{ transform: translateX(-120%);} 55%,100%{ transform: translateX(120%);} }
+
 
 /* ---------- generic section ---------- */
 .section { padding: clamp(40px, 6vw, 74px) 0; }
@@ -591,11 +586,19 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 }
 
 /* ---- dead-simple intake + mode clarity ---- */
-.paste-intake { margin: 16px auto 0; max-width: 540px; text-align: left; }
-.paste-intake textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 76px; padding: 12px 14px; border-radius: 0.7rem; border: 1px solid var(--cp-border-strong); background: var(--cp-surface); color: var(--cp-text); font: inherit; font-size: 14px; line-height: 1.5; }
-.paste-intake textarea:focus { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
-.paste-actions { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-.paste-or { color: var(--cp-text-muted); font-size: 13px; }
+.intake-lead { color: var(--cp-text); font-size: 15px; font-weight: 600; margin-top: 4px; }
+.intake-ways { display: flex; align-items: stretch; justify-content: center; gap: 4px; margin: 16px auto 0; max-width: 720px; text-align: left; flex-wrap: wrap; }
+.iway { flex: 1 1 280px; min-width: 258px; border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 0.9rem; padding: 16px 16px 18px; }
+.iway-head { display: flex; align-items: center; gap: 9px; font-size: 15px; font-weight: 800; color: var(--cp-text); }
+.iway-num { width: 24px; height: 24px; border-radius: 50%; background: var(--cp-accent); color: var(--cp-accent-fg); font-size: 13px; font-weight: 800; display: grid; place-items: center; flex: none; }
+.iway-note { color: var(--cp-text-muted); font-size: 13px; margin: 9px 0 12px; line-height: 1.45; }
+.iway textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 84px; padding: 11px 13px; border-radius: 0.6rem; border: 1px solid var(--cp-border-strong); background: var(--cp-bg-elevated); color: var(--cp-text); font: inherit; font-size: 13.5px; line-height: 1.5; }
+.iway textarea:focus { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+.iway .btn-primary { width: 100%; margin-top: 10px; }
+.iway-sep { display: flex; align-items: center; justify-content: center; padding: 0 4px; }
+.iway-sep span { font-size: 11.5px; font-weight: 800; letter-spacing: 0.08em; color: var(--cp-text-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 4px 9px; background: var(--cp-bg); }
+.iway-point { margin-top: 10px; font-size: 28px; color: var(--cp-accent); letter-spacing: 4px; line-height: 1; }
+@media (max-width: 720px) { .iway-sep { width: 100%; padding: 6px 0; } }
 .qr-warn { margin-top: 10px; padding: 9px 11px; border-radius: 8px; border: 1px solid var(--cp-warning); background: var(--cp-accent-soft); color: var(--cp-text); font-size: 12px; line-height: 1.45; text-align: left; }
 .hero-cta-sub { margin-top: 14px; font-size: 13px; }
 .hero-cta-sub a { color: var(--cp-text-muted); text-decoration: none; border-bottom: 1px dashed var(--cp-border-strong); padding-bottom: 1px; }
@@ -663,9 +666,6 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
             <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div></div>
             <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">Copilot Builder Award</div></div>
             <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div></div>
-          </div>
-          <div class="mini-spot">
-            <div class="s">PixelForge</div><div class="s">LatencyLab</div><div class="s">+ live entries</div>
           </div>
         </div>
       </div>
@@ -805,14 +805,20 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div id="spotlights" class="spotlights"></div>
 
       <div id="boardEmpty" class="board-empty">
-        <div class="big">📥</div>
         <h3 id="emptyTitle">Add projects to begin</h3>
-        <p id="emptySub">Two ways to add projects: <b>paste the links</b> here, or have <b>participants scan the QR</b> to add their own.</p>
-        <div id="pasteIntake" class="paste-intake">
-          <textarea id="pasteLinks" rows="3" placeholder="Paste project links — one per line&#10;https://github.com/owner/repo    ·    owner/repo    ·    https://your-demo.app"></textarea>
-          <div class="paste-actions">
+        <p id="emptySub" class="intake-lead">Two ways to add projects — use either one:</p>
+        <div id="pasteIntake" class="intake-ways">
+          <div class="iway">
+            <div class="iway-head"><span class="iway-num">1</span> Drop the links</div>
+            <p class="iway-note">You paste the project links — one per line.</p>
+            <textarea id="pasteLinks" rows="3" placeholder="https://github.com/owner/repo&#10;owner/repo&#10;https://your-demo.app"></textarea>
             <button class="btn btn-primary" id="addLinksBtn">＋&nbsp; Add these projects</button>
-            <span class="paste-or">— or participants scan the QR&nbsp;→</span>
+          </div>
+          <div class="iway-sep" aria-hidden="true"><span>OR</span></div>
+          <div class="iway">
+            <div class="iway-head"><span class="iway-num">2</span> Participants scan the QR</div>
+            <p class="iway-note">Builders scan the code (shown on the right) and add their own project from a phone.</p>
+            <div class="iway-point" aria-hidden="true">▦&nbsp;→</div>
           </div>
         </div>
       </div>
@@ -1130,12 +1136,14 @@ var QRClean = (function () {
   /* ---- landing actions ---- */
   function launch(mode) {
     var m = (mode === "demo") ? "demo" : "live";
-    if (state.status === "idle") {
+    var resumable = (state.status === "open" || state.status === "judging") && state.mode === m;
+    if (!resumable) {
       state = freshState();
       state.mode = m;
       state.status = "open";
       state.runId = "run-" + Date.now().toString(36);
       state.startedAt = Date.now();
+      seedRunning = false;
       save();
       feed = [];
       pushFeed(m === "demo"
@@ -1192,7 +1200,7 @@ var QRClean = (function () {
       $("emptyTitle").textContent = isDemo ? "Warming up the demo…" : "Add projects to begin";
       $("emptySub").textContent = isDemo
         ? "Illustrative sample projects are rolling in. You can also scan the QR to add a real one."
-        : "Two ways to add projects: paste the links here, or have participants scan the QR to add their own.";
+        : "Two ways to add projects — use either one:";
       $("pasteIntake").style.display = isDemo ? "none" : "";
     }
     /* operator */
