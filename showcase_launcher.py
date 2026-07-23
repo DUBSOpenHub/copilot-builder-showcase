@@ -37,12 +37,19 @@ Copilot Builder Showcase
 Start a showcase:
   showcase owner/project-one owner/project-two
   showcase --file submissions.txt
+  showcase | Team | Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes
 
 Try the built-in practice showcase:
   showcase --demo
 
 Check setup:
   showcase doctor
+
+More commands:
+  showcase replay <run-id>
+  showcase validate <run-id>
+  showcase feedback <run-id>
+  showcase present <run-id> --operator
 
 Paste only project links to begin. Team names and extra details are optional.
 """
@@ -69,6 +76,10 @@ def collect_project_links(
     input_fn = input_fn or input
     output = output or sys.stdout
     print("Paste project or demo links, one per line.", file=output)
+    print(
+        "Optional: URL | Team | Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes",
+        file=output,
+    )
     print("Press Return on an empty line to start the showcase.", file=output)
     links: List[str] = []
     while True:

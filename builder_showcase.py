@@ -678,7 +678,10 @@ def _suspense_enabled(args: Optional[argparse.Namespace] = None) -> bool:
         return False
     if getattr(args, "reduced_motion", False):
         return False
-    if os.environ.get("CBS_REDUCED_MOTION", "").lower() in {"1", "true", "yes", "on"}:
+    if os.environ.get(
+        "CBS_REDUCED_MOTION",
+        os.environ.get("HJ_REDUCED_MOTION", ""),
+    ).lower() in {"1", "true", "yes", "on"}:
         return False
     color_setting = os.environ.get("CBS_COLOR", os.environ.get("HJ_COLOR", ""))
     return sys.stdout.isatty() or color_setting.lower() == "always"

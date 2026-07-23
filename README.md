@@ -25,9 +25,10 @@ two minutes.
 >    ```bash
 >    showcase
 >    ```
+>    If that command is not on your PATH yet, run `~/.local/bin/showcase` on macOS/Linux or `$HOME\.local\bin\showcase.exe` on Windows.
 > 4. Paste project or demo links, one per line. Press Return on an empty line.
 >
-> *Requires Git, an authenticated GitHub CLI, and Python 3.11+. Official judging uses an authenticated GitHub Copilot CLI.*
+> *Requires Git and Python 3.11+ for practice installs. The one-line install prefers an authenticated GitHub CLI when available. Official judging uses an authenticated GitHub Copilot CLI.*
 
 ![Copilot Builder Showcase live reveal with podium and Top-3 growth cards](docs/images/builder-showcase-demo.svg)
 
@@ -402,6 +403,7 @@ showcase replay <run-id>
 showcase validate <run-id>
 showcase feedback <run-id>
 showcase doctor
+showcase present <run-id> --operator
 ```
 
 Private feedback includes what judges liked, an actionable next step, an
@@ -497,8 +499,8 @@ showcase
 ```
 
 The skill checks whether the command is installed, asks permission before
-installing anything, runs `showcase doctor`, and opens exactly one real macOS
-Terminal for the audience experience.
+installing anything, runs `showcase doctor`, and opens exactly one real terminal
+window for the audience experience.
 
 ---
 
@@ -515,6 +517,7 @@ Terminal for the audience experience.
 | `showcase validate <run-id>` | Verify bundle hashes and seals. |
 | `showcase feedback <run-id>` | Write private per-project feedback. |
 | `showcase doctor` | Check setup, panel connection, and bundle health. |
+| `showcase present <run-id> --operator` | Inspect stored results after awards. |
 | `showcase tui <run-id> --projector` | Open the optional diagnostic monitor. |
 
 The installer also preserves `hackathon` and `hackathon-judge` as compatibility

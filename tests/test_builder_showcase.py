@@ -380,6 +380,15 @@ class TestShowtimeDelight:
 
         sleep.assert_not_called()
 
+    def test_hj_reduced_motion_env_alias_skips_showtime_pauses(self):
+        args = argparse.Namespace(showtime=True, no_suspense=False, reduced_motion=False)
+
+        with patch.dict(os.environ, {"HJ_REDUCED_MOTION": "true"}, clear=True):
+            with patch.object(cbp.time, "sleep") as sleep:
+                cbp._showtime_pause(args, 1.0)
+
+        sleep.assert_not_called()
+
     def test_terminal_wrapper_keeps_words_inside_the_requested_width(self):
         text = (
             "This project stood out for reconciling scattered updates across "
