@@ -1,93 +1,147 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="900" viewBox="0 0 1280 900" role="img" aria-labelledby="title desc">
-  <title id="title">Copilot Builder Showcase live demo screenshot</title>
-  <desc id="desc">A terminal-style screenshot of the live showcase reveal with podium winners, audience cue, and Top-3 growth cards.</desc>
+  <title id="title">Copilot Builder Showcase big-screen award reveal</title>
+  <desc id="desc">The live big-screen reveal: a three-place builder podium — Copilot Builder Award, Builder Silver, and Builder Bronze — with per-lens Copilot panel scores, shown on a dark violet stage. Illustrative results.</desc>
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#3b3a39"/>
-      <stop offset="100%" stop-color="#1f1f1f"/>
+    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#9c5ff2" stop-opacity="0.22"/>
+      <stop offset="45%" stop-color="#7c3aed" stop-opacity="0.10"/>
+      <stop offset="100%" stop-color="#9c5ff2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ray" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#b98cff" stop-opacity="0.20"/>
+      <stop offset="100%" stop-color="#b98cff" stop-opacity="0"/>
     </linearGradient>
-    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#2a2a2a"/>
-      <stop offset="100%" stop-color="#232323"/>
+    <linearGradient id="riser1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#241a3d"/>
+      <stop offset="100%" stop-color="#100c1a"/>
+    </linearGradient>
+    <linearGradient id="riser2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c1830"/>
+      <stop offset="100%" stop-color="#0f0e16"/>
+    </linearGradient>
+    <linearGradient id="bar" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9c5ff2"/>
+      <stop offset="100%" stop-color="#fcbf08"/>
+    </linearGradient>
+    <linearGradient id="barGold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fcbf08"/>
+      <stop offset="100%" stop-color="#ffe08a"/>
     </linearGradient>
     <style>
-      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
-      .title { font: 700 31px/1.2 sans-serif; fill: #b9b9b9; letter-spacing: .3px; }
-      .chrome { fill: #2f2f2f; stroke: #474747; stroke-width: 1; }
-      .pill { fill: #3b2b14; stroke: #f0b74d; stroke-width: 1.2; }
-      .pillText { font: 700 18px/1 sans-serif; fill: #ffd166; letter-spacing: .8px; }
-      .headline { font: 700 26px/1.2 "Menlo", monospace; fill: #ffca3a; }
-      .subhead { font: 700 18px/1.2 "Menlo", monospace; fill: #55b6ff; }
-      .body { font: 700 16px/1.35 "Menlo", monospace; fill: #f2f2f2; }
-      .pink { fill: #ff89a9; }
-      .green { fill: #5be38a; }
-      .yellow { fill: #ffca3a; }
-      .muted { fill: #a8a8a8; }
-      .cardStroke { stroke: #ff89a9; stroke-width: 2.5; fill: none; }
-      .cardInner { stroke: #ff89a9; stroke-width: 2; fill: rgba(0,0,0,0.12); }
-      .accentBlue { stroke: #55b6ff; stroke-width: 3; }
-      .shadow { filter: drop-shadow(0 12px 30px rgba(0,0,0,.35)); }
+      .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+      .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+      .eyebrow { font: 800 13px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: 2px; fill: #b98cff; }
+      .statuslbl { font: 700 12px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: .4px; fill: #a3a3a3; }
+      .headline { font: 800 33px/1.15 -apple-system, "Segoe UI", sans-serif; fill: #f6f5f8; letter-spacing: .2px; }
+      .sub { font: 500 16px/1.3 -apple-system, "Segoe UI", sans-serif; fill: #a19bb0; }
+      .proj { font: 800 25px/1 -apple-system, "Segoe UI", sans-serif; fill: #f6f5f8; }
+      .proj2 { font: 800 20px/1 -apple-system, "Segoe UI", sans-serif; fill: #ece9f2; }
+      .awardlbl { font: 800 12px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: 1.6px; fill: #fcbf08; }
+      .silverlbl { font: 800 11px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: 1.4px; fill: #c9c6d4; }
+      .bronzelbl { font: 800 11px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: 1.4px; fill: #c9a583; }
+      .rnum { font: 900 88px/1 -apple-system, "Segoe UI", sans-serif; fill: #6a5a99; opacity: .55; }
+      .rnum2 { font: 900 66px/1 -apple-system, "Segoe UI", sans-serif; fill: #514a6b; opacity: .5; }
+      .lensname { font: 700 11px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: .4px; fill: #8f8aa0; text-transform: uppercase; }
+      .lensval { font: 800 13px/1 ui-monospace, Menlo, monospace; fill: #f0eef5; }
+      .lenshdr { font: 800 12px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: .6px; fill: #b98cff; }
+      .medal { font-size: 58px; }
+      .medal-s { font-size: 44px; }
+      .foot { font: 600 13px/1 -apple-system, "Segoe UI", sans-serif; letter-spacing: .3px; fill: #7d7890; }
+      .emoji { font-family: "Apple Color Emoji", "Segoe UI Emoji", sans-serif; }
     </style>
   </defs>
 
-  <rect x="0" y="0" width="1280" height="900" rx="24" fill="#141414"/>
-  <g class="shadow">
-    <rect x="50" y="28" width="1180" height="850" rx="18" fill="url(#bg)" stroke="#4d4d4d" stroke-width="1.5"/>
-    <rect x="50" y="28" width="1180" height="61" rx="18" class="chrome"/>
-    <circle cx="81" cy="58" r="7" fill="#ff6961"/>
-    <circle cx="107" cy="58" r="7" fill="#f8c54b"/>
-    <circle cx="133" cy="58" r="7" fill="#2ecc71"/>
-    <text x="640" y="64" text-anchor="middle" class="title">Copilot Builder Showcase — PRACTICE SHOW — ILLUSTRATIVE RESULTS</text>
-    <g transform="translate(1116,42)">
-      <rect class="pill" x="0" y="0" width="96" height="23" rx="11.5"/>
-      <text class="pillText" x="48" y="16" text-anchor="middle">REDUCED</text>
-    </g>
+  <!-- backdrop -->
+  <rect x="0" y="0" width="1280" height="900" fill="#08080a"/>
+  <rect x="24" y="24" width="1232" height="852" rx="22" fill="#0c0b10" stroke="#241d38" stroke-width="1.5"/>
+  <ellipse cx="640" cy="470" rx="620" ry="470" fill="url(#glow)"/>
 
-    <rect x="84" y="123" width="1112" height="3" fill="#55b6ff"/>
-    <text x="102" y="167" class="subhead">▶ ACT IV — AWARD REVEAL</text>
-    <text x="102" y="202" class="headline">PRACTICE SHOW — ILLUSTRATIVE RESULTS</text>
-    <rect x="84" y="218" width="1112" height="3" fill="#55b6ff"/>
-
-    <text x="84" y="255" class="body">
-      <tspan x="84" dy="0">✉  The envelopes are sealed. The room is waiting.</tspan>
-      <tspan x="84" dy="28" class="pink">🎙  Sideline report: the panel is locked, the audience is live, and the suspense is real.</tspan>
-      <tspan x="84" dy="28" class="yellow">🥁  3... 2... 1... GO!  The final result is about to hit.</tspan>
-      <tspan x="84" dy="28" class="muted">📣  Audience cue: DRUMROLL + APPLAUSE</tspan>
-    </text>
-
-    <text x="84" y="396" class="body">
-      <tspan x="84" dy="0">🏆  GOLD — FIRST PLACE</tspan>
-      <tspan x="84" dy="29" class="yellow">    Project: demo-day/skillbridge</tspan>
-      <tspan x="84" dy="25" class="green">    Built by: Team Lift</tspan>
-      <tspan x="84" dy="25" class="pink">    Copilot-next: generate an acceptance-test checklist for onboarding.</tspan>
-      <tspan x="84" dy="25" class="green">    Growth: one focused next step, one Copilot move, one evidence-based note.</tspan>
-    </text>
-
-    <g transform="translate(84,540)">
-      <rect x="0" y="0" width="1112" height="218" rx="4" class="cardStroke"/>
-      <rect x="4" y="4" width="1104" height="210" rx="3" class="cardInner"/>
-      <text x="24" y="38" class="body yellow">TOP-3 GROWTH CARDS</text>
-      <line x1="22" y1="50" x2="1090" y2="50" class="accentBlue"/>
-
-      <text x="26" y="84" class="body">
-        <tspan x="26" dy="0">1. Aurora — tighten the onboarding walkthrough.</tspan>
-        <tspan x="26" dy="24" class="pink">   Copilot-used-well: scaffolded the workflow start with Copilot Chat.</tspan>
-        <tspan x="26" dy="24" class="green">   Next move: turn the best moment into one testable release slice.</tspan>
-      </text>
-
-      <text x="26" y="164" class="body">
-        <tspan x="26" dy="0">2. Beacon — add one concrete user flow and a clearer handoff.</tspan>
-        <tspan x="26" dy="24" class="pink">   Copilot-used-well: used builder-provided evidence, not a vague claim.</tspan>
-        <tspan x="26" dy="24" class="green">   Next move: draft API contract tests and a shorter demo script.</tspan>
-      </text>
-
-      <text x="684" y="84" class="body">
-        <tspan x="0" dy="0">3. Cinder — sharpen the explanation and highlight the strongest result.</tspan>
-        <tspan x="0" dy="24" class="pink">   Copilot-next: ask Copilot for a concise polish pass.</tspan>
-        <tspan x="0" dy="24" class="green">   Growth note: strong idea, now make the path to value obvious.</tspan>
-      </text>
-    </g>
-
-    <text x="84" y="814" class="muted mono">PRACTICE SHOW — ILLUSTRATIVE RESULTS • scores stayed sealed until reveal • top-3 coaching lands after awards</text>
+  <!-- god-rays behind podium -->
+  <g opacity="0.55">
+    <polygon points="640,214 386,690 470,690" fill="url(#ray)"/>
+    <polygon points="640,214 516,690 582,690" fill="url(#ray)"/>
+    <polygon points="640,214 612,690 668,690" fill="url(#ray)"/>
+    <polygon points="640,214 698,690 764,690" fill="url(#ray)"/>
+    <polygon points="640,214 810,690 894,690" fill="url(#ray)"/>
   </g>
+
+  <!-- confetti -->
+  <g opacity="0.9">
+    <rect x="250" y="250" width="10" height="10" rx="2" fill="#9c5ff2" transform="rotate(20 255 255)"/>
+    <rect x="360" y="210" width="8" height="8" rx="2" fill="#fcbf08" transform="rotate(-15 364 214)"/>
+    <rect x="470" y="300" width="9" height="9" rx="2" fill="#22c55e" transform="rotate(30 474 304)"/>
+    <rect x="820" y="240" width="10" height="10" rx="2" fill="#b98cff" transform="rotate(-25 825 245)"/>
+    <rect x="930" y="290" width="8" height="8" rx="2" fill="#fcbf08" transform="rotate(18 934 294)"/>
+    <rect x="1010" y="330" width="9" height="9" rx="2" fill="#9c5ff2" transform="rotate(-20 1014 334)"/>
+    <rect x="700" y="220" width="8" height="8" rx="2" fill="#22c55e" transform="rotate(40 704 224)"/>
+    <rect x="560" y="235" width="9" height="9" rx="2" fill="#b98cff" transform="rotate(-30 564 239)"/>
+    <rect x="180" y="330" width="8" height="8" rx="2" fill="#fcbf08" transform="rotate(24 184 334)"/>
+    <rect x="1090" y="260" width="8" height="8" rx="2" fill="#22c55e" transform="rotate(-18 1094 264)"/>
+  </g>
+
+  <!-- top bar: eyebrow + status -->
+  <rect x="64" y="74" width="196" height="32" rx="16" fill="#150f24" stroke="#3a2d5c" stroke-width="1"/>
+  <circle cx="86" cy="90" r="4.5" fill="#b98cff"/>
+  <text x="100" y="94" class="eyebrow">AWARD REVEAL</text>
+
+  <rect x="1004" y="74" width="212" height="32" rx="16" fill="#111014" stroke="#2a2733" stroke-width="1"/>
+  <circle cx="1026" cy="90" r="4.5" fill="#22c55e"/>
+  <text x="1038" y="94" class="statuslbl">Live · illustrative results</text>
+
+  <!-- headline -->
+  <text x="640" y="150" text-anchor="middle" class="headline">And the Copilot Builder Award goes to…</text>
+  <text x="640" y="184" text-anchor="middle" class="sub">The Copilot CLI panel deliberated by median consensus — the room gets the reveal.</text>
+
+  <!-- ======================= PODIUM ======================= -->
+  <!-- base slab -->
+  <rect x="250" y="690" width="790" height="16" rx="6" fill="#191424" stroke="#2c2340" stroke-width="1"/>
+
+  <!-- 2nd place (left) -->
+  <text x="380" y="392" text-anchor="middle" class="emoji medal-s">🥈</text>
+  <text x="380" y="430" text-anchor="middle" class="proj2">Commit Coach</text>
+  <text x="380" y="452" text-anchor="middle" class="silverlbl">BUILDER SILVER</text>
+  <rect x="280" y="470" width="200" height="220" rx="10" fill="url(#riser2)" stroke="#2c2340" stroke-width="1"/>
+  <rect x="280" y="470" width="200" height="2.5" rx="1.2" fill="#8a7bc8" opacity="0.6"/>
+  <text x="380" y="606" text-anchor="middle" class="rnum2">2</text>
+
+  <!-- 3rd place (right) -->
+  <text x="900" y="432" text-anchor="middle" class="emoji medal-s">🥉</text>
+  <text x="900" y="470" text-anchor="middle" class="proj2">Reef Guardian</text>
+  <text x="900" y="492" text-anchor="middle" class="bronzelbl">BUILDER BRONZE</text>
+  <rect x="800" y="510" width="200" height="180" rx="10" fill="url(#riser2)" stroke="#2c2340" stroke-width="1"/>
+  <rect x="800" y="510" width="200" height="2.5" rx="1.2" fill="#7a6a58" opacity="0.6"/>
+  <text x="900" y="636" text-anchor="middle" class="rnum2">3</text>
+
+  <!-- 1st place (center) -->
+  <text x="640" y="326" text-anchor="middle" class="emoji medal">🏆</text>
+  <text x="640" y="372" text-anchor="middle" class="proj">Aurora Recall</text>
+  <text x="640" y="396" text-anchor="middle" class="awardlbl">COPILOT BUILDER AWARD</text>
+  <rect x="524" y="414" width="232" height="276" rx="12" fill="url(#riser1)" stroke="#4a3a78" stroke-width="1.5"/>
+  <rect x="524" y="414" width="232" height="3" rx="1.5" fill="#b98cff" opacity="0.85"/>
+  <text x="640" y="588" text-anchor="middle" class="rnum">1</text>
+
+  <!-- ======================= WINNER LENS CARD ======================= -->
+  <rect x="372" y="728" width="536" height="102" rx="14" fill="#100e16" stroke="#2c2340" stroke-width="1"/>
+  <text x="396" y="756" class="lenshdr">WHY AURORA RECALL LED · COPILOT PANEL, MEDIAN CONSENSUS</text>
+
+  <!-- Innovation -->
+  <text x="396" y="782" class="lensname">Innovation</text>
+  <rect x="516" y="775" width="300" height="7" rx="3.5" fill="#221c30"/>
+  <rect x="516" y="775" width="276" height="7" rx="3.5" fill="url(#barGold)"/>
+  <text x="870" y="782" text-anchor="end" class="lensval">9.2</text>
+
+  <!-- Build Quality -->
+  <text x="396" y="802" class="lensname">Build Quality</text>
+  <rect x="516" y="795" width="300" height="7" rx="3.5" fill="#221c30"/>
+  <rect x="516" y="795" width="261" height="7" rx="3.5" fill="url(#barGold)"/>
+  <text x="870" y="802" text-anchor="end" class="lensval">8.7</text>
+
+  <!-- Impact -->
+  <text x="396" y="822" class="lensname">Impact</text>
+  <rect x="516" y="815" width="300" height="7" rx="3.5" fill="#221c30"/>
+  <rect x="516" y="815" width="270" height="7" rx="3.5" fill="url(#barGold)"/>
+  <text x="870" y="822" text-anchor="end" class="lensval">9.0</text>
+
+  <!-- footer -->
+  <text x="640" y="862" text-anchor="middle" class="foot">Copilot-judged · scores stay sealed until the reveal · illustrative results, no judging panel required</text>
 </svg>

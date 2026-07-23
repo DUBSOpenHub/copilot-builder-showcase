@@ -346,6 +346,11 @@ button { font-family: inherit; cursor: pointer; }
 footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px 0 46px; }
 .foot { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; justify-content: space-between; color: var(--cp-text-soft); font-size: 13.5px; }
 .foot .foot-brand { display: flex; align-items: center; gap: 9px; font-weight: 700; color: var(--cp-text-muted); }
+.foot .repo-link { transition: color .15s ease; }
+.foot .repo-link:hover { color: var(--cp-accent); text-decoration: none; }
+.foot .foot-by { color: var(--cp-text-soft); }
+.foot .foot-by a { color: var(--cp-accent); font-weight: 600; }
+.foot .foot-by a:hover { text-decoration: underline; }
 
 /* ---------- STAGE (big screen) ---------- */
 .stage { position: fixed; inset: 0; z-index: 80; background: var(--cp-bg); display: none; flex-direction: column; overflow: hidden; }
@@ -807,7 +812,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
   <footer>
     <div class="wrap foot">
-      <span class="foot-brand"><span class="gh-mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></span> Built with the GitHub Copilot CLI</span>
+      <a class="foot-brand repo-link" href="https://github.com/DUBSOpenHub/copilot-builder-showcase" target="_blank" rel="noopener"><span class="gh-mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></span> DUBSOpenHub/copilot-builder-showcase</a>
+      <span class="foot-by">Built with the <a href="https://docs.github.com/en/copilot/github-copilot-in-the-cli" target="_blank" rel="noopener">Copilot CLI</a> by <a href="https://github.com/DUBSOpenHub" target="_blank" rel="noopener">@DUBSOpenHub</a></span>
       <span>Practice showcase · illustrative results · no judging panel required</span>
     </div>
   </footer>

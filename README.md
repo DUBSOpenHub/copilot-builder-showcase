@@ -30,7 +30,7 @@ two minutes.
 >
 > *Requires Git and Python 3.11+ for practice installs. The one-line install prefers an authenticated GitHub CLI when available. Official judging uses an authenticated GitHub Copilot CLI.*
 
-![Copilot Builder Showcase live reveal with podium and Top-3 growth cards](docs/images/builder-showcase-demo.svg)
+![Copilot Builder Showcase big-screen award reveal — Copilot Builder Award, Builder Silver, and Builder Bronze podium with per-lens Copilot panel scores](docs/images/builder-showcase-demo.svg)
 
 ---
 
