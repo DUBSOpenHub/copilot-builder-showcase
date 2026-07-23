@@ -218,6 +218,12 @@ button { font-family: inherit; cursor: pointer; }
 .command-chip .cmd { color: var(--cp-text); font-weight: 600; }
 .command-chip .caret { width: 9px; height: 18px; background: var(--cp-accent); display: inline-block; animation: blink 1.1s steps(1) infinite; border-radius: 1px; }
 @keyframes blink { 50% { opacity: 0; } }
+.command-chip-btn { cursor: pointer; text-align: left; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.command-chip-btn:hover { border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft), var(--cp-shadow); transform: translateY(-2px); }
+.command-chip-btn:active { transform: translateY(0); }
+.command-chip-btn:focus-visible { outline: none; border-color: var(--cp-accent); box-shadow: 0 0 0 3px var(--cp-accent-soft); }
+.command-chip .chip-hint { padding-left: 12px; border-left: 1px solid var(--cp-border); font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12.5px; font-weight: 700; color: var(--cp-accent); white-space: nowrap; }
+@media (max-width: 560px) { .command-chip .chip-hint { display: none; } }
 .hero-note { margin-top: 16px; font-size: 13.5px; color: var(--cp-text-soft); display: flex; align-items: center; gap: 8px; }
 
 /* hero visual: mini stage preview */
@@ -567,10 +573,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 #cueOverlay { position: absolute; inset: 0; z-index: 8; display: none; place-items: center; text-align: center;
   background: color-mix(in srgb, var(--cp-bg) 72%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 #cueOverlay.on { display: grid; }
-#cueBig { font-size: clamp(72px, 17vw, 180px); font-weight: 800; letter-spacing: -0.04em; color: var(--cp-accent); line-height: 1; animation: cue-pop .45s cubic-bezier(.2,.9,.3,1.5) both; }
+#cueBig { font-size: clamp(72px, 17vw, 180px); font-weight: 800; letter-spacing: -0.04em; color: var(--cp-accent); line-height: 1; position: relative; z-index: 2; animation: cue-pop .45s cubic-bezier(.2,.9,.3,1.5) both; }
 #cueBig .cue-sub { display: block; font-size: clamp(16px,2.4vw,22px); font-weight: 700; color: var(--cp-text-muted); letter-spacing: 0; margin-top: 10px; }
 @keyframes cue-pop { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
 .cue-shake { animation: cue-pop .45s cubic-bezier(.2,.9,.3,1.5) both, shake .5s ease-in-out infinite; }
+#cueBig .cue-cap { display: block; font-size: clamp(15px, 2.4vw, 22px); font-weight: 700; color: var(--cp-text-muted); letter-spacing: .01em; margin-bottom: 14px; }
+#cueBig .cue-num { display: block; line-height: 1; }
+#cueBig.cue-slam { animation: none; }
+#cueBig.cue-slam .cue-num { animation: cue-slam .6s cubic-bezier(.16,1,.3,1) both; }
+@keyframes cue-slam { 0% { transform: scale(1.28); opacity: 0; } 55% { transform: scale(.94); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
 
 /* try-it-yourself modal */
 .modal { position: fixed; inset: 0; z-index: 120; display: none; align-items: flex-start; justify-content: center; padding: 5vh 18px; overflow: auto; background: rgba(0,0,0,.45); }
@@ -644,10 +655,14 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
             <button class="btn btn-ghost btn-lg" id="demoHero">👁&nbsp; Watch the 60-sec demo</button>
           </div>
           <div class="hero-cta-sub"><a href="#how">See how it works ↓</a></div>
-          <div class="command-chip" aria-hidden="true">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span class="prompt">$</span><span class="cmd">showcase</span><span class="caret"></span>
-          </div>
+          <button type="button" class="command-chip command-chip-btn" id="copyCmdChip"
+            aria-label="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
+            title="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
+            data-cmd='copilot -p "Clone github.com/DUBSOpenHub/copilot-builder-showcase and open docs/index.html so I can run a live Copilot Builder Showcase at my workshop"'>
+            <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+            <span class="prompt" aria-hidden="true">$</span><span class="cmd">copilot</span><span class="caret" aria-hidden="true"></span>
+            <span class="chip-hint">⚡ Copy the Copilot CLI prompt</span>
+          </button>
           <div class="hero-note">🛈 No judging panel to recruit. No dashboard to wire up. Just paste links and go.</div>
           <div class="resume-banner" id="resumeBanner">
             <span class="rb-dot"></span>
@@ -1366,6 +1381,13 @@ var QRClean = (function () {
     function legacyCopy(t) { var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy this: " + t); } document.body.removeChild(ta); }
   });
   $("openSubmit").addEventListener("click", function () { try { window.open(submitURL(), "_blank", "noopener"); } catch (e) { location.hash = "#submit"; } });
+  var copyCmdChip = $("copyCmdChip");
+  if (copyCmdChip) copyCmdChip.addEventListener("click", function () {
+    var cmd = copyCmdChip.getAttribute("data-cmd") || "";
+    function ok() { toast("Copilot CLI prompt copied — paste it into your terminal"); }
+    function legacyCopy(t) { var ta = document.createElement("textarea"); ta.value = t; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("Copy this: " + t); } document.body.removeChild(ta); }
+    try { if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(cmd).then(ok, function () { legacyCopy(cmd); }); } else legacyCopy(cmd); } catch (e) { legacyCopy(cmd); }
+  });
 
   $("runPanelBtn").addEventListener("click", function () {
     if (state.status !== "open" || state.entries.length < 3) return;
@@ -1474,13 +1496,55 @@ var QRClean = (function () {
     ov.classList.add("on");
     function finish() { ov.classList.remove("on"); reveal(); }
     if (type === "countdown") {
-      var seq = ["3", "2", "1", "🎉"], i = 0;
-      (function tick() { if (i >= seq.length) { finish(); return; } big.className = ""; big.innerHTML = seq[i]; void big.offsetWidth; i++; setTimeout(tick, 620); })();
+      var seq = [
+        { cap: "Announcing the winners in…", num: "3" },
+        { cap: "Median consensus locked in", num: "2" },
+        { cap: "Here they come", num: "1" },
+        { cap: "", num: "🏆" }
+      ], i = 0;
+      (function tick() {
+        if (i >= seq.length) { finish(); return; }
+        var s = seq[i];
+        big.className = "cue-slam";
+        big.innerHTML = (s.cap ? '<span class="cue-cap">' + s.cap + "</span>" : "") + '<span class="cue-num">' + s.num + "</span>";
+        void big.offsetWidth;
+        cueBurst(i);
+        i++;
+        setTimeout(tick, i >= seq.length ? 760 : 900);
+      })();
     } else if (type === "drumroll") {
       big.className = "cue-shake"; big.innerHTML = '🥁<span class="cue-sub">Drumroll…</span>'; setTimeout(finish, 1700);
     } else {
       big.className = ""; big.innerHTML = '👏<span class="cue-sub">Applause!</span>'; setTimeout(finish, 1500);
     }
+  }
+  function cueBurst(step) {
+    if (reduceMotion) return;
+    var host = $("cueOverlay"); if (!host) return;
+    var colors = ["#FDC006", "#00A562", "#ffd24a", "#00d67f", "#e5e7eb"];
+    var glyphs = ["✦", "●", "✦", "◆"];
+    var storm = document.createElement("div");
+    storm.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1;";
+    var n = 16;
+    for (var k = 0; k < n; k++) {
+      var sp = document.createElement("span");
+      sp.textContent = glyphs[k % glyphs.length];
+      var ang = (k / n) * Math.PI * 2 + step * 0.4;
+      var dist = 120 + Math.random() * 260;
+      var tx = Math.cos(ang) * dist, ty = Math.sin(ang) * dist;
+      var rot = Math.random() * 540 - 270;
+      sp.style.cssText = "position:absolute;left:50%;top:50%;font-size:" + (14 + Math.random() * 22) + "px;color:" + colors[(k + step) % colors.length] + ";transform:translate(-50%,-50%);will-change:transform,opacity;";
+      storm.appendChild(sp);
+      if (sp.animate) {
+        sp.animate([
+          { opacity: 0, transform: "translate(-50%,-50%) scale(.3) rotate(0deg)" },
+          { opacity: 1, offset: 0.15 },
+          { opacity: 0, transform: "translate(calc(-50% + " + tx + "px), calc(-50% + " + ty + "px)) scale(1.05) rotate(" + rot + "deg)" }
+        ], { duration: 820 + Math.random() * 240, easing: "cubic-bezier(.16,1,.3,1)", fill: "forwards" });
+      }
+    }
+    host.appendChild(storm);
+    setTimeout(function () { if (storm.parentNode) storm.parentNode.removeChild(storm); }, 1200);
   }
   function reveal() {
     var ranked = rankEntries();
