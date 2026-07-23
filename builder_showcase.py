@@ -1171,6 +1171,14 @@ _PROJECT_URL_RE = re.compile(r"https?://[^\s<>\"]+", re.IGNORECASE)
 _OWNER_REPO_RE = re.compile(
     r"(?<![A-Za-z0-9_.-])([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)(?![A-Za-z0-9_.-])"
 )
+# Non-http(s) URIs (ftp://, file://, javascript:, data:, custom schemes) must be
+# stripped before the owner/repo fallback so a pasted `file:///etc/passwd` or
+# `ftp://x.com/a` can never be misread as a `github.com/<owner>/<repo>` submission.
+_UNSAFE_URI_RE = re.compile(
+    r"[a-z][a-z0-9+.-]*://[^\s<>\"]+"
+    r"|(?:javascript|data|vbscript|file|ftp|ftps|mailto):[^\s<>\"]+",
+    re.IGNORECASE,
+)
 
 
 def _canonical_project_url(candidate: str) -> Optional[str]:
@@ -1217,6 +1225,7 @@ def parse_submission_urls(raw: str) -> List[str]:
             add(canonical)
 
     scrubbed = _PROJECT_URL_RE.sub(" ", raw or "")
+    scrubbed = _UNSAFE_URI_RE.sub(" ", scrubbed)
     for match in _OWNER_REPO_RE.finditer(scrubbed):
         owner, repo = match.group(1), match.group(2)
         if owner.lower() in {"http:", "https:"}:

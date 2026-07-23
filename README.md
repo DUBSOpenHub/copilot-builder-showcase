@@ -511,7 +511,7 @@ window for the audience experience.
 | `showcase` | Paste links and start the complete live showcase. |
 | `showcase <links...>` | Start immediately with supplied projects. |
 | `showcase --demo` | Run the bundled two-minute practice showcase. |
-| `showcase --reduced-motion` | Prefer low-motion reveal pacing in the live showcase. |
+| `showcase --reduced-motion` | Prefer low-motion reveal pacing in the live showcase (or set `CBS_REDUCED_MOTION=1`; legacy `HJ_REDUCED_MOTION` still honored). |
 | `showcase --official <links...>` | Require a connected official Copilot panel. |
 | `showcase replay <run-id>` | Replay a prior showcase without judge calls. |
 | `showcase validate <run-id>` | Verify bundle hashes and seals. |

@@ -213,7 +213,8 @@ diagnostic/growth content, not additional awards.
 ## Accessibility
 
 If the organizer asks for a lower-motion showcase, add `--reduced-motion` to the
-`showcase` command (or set `CBS_REDUCED_MOTION=1`). This keeps the same
+`showcase` command (or set `CBS_REDUCED_MOTION=1`; the legacy `HJ_REDUCED_MOTION`
+is still honored). This keeps the same
 single-terminal ceremony but skips optional suspense pauses. An EventSpec may
 also set this as its default via `accessibility.reduced_motion`.
 

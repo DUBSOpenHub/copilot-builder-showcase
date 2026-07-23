@@ -389,6 +389,22 @@ class TestShowtimeDelight:
 
         sleep.assert_not_called()
 
+    def test_cbs_reduced_motion_env_var_skips_showtime_pauses(self):
+        args = argparse.Namespace(showtime=True, no_suspense=False, reduced_motion=False)
+
+        with patch.dict(os.environ, {"CBS_REDUCED_MOTION": "1"}, clear=True):
+            with patch.object(cbp.time, "sleep") as sleep:
+                cbp._showtime_pause(args, 1.0)
+
+        sleep.assert_not_called()
+
+    def test_cbs_showtime_overrides_hj_showtime(self):
+        # CBS_SHOWTIME must win over the legacy HJ_SHOWTIME alias.
+        with patch.dict(
+            os.environ, {"HJ_SHOWTIME": "0", "CBS_SHOWTIME": "1"}, clear=True
+        ):
+            assert cbp._showtime_enabled() is True
+
     def test_terminal_wrapper_keeps_words_inside_the_requested_width(self):
         text = (
             "This project stood out for reconciling scattered updates across "
@@ -1441,6 +1457,29 @@ class TestBulkUrlImport:
         ) == [
             "https://demo.example.com/Project",
             "https://demo.example.com/project",
+        ]
+
+    def test_parse_submission_urls_rejects_unsafe_scheme_uris(self):
+        # ftp://, file://, javascript:, and data: URIs must never be turned into
+        # fabricated github.com/<owner>/<repo> submissions by the owner/repo fallback.
+        raw = (
+            "ftp://x.com/a\n"
+            "file:///etc/passwd\n"
+            "javascript:alert(1)\n"
+            "data:text/html,<script>0</script>\n"
+        )
+        assert cbp.parse_submission_urls(raw) == []
+
+    def test_parse_submission_urls_rejects_credentialed_urls(self):
+        # URLs embedding user:pass@ credentials must be dropped, not imported.
+        raw = "https://user:secret@github.com/DUBSOpenHub/terminal-stampede"
+        assert cbp.parse_submission_urls(raw) == []
+
+    def test_parse_submission_urls_preserves_owner_repo_next_to_unsafe_uris(self):
+        # A legit owner/repo pasted alongside an unsafe URI is still extracted.
+        raw = "ftp://mirror.example/pkg\nDUBSOpenHub/terminal-stampede"
+        assert cbp.parse_submission_urls(raw) == [
+            "https://github.com/DUBSOpenHub/terminal-stampede",
         ]
 
     def test_github_submission_ids_remain_legacy_compatible(self):
@@ -3703,6 +3742,34 @@ class TestConfigValidation:
 
     def test_valid_rubric_passes(self):
         cbp._validate_rubric(copy.deepcopy(cbp.DEFAULT_RUBRIC))  # should not raise
+
+    def test_validate_run_id_rejects_traversal_and_separators(self):
+        for bad in ["../evil", "..", ".", "a/b", "runs\\evil", "with space", ""]:
+            with pytest.raises(cbp.ConfigValidationError):
+                cbp.validate_run_id(bad)
+
+    def test_validate_run_id_accepts_safe_ids(self):
+        for good in ["ok-1", "good.name_1", "Run2026"]:
+            assert cbp.validate_run_id(good) == good
+
+    def test_cbs_runs_dir_overrides_hj_runs_dir(self):
+        with patch.dict(
+            os.environ,
+            {"HJ_RUNS_DIR": "/tmp/hj-runs", "CBS_RUNS_DIR": "/tmp/cbs-runs"},
+            clear=True,
+        ):
+            assert cbp.get_runs_dir() == Path("/tmp/cbs-runs")
+
+    def test_cbs_registry_path_overrides_hj_registry_path(self):
+        with patch.dict(
+            os.environ,
+            {
+                "HJ_REGISTRY_PATH": "/tmp/hj/log.ndjson",
+                "CBS_REGISTRY_PATH": "/tmp/cbs/log.ndjson",
+            },
+            clear=True,
+        ):
+            assert cbp.get_registry_path() == Path("/tmp/cbs/log.ndjson")
 
 
 # ---------------------------------------------------------------------------
