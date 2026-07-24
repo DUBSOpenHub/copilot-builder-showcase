@@ -510,7 +510,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 @keyframes shake { 0%,100%{ transform: rotate(-8deg);} 50%{ transform: rotate(8deg);} }
 
 /* podium */
-.podium-wrap { position: absolute; inset: 0; z-index: 6; display: none; flex-direction: column; padding: clamp(16px,3vw,30px); overflow: auto; }
+.podium-wrap { position: absolute; inset: 0; z-index: 6; display: none; flex-direction: column; padding: clamp(16px,3vw,30px); overflow: auto; background: var(--cp-bg); }
 .podium-wrap.on { display: flex; }
 .podium-head { text-align: center; margin-bottom: 8px; }
 .podium-head .badge { margin: 0 auto 10px; }
@@ -544,13 +544,56 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .growth-grid .gc { border: 1px solid var(--cp-border); border-radius: 0.8rem; background: var(--cp-surface); padding: 13px; }
 .growth-grid .gc .gp { font-size: 13.5px; font-weight: 800; }
 .growth-grid .gc .gl { font-size: 12.5px; color: var(--cp-text-muted); margin-top: 6px; }
-.podium-actions { display: flex; gap: 12px; justify-content: center; margin: 22px auto 6px; flex-wrap: wrap; }
+.podium-actions { display: none; gap: 12px; justify-content: center; margin: 22px auto 6px; flex-wrap: wrap; }
+.podium-actions.on { display: flex; }
 
 #confetti { position: absolute; inset: 0; z-index: 7; pointer-events: none; display: none; }
 #confetti.on { display: block; }
 
+/* ---- manual reveal bar (operator paces each place) ---- */
+.reveal-bar { display: none; flex-direction: column; align-items: center; gap: 12px; max-width: 720px; margin: 8px auto 4px; width: 100%; }
+.reveal-bar.on { display: flex; animation: award-in .5s ease both; }
+.reveal-fx { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.reveal-step-btn { font-size: clamp(16px, 2.2vw, 21px); font-weight: 800; padding: 15px 28px; }
+.reveal-progress { font-size: 13px; color: var(--cp-text-soft); text-align: center; max-width: 460px; }
+
+/* ---- full results (every project, ranked) ---- */
+.fullresults { max-width: 940px; margin: 18px auto 8px; width: 100%; border: 1px solid var(--cp-border); border-radius: 1rem; background: var(--cp-bg-elevated); padding: 18px; opacity: 0; }
+.fullresults.show { animation: award-in .6s ease .1s both; }
+.fullresults .op-t { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.fr-list { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.fr-row { display: grid; grid-template-columns: 42px minmax(0,1.35fr) minmax(0,1.9fr) auto; gap: 14px; align-items: center; border: 1px solid var(--cp-border); border-radius: 0.8rem; background: var(--cp-surface); padding: 11px 15px; }
+.fr-row.fr-top { border-color: color-mix(in srgb, var(--cp-accent) 34%, var(--cp-border)); background: color-mix(in srgb, var(--cp-accent) 4%, var(--cp-surface)); }
+.fr-rank { font-size: 21px; font-weight: 800; text-align: center; }
+.fr-main { min-width: 0; }
+.fr-proj { font-size: 14.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-team { font-size: 12px; color: var(--cp-text-soft); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fr-team .fr-link { color: var(--cp-link); text-decoration: none; }
+.fr-team .fr-link:hover { text-decoration: underline; }
+.fr-desc { font-size: 12px; color: var(--cp-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.fr-lenses { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fr-lens { display: grid; grid-template-columns: 86px 1fr 32px; gap: 9px; align-items: center; }
+.fr-lname { font-size: 10px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .04em; }
+.fr-lbar { height: 6px; border-radius: 999px; background: var(--cp-surface-soft); overflow: hidden; }
+.fr-lbar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-accent-hover)); }
+.fr-lval { font-size: 11px; font-weight: 700; color: var(--cp-text-muted); text-align: right; }
+.fr-total { font-size: 21px; font-weight: 800; text-align: right; white-space: nowrap; }
+.fr-total span { font-size: 11px; font-weight: 700; color: var(--cp-text-soft); }
+.fr-note { font-size: 12px; color: var(--cp-text-soft); margin-top: 13px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .fr-row { grid-template-columns: 34px 1fr auto; }
+  .fr-lenses { grid-column: 1 / -1; }
+  .fr-desc { display: none; }
+}
+
+/* ---- Copilot sparkles ---- */
+.sparkles { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.spark { position: absolute; font-size: 16px; line-height: 1; opacity: 0; color: var(--cp-accent); text-shadow: 0 0 8px color-mix(in srgb, var(--cp-accent) 55%, transparent); animation: spark-tw 2.6s ease-in-out infinite; will-change: transform, opacity; }
+.spark.gold { color: var(--cp-gold); text-shadow: 0 0 10px color-mix(in srgb, var(--cp-gold) 65%, transparent); }
+@keyframes spark-tw { 0%, 100% { opacity: 0; transform: scale(.35) rotate(0deg); } 45% { opacity: .95; transform: scale(1) rotate(35deg); } 72% { opacity: .5; transform: scale(.78) rotate(58deg); } }
+
 /* ---------- PREMIUM PODIUM: god-rays, per-lens insight, method ---------- */
-.podium-wrap > *:not(.podium-rays) { position: relative; z-index: 1; }
+.podium-wrap > *:not(.podium-rays):not(.sparkles) { position: relative; z-index: 1; }
 .podium-rays { position: absolute; left: 50%; top: 6%; width: min(920px, 94%); height: min(760px, 78%); transform: translateX(-50%); pointer-events: none; opacity: 0; z-index: 0; transition: opacity .9s ease; filter: blur(2px);
   background: conic-gradient(from 0deg at 50% 42%,
     transparent 0deg, color-mix(in srgb, var(--cp-gold) 26%, transparent) 5deg, transparent 11deg,
@@ -666,6 +709,9 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .cue-lead { margin: 6px 0 14px; color: var(--cp-text-muted); font-size: 14px; }
 .cue-choices { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .cue-btn { font-size: 15px; }
+.cue-fx { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+.cue-reveal { min-width: 250px; }
+.cue-foot { margin-top: 13px; font-size: 12px; color: var(--cp-text-soft); }
 #cueOverlay { position: absolute; inset: 0; z-index: 8; display: none; place-items: center; text-align: center;
   background: color-mix(in srgb, var(--cp-bg) 72%, transparent); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
 #cueOverlay.on { display: grid; }
@@ -937,12 +983,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <div class="rx-row" id="judgeReacts"></div>
           <div class="judge-agg" id="judgeAgg"></div>
           <div class="reveal-cue" id="revealCue">
-            <p class="cue-lead">Review complete &amp; sealed. Pick a cue for the room, then reveal the podium:</p>
-            <div class="cue-choices" id="cueChoices">
-              <button class="btn cue-btn" data-cue="drumroll">🥁 Drumroll</button>
-              <button class="btn cue-btn" data-cue="countdown">⏱️ 3 · 2 · 1</button>
-              <button class="btn cue-btn btn-primary" data-cue="applause">👏 Applause &amp; reveal</button>
+            <p class="cue-lead">Review complete &amp; sealed. Set the mood, then reveal the podium <b>one place at a time</b> — you control the pace.</p>
+            <div class="cue-fx" id="cueFx">
+              <button class="btn cue-btn cue-fx-btn" data-fx="drumroll">🥁 Drumroll</button>
+              <button class="btn cue-btn cue-fx-btn" data-fx="applause">👏 Applause</button>
             </div>
+            <div class="cue-choices" id="cueChoices">
+              <button class="btn btn-primary btn-lg cue-btn cue-reveal btn-cta-hot" id="startRevealBtn">🏆 Reveal the winners</button>
+            </div>
+            <p class="cue-foot">Drumroll &amp; applause are audible — tap to build the moment. Nothing is shown until you press <b>Reveal the winners</b>, then you reveal each place yourself.</p>
           </div>
         </div>
       </div>
@@ -950,17 +999,27 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <!-- podium overlay -->
       <div class="podium-wrap" id="podiumWrap">
         <div class="podium-rays" id="podiumRays" aria-hidden="true"></div>
+        <div class="sparkles" id="sparkles" aria-hidden="true"></div>
         <div class="podium-head">
           <span class="badge">🎉 The podium</span>
           <h2>Copilot Builder Showcase — winners</h2>
           <p>Chosen by median consensus of a Copilot CLI panel · practice showcase, illustrative results</p>
+        </div>
+        <div class="reveal-bar" id="revealBar">
+          <div class="reveal-fx">
+            <button class="btn cue-btn cue-fx-btn" data-fx="drumroll">🥁 Drumroll</button>
+            <button class="btn cue-btn cue-fx-btn" data-fx="applause">👏 Applause</button>
+          </div>
+          <button class="btn btn-primary btn-cta-hot reveal-step-btn" id="revealStepBtn">🥉 Reveal Builder Bronze</button>
+          <div class="reveal-progress" id="revealProgress">Third place first — press when the room is ready.</div>
         </div>
         <div class="podium" id="podium"></div>
         <div class="growth method" id="growth">
           <div class="op-t" id="growthTitle">How the panel decided · rubric &amp; method</div>
           <div class="growth-grid" id="growthGrid"></div>
         </div>
-        <div class="podium-actions">
+        <div class="fullresults" id="fullResults"></div>
+        <div class="podium-actions" id="podiumActions">
           <button class="btn btn-ghost" id="replayBtn">↺ Show spotlights again</button>
           <button class="btn btn-primary" id="newRunBtn">＋ Run another showcase</button>
         </div>
@@ -1179,6 +1238,53 @@ var QRClean = (function () {
     tone(1046.50, chordT, 0.9, "triangle", 0.16);
     tone(1567.98, chordT + 0.10, 0.5, "sine", 0.08);
   }
+  function noiseBuffer(dur) {
+    if (!_actx) return null;
+    try {
+      var n = Math.max(1, Math.floor(_actx.sampleRate * dur));
+      var buf = _actx.createBuffer(1, n, _actx.sampleRate);
+      var d = buf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      var src = _actx.createBufferSource(); src.buffer = buf;
+      return src;
+    } catch (e) { return null; }
+  }
+  function drumrollSound() {
+    if (!soundOn) return; var ctx = audioCtx(); if (!ctx) return;
+    try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+    var t = ctx.currentTime, dur = 1.4, src = noiseBuffer(dur + 0.28);
+    if (src) try {
+      var bp = _actx.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 250; bp.Q.value = 0.7;
+      var g = _actx.createGain();
+      g.gain.setValueAtTime(0.0008, t);
+      g.gain.exponentialRampToValueAtTime(0.09, t + dur * 0.7);
+      g.gain.exponentialRampToValueAtTime(0.20, t + dur);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur + 0.22);
+      src.connect(bp); bp.connect(g); g.connect(_master);
+      src.start(t); src.stop(t + dur + 0.3);
+    } catch (e) {}
+    tone(90, t + dur, 0.42, "sine", 0.22); tone(150, t + dur, 0.3, "triangle", 0.12);
+  }
+  function applauseSound() {
+    if (!soundOn) return; var ctx = audioCtx(); if (!ctx) return;
+    try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+    var t = ctx.currentTime, dur = 1.5, src = noiseBuffer(dur + 0.2);
+    if (src) try {
+      var hp = _actx.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 1200;
+      var g = _actx.createGain();
+      g.gain.setValueAtTime(0.0008, t);
+      g.gain.exponentialRampToValueAtTime(0.16, t + 0.10);
+      g.gain.setValueAtTime(0.14, t + dur * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      src.connect(hp); hp.connect(g); g.connect(_master);
+      src.start(t); src.stop(t + dur + 0.05);
+    } catch (e) {}
+    for (var i = 0; i < 6; i++) { tone(1400 + Math.random() * 900, t + 0.04 + Math.random() * dur * 0.7, 0.05, "square", 0.045); }
+  }
+  function ensureSoundOn() {
+    if (!soundOn) { soundOn = true; try { localStorage.setItem(SOUND_KEY, "1"); } catch (e) {} applySoundIcon(); }
+    unlockAudio();
+  }
   function applySoundIcon() {
     var b = $("soundToggleStage"); if (!b) return;
     b.textContent = soundOn ? "🔊" : "🔇";
@@ -1292,7 +1398,7 @@ var QRClean = (function () {
     if (view === "stage") {
       renderStage();
       if (state.status === "open" && state.entries.length > prevN) pulseNewEntries(prevN);
-      if (state.status === "awarded" && prevStatus !== "awarded") showPodium(true);
+      if (state.status === "awarded" && prevStatus !== "awarded") showPodium(true, "all");
       if (state.status === "idle" && prevStatus !== "idle") resetStageUI();
     } else if (view === "submit") {
       renderSubmit();
@@ -1673,7 +1779,7 @@ var QRClean = (function () {
     renderStage();
     drawStageQR();
     if (state.status === "judging") showJudging(true);
-    if (state.status === "awarded") showPodium(false);
+    if (state.status === "awarded") showPodium(false, "all");
   }
   $("exitStage").addEventListener("click", function () { stopHeroTimer(); liveUnsubscribe(); setView("app"); location.hash = ""; renderResume(); });
 
@@ -1997,40 +2103,50 @@ var QRClean = (function () {
     $("judgeAgg").textContent = state.entries.length + " projects · " + state.calls + " Copilot panel calls · median consensus locked";
     $("revealCue").classList.add("on");
     pushFeed("Copilot panel finished — scores sealed until the reveal.");
-    if (state.mode === "demo") { var myRun = state.runId; setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "judging" && view === "stage") playCue("countdown"); }, reduceMotion ? 500 : 1600); }
+    if (state.mode === "demo") { var myRun = state.runId; setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "judging" && view === "stage") reveal(true); }, reduceMotion ? 500 : 1600); }
   }
-  Array.prototype.forEach.call(document.querySelectorAll("#cueChoices .cue-btn"), function (b) { b.addEventListener("click", function () { playCue(b.getAttribute("data-cue")); }); });
-  function playCue(type) {
-    if (state.status !== "judging") return;
-    pushFeed("Operator cued the room (" + type + ") — revealing the podium…");
-    if (reduceMotion) { reveal(); return; }
+  /* Reveal is operator-gated and paced one place at a time. Drumroll / applause are
+     audible atmosphere cues (no reveal); "Reveal the winners" starts the podium. */
+  var FX_TIMER = null;
+  function playFx(type) {
+    if (state.status !== "judging" && state.status !== "awarded") return;
+    ensureSoundOn();
+    if (type === "drumroll") { drumrollSound(); pushFeed("🥁 Drumroll…"); }
+    else { applauseSound(); pushFeed("👏 Applause!"); }
+    if (reduceMotion) return;
     var ov = $("cueOverlay"), big = $("cueBig");
     ov.classList.add("on");
-    function finish() { ov.classList.remove("on"); reveal(); }
-    if (type === "countdown") {
-      var seq = [
-        { cap: "Announcing the winners in…", num: "3" },
-        { cap: "Median consensus locked in", num: "2" },
-        { cap: "Let’s reveal the winners", num: "1" },
-        { cap: "", num: "🏆" }
-      ], i = 0;
-      (function tick() {
-        if (i >= seq.length) { finish(); return; }
-        var s = seq[i];
-        big.className = "cue-slam";
-        big.innerHTML = (s.cap ? '<span class="cue-cap">' + s.cap + "</span>" : "") + '<span class="cue-num">' + s.num + "</span>";
-        void big.offsetWidth;
-        cueBurst(i);
-        if (i < 3) playTick();
-        i++;
-        setTimeout(tick, i >= seq.length ? 760 : 900);
-      })();
-    } else if (type === "drumroll") {
-      big.className = "cue-shake"; big.innerHTML = '🥁<span class="cue-sub">Drumroll…</span>'; setTimeout(finish, 1700);
-    } else {
-      big.className = ""; big.innerHTML = '👏<span class="cue-sub">Applause!</span>'; setTimeout(finish, 1500);
-    }
+    if (type === "drumroll") { big.className = "cue-shake"; big.innerHTML = '🥁<span class="cue-sub">Drumroll…</span>'; }
+    else { big.className = ""; big.innerHTML = '👏<span class="cue-sub">Applause!</span>'; }
+    clearTimeout(FX_TIMER); FX_TIMER = setTimeout(function () { ov.classList.remove("on"); }, type === "drumroll" ? 1600 : 1400);
   }
+  function runCountdown(onDone) {
+    if (reduceMotion) { onDone(); return; }
+    clearTimeout(FX_TIMER);
+    var ov = $("cueOverlay"), big = $("cueBig");
+    ov.classList.add("on");
+    var seq = [
+      { cap: "Announcing the winner in…", num: "3" },
+      { cap: "Median consensus locked in", num: "2" },
+      { cap: "Let’s reveal the winner", num: "1" },
+      { cap: "", num: "🏆" }
+    ], i = 0;
+    (function tick() {
+      if (i >= seq.length) { ov.classList.remove("on"); onDone(); return; }
+      var s = seq[i];
+      big.className = "cue-slam";
+      big.innerHTML = (s.cap ? '<span class="cue-cap">' + s.cap + "</span>" : "") + '<span class="cue-num">' + s.num + "</span>";
+      void big.offsetWidth;
+      cueBurst(i);
+      if (i < 3) playTick();
+      i++;
+      setTimeout(tick, i >= seq.length ? 760 : 900);
+    })();
+  }
+  function startReveal() { if (state.status !== "judging") return; reveal(false); }
+  var _srb = $("startRevealBtn"); if (_srb) _srb.addEventListener("click", startReveal);
+  var _rsb = $("revealStepBtn"); if (_rsb) _rsb.addEventListener("click", revealNextPlace);
+  Array.prototype.forEach.call(document.querySelectorAll("[data-fx]"), function (b) { b.addEventListener("click", function () { playFx(b.getAttribute("data-fx")); }); });
   function cueBurst(step) {
     if (reduceMotion) return;
     var host = $("cueOverlay"); if (!host) return;
@@ -2059,13 +2175,16 @@ var QRClean = (function () {
     host.appendChild(storm);
     setTimeout(function () { if (storm.parentNode) storm.parentNode.removeChild(storm); }, 1200);
   }
-  function reveal() {
+  function reveal(auto) {
+    if (state.status === "awarded") return;
     var ranked = rankEntries();
     state.podium = ranked.slice(0, 3).map(function (r) { return r.e.id; });
     state.status = "awarded"; save(); liveSetStatus("awarded");
-    showPodium(true);
-    victoryFanfare();
-    pushFeed("🏆 Copilot Builder Award goes to “" + ranked[0].e.proj + "”.");
+    var mode = reduceMotion ? "all" : (auto ? "auto" : "manual");
+    showPodium(true, mode);
+    pushFeed(mode === "manual"
+      ? "🎬 Podium is set — reveal each place when the room is ready."
+      : "🏆 Revealing the winners — Copilot Builder Award to “" + ranked[0].e.proj + "”.");
   }
 
   /* ---- podium ---- */
@@ -2076,14 +2195,32 @@ var QRClean = (function () {
   ];
   function whyText(rank, sc) {
     var lens = sc.topLens, v = sc.per[sc.topLens].toFixed(1);
-    var lead = { 0: "Strongest overall consensus", 1: "A close, well-rounded second", 2: "Rounded out the podium" }[rank];
-    return lead + " — the panel leaned most on its " + lens.toLowerCase() + " (" + v + "/10).";
+    var lead = { 0: "Strongest overall consensus at " + sc.total.toFixed(1) + "/30", 1: "A close, well-rounded second at " + sc.total.toFixed(1) + "/30", 2: "Rounded out the podium at " + sc.total.toFixed(1) + "/30" }[rank];
+    return lead + " — the panel scored it highest on " + lens.toLowerCase() + " (" + v + "/10).";
   }
   function lowLens(sc) { return Object.keys(sc.per).sort(function (a, b) { return sc.per[a] - sc.per[b]; })[0]; }
-  function levelUp(sc) {
-    var low = lowLens(sc);
-    var moves = { "Innovation": "push one bolder idea the demo only hints at", "Build Quality": "add a test or two around the core path and tidy the README", "Impact": "show the before/after for one real user to sharpen the story" };
-    return low + " — " + (moves[low] || "sharpen the demo's single clearest win") + ".";
+  function levelUp(e, sc) {
+    var low = lowLens(sc), v = sc.per[low].toFixed(1);
+    var movesByLens = {
+      "Innovation": [
+        "push the one bolder idea the demo only hints at and cut the safe filler",
+        "show the angle no other project tried — lead the README with it",
+        "turn the cleverest ten seconds of the demo into the headline feature"
+      ],
+      "Build Quality": [
+        "add tests around the core path and tidy the README’s first screen",
+        "handle the top error case on-camera and smooth one rough edge",
+        "get CI green and pin setup to a single copy-paste command"
+      ],
+      "Impact": [
+        "show the before/after for one real user so the win is undeniable",
+        "put a number on the outcome — time saved, errors caught, dollars",
+        "name the exact person this helps and open the demo on their pain"
+      ]
+    };
+    var opts = movesByLens[low] || ["sharpen the demo’s single clearest win"];
+    var move = opts[hash((e && e.link || "") + "|" + low) % opts.length];
+    return low + " is its lowest lens at " + v + "/10 — " + move + ".";
   }
   function lensBar(name, val) {
     var w = Math.max(8, Math.min(100, Math.round(val / 10 * 100)));
@@ -2092,8 +2229,13 @@ var QRClean = (function () {
       '<span class="lens-val">' + val.toFixed(1) + '</span></div>';
   }
   function fillLensBars() { Array.prototype.forEach.call(document.querySelectorAll("#podium .lens-bar > i"), function (i) { i.style.width = (i.getAttribute("data-w") || 0) + "%"; }); }
-  function showPodium(animate) {
+  function fillCardLens(card) { if (!card) return; Array.prototype.forEach.call(card.querySelectorAll(".lens-bar > i"), function (i) { i.style.width = (i.getAttribute("data-w") || 0) + "%"; }); }
+  var REVEAL = { step: 0, mode: null, timer: null };
+  var REVEAL_ORDER = [2, 1, 0]; /* 3rd (bronze) → 2nd (silver) → 1st (gold) */
+  function showPodium(animate, mode) {
+    mode = mode || "all";
     stopHeroTimer(); delibStop();
+    clearTimeout(REVEAL.timer);
     $("judging").classList.remove("on");
     $("podiumWrap").classList.add("on");
     setStepper(); $("cStage").textContent = "Awarded"; $("boardTitle").textContent = "The winners are in"; $("boardSub").textContent = "Chosen by median consensus of a Copilot CLI panel."; $("qrCard").style.opacity = "0.55";
@@ -2113,18 +2255,117 @@ var QRClean = (function () {
       ["Copilot panel calls", String(state.calls || 0)]
     ];
     $("growthGrid").innerHTML = methodStats.map(function (s) { return '<div class="gc"><div class="gp">' + esc(s[0]) + '</div><div class="gl">' + esc(s[1]) + "</div></div>"; }).join("");
-    var cards = document.querySelectorAll("#podium .award");
-    /* staged reveal (3rd → 2nd → 1st) so the room can read each one */
-    var delays = { 2: 0, 1: animate ? 750 : 0, 0: animate ? 1550 : 0 };
-    Array.prototype.forEach.call(cards, function (card) { var rk = +card.getAttribute("data-rank"); setTimeout(function () { card.classList.add("show"); }, reduceMotion ? 0 : (delays[rk] || 0)); });
-    if (reduceMotion) { fillLensBars(); $("growth").classList.add("show"); $("podiumRays").classList.add("on"); }
-    else {
-      setTimeout(function () { $("podiumRays").classList.add("on"); }, animate ? 1550 : 0);
-      setTimeout(fillLensBars, animate ? 2100 : 60);
-      setTimeout(function () { $("growth").classList.add("show"); }, animate ? 2700 : 0);
-      if (animate) setTimeout(confetti, 1650);
+    renderFullResults(ranked);
+    renderSparkles(mode === "all");
+    /* reset reveal-dependent chrome so re-entry is clean */
+    $("growth").classList.remove("show"); $("fullResults").classList.remove("show");
+    $("podiumActions").classList.remove("on"); $("revealBar").classList.remove("on"); $("podiumRays").classList.remove("on");
+    if (reduceMotion) mode = "all";
+    if (mode === "all") {
+      Array.prototype.forEach.call(document.querySelectorAll("#podium .award"), function (c) { c.classList.add("show"); });
+      fillLensBars();
+      $("growth").classList.add("show"); $("fullResults").classList.add("show");
+      $("podiumRays").classList.add("on"); $("podiumActions").classList.add("on");
+      if (animate && !reduceMotion) confetti();
+      if (animate) victoryFanfare();
+    } else {
+      setupStagedReveal(mode);
     }
     renderStage();
+  }
+  function setupStagedReveal(mode) {
+    clearTimeout(REVEAL.timer);
+    REVEAL.step = 0; REVEAL.mode = mode;
+    if (mode === "manual") { $("revealBar").classList.add("on"); updateRevealBar(); }
+    else { $("revealBar").classList.remove("on"); scheduleAutoStep(); }
+  }
+  function updateRevealBar() {
+    var labels = [
+      { t: "🥉 Reveal Builder Bronze", p: "Third place first — press when the room is ready." },
+      { t: "🥈 Reveal Builder Silver", p: "Second place next — build the suspense." },
+      { t: "🏆 Reveal the Copilot Builder Award", p: "The winner. Drumroll, then reveal." }
+    ];
+    var l = labels[REVEAL.step] || labels[2];
+    var btn = $("revealStepBtn"), prog = $("revealProgress");
+    if (btn) btn.innerHTML = l.t;
+    if (prog) prog.textContent = l.p;
+  }
+  function scheduleAutoStep() {
+    clearTimeout(REVEAL.timer);
+    REVEAL.timer = setTimeout(function () {
+      if (state.status !== "awarded" || view !== "stage") return;
+      revealNextPlace();
+    }, REVEAL.step === 0 ? 900 : 1800);
+  }
+  function revealNextPlace() {
+    if (!REVEAL.mode || REVEAL.step >= 3) return;
+    var rank = REVEAL_ORDER[REVEAL.step];
+    if (rank === 0 && !reduceMotion) {
+      $("revealBar").classList.remove("on");
+      runCountdown(function () { doRevealPlace(0); });
+    } else {
+      doRevealPlace(rank);
+    }
+  }
+  function doRevealPlace(rank) {
+    var card = document.querySelector('#podium .award[data-rank="' + rank + '"]');
+    if (card) { card.classList.add("show"); fillCardLens(card); }
+    REVEAL.step++;
+    if (rank === 0) {
+      winnerFlourish();
+    } else {
+      updateRevealBar();
+      pushFeed(rank === 2 ? "🥉 Builder Bronze takes third place." : "🥈 Builder Silver takes second place.");
+      if (REVEAL.mode === "auto") scheduleAutoStep();
+    }
+  }
+  function winnerFlourish() {
+    var ranked = rankEntries();
+    $("podiumRays").classList.add("on");
+    renderSparkles(true);
+    if (!reduceMotion) confetti();
+    victoryFanfare();
+    $("revealBar").classList.remove("on");
+    pushFeed("🏆 The Copilot Builder Award goes to “" + (ranked[0] ? ranked[0].e.proj : "the winner") + "”.");
+    setTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : 400);
+    setTimeout(function () { $("fullResults").classList.add("show"); }, reduceMotion ? 0 : 700);
+    setTimeout(function () { $("podiumActions").classList.add("on"); }, reduceMotion ? 0 : 950);
+  }
+  function shortLink(u) { try { var p = new URL(u, location.href); return (p.hostname + p.pathname).replace(/\/$/, "").replace(/^www\./, ""); } catch (e) { return String(u || ""); } }
+  function renderFullResults(ranked) {
+    var el = $("fullResults"); if (!el) return;
+    var rows = ranked.map(function (r, i) {
+      var place = i + 1, medal = place === 1 ? "🏆" : place === 2 ? "🥈" : place === 3 ? "🥉" : "#" + place;
+      var lensCells = LENSES.map(function (L) {
+        var v = r.sc.per[L], w = Math.max(8, Math.min(100, Math.round(v / 10 * 100)));
+        return '<div class="fr-lens"><span class="fr-lname">' + esc(L) + '</span><span class="fr-lbar"><i style="width:' + w + '%"></i></span><span class="fr-lval">' + v.toFixed(1) + "</span></div>";
+      }).join("");
+      var url = safeURL(r.e.link);
+      var linkHTML = url ? ' · <a class="fr-link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(shortLink(r.e.link)) + "</a>" : "";
+      var descHTML = r.e.desc ? '<div class="fr-desc">' + esc(r.e.desc) + "</div>" : "";
+      return '<div class="fr-row' + (place <= 3 ? " fr-top" : "") + '">' +
+        '<div class="fr-rank">' + medal + "</div>" +
+        '<div class="fr-main"><div class="fr-proj">' + esc(r.e.proj) + "</div>" +
+        '<div class="fr-team">👥 ' + esc(r.e.team || "Project team") + linkHTML + "</div>" + descHTML + "</div>" +
+        '<div class="fr-lenses">' + lensCells + "</div>" +
+        '<div class="fr-total">' + r.sc.total.toFixed(1) + "<span>/30</span></div>" +
+        "</div>";
+    }).join("");
+    el.innerHTML = '<div class="op-t">Full results · every project, ranked by median consensus</div>' +
+      '<div class="fr-list">' + rows + "</div>" +
+      '<p class="fr-note">Every accepted project is scored on the same rubric — Innovation, Build Quality &amp; Impact — each combined by the median consensus of a Copilot CLI panel, then summed to a score out of 30. Practice showcase · illustrative results.</p>';
+  }
+  function renderSparkles(intense) {
+    var el = $("sparkles"); if (!el) return;
+    if (reduceMotion) { el.innerHTML = ""; return; }
+    var glyphs = ["✦", "✧", "✨", "⟡"], n = intense ? 22 : 13, html = "";
+    for (var i = 0; i < n; i++) {
+      var x = Math.round(Math.random() * 100), y = Math.round(Math.random() * 100);
+      var gold = intense && Math.random() < 0.5, sz = 11 + Math.round(Math.random() * 16);
+      var dl = (Math.random() * 2.4).toFixed(2), du = (2 + Math.random() * 1.8).toFixed(2);
+      html += '<span class="spark' + (gold ? " gold" : "") + '" style="left:' + x + "%;top:" + y + "%;font-size:" + sz + "px;animation-delay:" + dl + "s;animation-duration:" + du + 's">' + glyphs[i % glyphs.length] + "</span>";
+    }
+    el.innerHTML = html;
   }
   function awardCard(rank, r) {
     var m = AWARD_META[rank], e = r.e, sc = r.sc;
@@ -2137,7 +2378,7 @@ var QRClean = (function () {
       '<div class="ateam">👥 ' + esc(e.team || "Project team") + "</div>" +
       '<div class="lens-block">' + lensHTML + "</div>" +
       '<div class="why"><b>Why it placed:</b> ' + whyText(rank, sc) + "</div>" +
-      '<div class="uplift"><b>Level up:</b> ' + levelUp(sc) + "</div>" +
+      '<div class="uplift"><b>Level up:</b> ' + levelUp(e, sc) + "</div>" +
       '<div class="consensus">🤝 Panel consensus ' + sc.total.toFixed(1) + "/30 · median</div>" +
       "</div>";
   }
