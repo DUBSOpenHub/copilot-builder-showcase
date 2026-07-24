@@ -832,6 +832,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     </div>
     <div class="spacer"></div>
     <span class="pill status-pill" id="stageMode"><span class="badge-dot"></span> Live · illustrative results</span>
+    <button class="icon-btn" id="soundToggleStage" title="Sound off — tap for the victory fanfare" aria-label="Toggle victory sound" aria-pressed="false">🔇</button>
     <button class="icon-btn" id="themeToggleStage" title="Toggle theme" aria-label="Toggle color theme">🌙</button>
     <button class="btn btn-sm btn-ghost" id="exitStage" title="Back to landing">✕ Exit</button>
   </div>
@@ -1078,6 +1079,72 @@ var QRClean = (function () {
   function toggleTheme() { var next = currentTheme() === "dark" ? "light" : "dark"; root.setAttribute("data-theme", next); try { localStorage.setItem(THEME_KEY, next); } catch (e) {} applyThemeIcon(); if (view === "stage") drawStageQR(); }
   ["themeToggleApp", "themeToggleStage", "themeToggleSubmit"].forEach(function (id) { var b = $(id); if (b) b.addEventListener("click", toggleTheme); });
   applyThemeIcon();
+
+  /* ---- sound: opt-in victory fanfare + countdown ticks (Web Audio, no assets) ---- */
+  var SOUND_KEY = "cbs_sound";
+  var soundOn = false; try { soundOn = localStorage.getItem(SOUND_KEY) === "1"; } catch (e) {}
+  var _actx = null, _master = null, _audioUnlocked = false;
+  function audioCtx() {
+    if (_actx) return _actx;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null;
+      _actx = new AC();
+      _master = _actx.createGain(); _master.gain.value = 0.5; _master.connect(_actx.destination);
+    } catch (e) { _actx = null; _master = null; }
+    return _actx;
+  }
+  function unlockAudio() {
+    if (_audioUnlocked) return;
+    var ctx = audioCtx(); if (!ctx) return;
+    try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+    _audioUnlocked = true;
+  }
+  function tone(freq, at, dur, type, peak) {
+    if (!_actx || !_master) return;
+    try {
+      var o = _actx.createOscillator(), g = _actx.createGain();
+      o.type = type || "triangle"; o.frequency.setValueAtTime(freq, at);
+      var pk = peak == null ? 0.18 : peak;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(pk, at + 0.014);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + dur);
+      o.connect(g); g.connect(_master);
+      o.start(at); o.stop(at + dur + 0.03);
+    } catch (e) {}
+  }
+  function playTick() {
+    if (!soundOn) return; var ctx = audioCtx(); if (!ctx) return;
+    try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+    tone(680, ctx.currentTime, 0.11, "square", 0.1);
+  }
+  function victoryFanfare() {
+    if (!soundOn) return; var ctx = audioCtx(); if (!ctx) return;
+    try { if (ctx.state === "suspended") ctx.resume(); } catch (e) {}
+    var t = ctx.currentTime + 0.03;
+    var arp = [523.25, 659.25, 783.99, 1046.50];
+    arp.forEach(function (f, i) { tone(f, t + i * 0.11, 0.32, "triangle", 0.2); });
+    var chordT = t + arp.length * 0.11 + 0.02;
+    [523.25, 659.25, 783.99].forEach(function (f) { tone(f, chordT, 0.85, "sawtooth", 0.06); });
+    tone(1046.50, chordT, 0.9, "triangle", 0.16);
+    tone(1567.98, chordT + 0.10, 0.5, "sine", 0.08);
+  }
+  function applySoundIcon() {
+    var b = $("soundToggleStage"); if (!b) return;
+    b.textContent = soundOn ? "🔊" : "🔇";
+    b.setAttribute("aria-pressed", soundOn ? "true" : "false");
+    b.title = soundOn ? "Sound on — tap to mute" : "Sound off — tap for the victory fanfare";
+  }
+  function toggleSound() {
+    soundOn = !soundOn;
+    try { localStorage.setItem(SOUND_KEY, soundOn ? "1" : "0"); } catch (e) {}
+    applySoundIcon();
+    if (soundOn) { unlockAudio(); playTick(); }
+  }
+  (function initSound() {
+    var b = $("soundToggleStage"); if (b) b.addEventListener("click", toggleSound);
+    ["pointerdown", "keydown"].forEach(function (ev) { try { window.addEventListener(ev, unlockAudio, { passive: true }); } catch (e) { try { window.addEventListener(ev, unlockAudio); } catch (e2) {} } });
+    applySoundIcon();
+  })();
 
   /* ---- accent-derived confetti colors (reads the --primary token) ---- */
   function accentColor(a) { var v = (getComputedStyle(root).getPropertyValue("--primary") || "265 85% 66%").trim(); return "hsl(" + v + (a != null ? " / " + a : "") + ")"; }
@@ -1762,6 +1829,7 @@ var QRClean = (function () {
         big.innerHTML = (s.cap ? '<span class="cue-cap">' + s.cap + "</span>" : "") + '<span class="cue-num">' + s.num + "</span>";
         void big.offsetWidth;
         cueBurst(i);
+        if (i < 3) playTick();
         i++;
         setTimeout(tick, i >= seq.length ? 760 : 900);
       })();
@@ -1804,6 +1872,7 @@ var QRClean = (function () {
     state.podium = ranked.slice(0, 3).map(function (r) { return r.e.id; });
     state.status = "awarded"; save(); fbSetStatus("awarded");
     showPodium(true);
+    victoryFanfare();
     pushFeed("🏆 Copilot Builder Award goes to “" + ranked[0].e.proj + "”.");
   }
 
