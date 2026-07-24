@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="500" viewBox="0 0 760 500" role="img" aria-labelledby="t d">
+<title id="t">A sealed Copilot panel reviews every project on the same rubric</title>
+<desc id="d">Three Copilot judge scorecards with scores sealed until the reveal, above a spotlighted project card with brief judge reactions and no scores.</desc>
+
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="38%" r="62%">
+      <stop offset="0%" stop-color="#9c5ff2" stop-opacity="0.20"/>
+      <stop offset="55%" stop-color="#7c3aed" stop-opacity="0.07"/>
+      <stop offset="100%" stop-color="#9c5ff2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="acc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#9c5ff2"/><stop offset="100%" stop-color="#b98cff"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fcbf08"/><stop offset="100%" stop-color="#ffe08a"/>
+    </linearGradient>
+  </defs>
+
+<style>
+    .sans { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .eyebrow { font: 800 12px/1 -apple-system,"Segoe UI",sans-serif; letter-spacing:2px; fill:#b98cff; }
+    .h { font: 800 21px/1.15 -apple-system,"Segoe UI",sans-serif; fill:#f6f5f8; }
+    .lbl { font: 700 11px/1 -apple-system,"Segoe UI",sans-serif; letter-spacing:.4px; fill:#8f8aa0; text-transform:uppercase; }
+    .val { font: 700 13px/1 -apple-system,"Segoe UI",sans-serif; fill:#ece9f2; }
+    .valmono { font: 600 12px/1 ui-monospace,Menlo,monospace; fill:#c7c2d6; }
+    .muted { font: 500 12px/1.3 -apple-system,"Segoe UI",sans-serif; fill:#8f8aa0; }
+    .btn { font: 800 13px/1 -apple-system,"Segoe UI",sans-serif; fill:#160f24; }
+    .chip { font: 700 12px/1 -apple-system,"Segoe UI",sans-serif; fill:#22c55e; }
+    .emoji { font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif; }
+</style>
+<rect x="0" y="0" width="760" height="500" fill="#08080a"/><rect x="14" y="14" width="732" height="472" rx="18" fill="#0c0b10" stroke="#241d38" stroke-width="1.4"/><ellipse cx="380" cy="210" rx="418" ry="300" fill="url(#glow)"/>
+<rect x="34" y="30" width="212" height="30" rx="15" fill="#150f24" stroke="#3a2d5c"/>
+<circle cx="54" cy="45" r="4" fill="#b98cff"/><text x="66" y="49" class="eyebrow">SEALED COPILOT PANEL</text>
+<rect x="40" y="80" width="184" height="196" rx="13" fill="#100e18" stroke="#2c2340"/>
+<circle cx="62" cy="106" r="7" fill="#241a3d" stroke="#4a3a78"/>
+<text x="62" y="110" class="emoji" font-size="9" text-anchor="middle">🤖</text>
+<text x="78" y="110" class="val" font-size="12">Copilot · Judge 1</text>
+<text x="58" y="140" class="lbl">Innovation</text>
+<rect x="58" y="148" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="58" y="148" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="58" y="174" class="lbl">Build Quality</text>
+<rect x="58" y="182" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="58" y="182" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="58" y="208" class="lbl">Impact</text>
+<rect x="58" y="216" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="58" y="216" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="58" y="264" class="lbl" fill="#b98cff">🔒 SEALED</text>
+<rect x="288" y="80" width="184" height="196" rx="13" fill="#100e18" stroke="#2c2340"/>
+<circle cx="310" cy="106" r="7" fill="#241a3d" stroke="#4a3a78"/>
+<text x="310" y="110" class="emoji" font-size="9" text-anchor="middle">🤖</text>
+<text x="326" y="110" class="val" font-size="12">Copilot · Judge 2</text>
+<text x="306" y="140" class="lbl">Innovation</text>
+<rect x="306" y="148" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="306" y="148" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="306" y="174" class="lbl">Build Quality</text>
+<rect x="306" y="182" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="306" y="182" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="306" y="208" class="lbl">Impact</text>
+<rect x="306" y="216" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="306" y="216" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="306" y="264" class="lbl" fill="#b98cff">🔒 SEALED</text>
+<rect x="536" y="80" width="184" height="196" rx="13" fill="#100e18" stroke="#2c2340"/>
+<circle cx="558" cy="106" r="7" fill="#241a3d" stroke="#4a3a78"/>
+<text x="558" y="110" class="emoji" font-size="9" text-anchor="middle">🤖</text>
+<text x="574" y="110" class="val" font-size="12">Copilot · Judge 3</text>
+<text x="554" y="140" class="lbl">Innovation</text>
+<rect x="554" y="148" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="554" y="148" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="554" y="174" class="lbl">Build Quality</text>
+<rect x="554" y="182" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="554" y="182" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="554" y="208" class="lbl">Impact</text>
+<rect x="554" y="216" width="148" height="8" rx="4" fill="#201a2e"/>
+<rect x="554" y="216" width="148" height="8" rx="4" fill="none" stroke="#3a2d5c" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="554" y="264" class="lbl" fill="#b98cff">🔒 SEALED</text>
+<rect x="40" y="298" width="680" height="150" rx="14" fill="#0f0d16" stroke="#2c2340"/>
+<text x="64" y="332" class="lbl">NOW SHOWING · NO SCORES SHOWN</text>
+<text x="64" y="360" class="h">Aurora Recall</text>
+<text x="64" y="384" class="muted">A retrieval agent that resurfaces missed follow-ups.</text>
+<rect x="64" y="402" width="158" height="30" rx="15" fill="#150f24" stroke="#33294f"/>
+<text x="80" y="421" class="emoji" font-size="13" text-anchor="middle">✨</text>
+<text x="94" y="421" class="val" font-size="12">Clever retrieval</text>
+<rect x="234" y="402" width="121" height="30" rx="15" fill="#150f24" stroke="#33294f"/>
+<text x="250" y="421" class="emoji" font-size="13" text-anchor="middle">🛠️</text>
+<text x="264" y="421" class="val" font-size="12">Clean build</text>
+<rect x="368" y="402" width="121" height="30" rx="15" fill="#150f24" stroke="#33294f"/>
+<text x="384" y="421" class="emoji" font-size="13" text-anchor="middle">🎯</text>
+<text x="398" y="421" class="val" font-size="12">Real impact</text>
+<text x="700" y="332" class="lbl" text-anchor="end" fill="#8f8aa0">MEDIAN CONSENSUS</text>
+</svg>

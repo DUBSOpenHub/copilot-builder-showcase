@@ -1,14 +1,25 @@
+<div align="center">
+
 # 🏆 Copilot Builder Showcase
 
-**Turn any workshop into a live Copilot Builder Showcase.**
+**Turn the awkward final ten minutes of any workshop into a live, Copilot-judged finale.**
 
-Drop the links, activate the judging panel, and spotlight the winners—in under
-two minutes.
+Paste the links, activate the panel, reveal the winners — in under two minutes.
 
 [![GitHub](https://img.shields.io/badge/GitHub-Copilot_CLI-blue?logo=github)](https://github.com/features/copilot)
 [![CI](https://github.com/DUBSOpenHub/copilot-builder-showcase/actions/workflows/ci.yml/badge.svg)](https://github.com/DUBSOpenHub/copilot-builder-showcase/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Security Policy](https://img.shields.io/badge/Security-Policy-brightgreen?logo=github)](SECURITY.md)
+
+**[Live demo](https://dubsopenhub.github.io/copilot-builder-showcase/) · [What it does](#what-it-does) · [Install](#install) · [How it works](#how-it-works) · [From the CLI](#from-the-cli) · [FAQ](#faq) · [License](#license-and-credits)**
+
+<img src="docs/images/builder-showcase-demo.svg" alt="Copilot Builder Showcase big-screen award reveal: the Copilot Builder Award, Builder Silver, and Builder Bronze podium with per-lens Copilot panel scores" width="100%">
+
+*Every accepted project gets a spotlight. One sealed Copilot panel scores them all on the same rubric. Then the room watches the podium land — Builder Bronze, Builder Silver, and the first-place Copilot Builder Award.*
+
+</div>
+
+---
 
 > ### ⚡ One command. That's it.
 >
@@ -20,7 +31,7 @@ two minutes.
 >    bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
 >      -H "Accept: application/vnd.github.raw+json" | bash'
 >    ```
->    On Windows, use the PowerShell command in [Install](#-install).
+>    On Windows, use the PowerShell command in [Install](#install).
 > 3. Type:
 >    ```bash
 >    showcase
@@ -30,55 +41,19 @@ two minutes.
 >
 > *Requires Git and Python 3.11+ for practice installs. The one-line install prefers an authenticated GitHub CLI when available. Official judging uses an authenticated GitHub Copilot CLI.*
 
-![Copilot Builder Showcase big-screen award reveal — Copilot Builder Award, Builder Silver, and Builder Bronze podium with per-lens Copilot panel scores](docs/images/builder-showcase-demo.svg)
-
 ---
 
-## 🚀 30-Second Overview
+## What it does
 
-Copilot Builder Showcase is for the awkward final ten minutes after people build things
-together:
+Builder workshops, demo days, conference sessions, and online challenges are great at *starting* projects and terrible at *ending* them. The links scatter across chat threads and browser tabs. A few people get demo time. Most projects get no real review. The room has nothing to follow — and then the session just... stops.
 
-- **Have a list of projects but no ending?** Paste the links once.
-- **Want every project to be seen?** Every accepted entry gets a spotlight.
-- **Need a consistent review?** The same rubric and panel policy apply to all.
-- **Want the room involved?** The audience joins a quick final reveal.
-- **Need more than applause?** Each run preserves awards, private feedback, and replay evidence.
+Copilot Builder Showcase is a one-command finale for that moment. The host pastes the links (or the room scans a QR to submit). A sealed Copilot panel reviews every project through the same rubric. Each entry gets a spotlight, the audience joins one quick reveal cue, and a real podium lands — saved as a replayable bundle.
 
-The default result is one watchable Terminal showcase with a real podium:
-**Builder Bronze**, **Builder Silver**, and the first-place **Copilot Builder Award**.
-
----
-
-## 💬 The Problem
-
-Builder workshops, product demos, conference sessions, and online challenges are
-good at creating projects—and bad at ending.
-
-The links scatter across chat threads, shared documents, and browser tabs. A few
-people get demo time. Most projects receive no consistent review. The audience
-has nothing to follow, and the session simply stops.
-
-A human judging panel would create a shared resolution, but recruiting judges,
-reviewing every entry, producing feedback, and running an award ceremony is too
-much overhead for most sessions.
-
-> **Copilot Builder Showcase turns that loose project list into a finale everyone can watch and join.**
-
----
-
-## 🤔 What Is This?
-
-Copilot Builder Showcase is a one-command judging showcase for projects built during
-a shared session. The host pastes links. A sealed Copilot panel reviews every
-project through the same rubric. The showcase spotlights each entry, invites the
-audience into the reveal, and saves the result as a replayable bundle.
-
-It gives any workshop the energy and resolution of a judged finale.
+It gives any session the energy and resolution of a judged finale, without recruiting a single human judge.
 
 | Before | With Copilot Builder Showcase |
 |---|---|
-| Links sit in a chat or spreadsheet | The host pastes the complete list once |
+| Links sit in a chat or spreadsheet | The host pastes the complete list once — or the room submits by QR |
 | Only a few people get demo time | Every accepted project gets a spotlight |
 | Review quality depends on who speaks up | Every project uses the same declared rubric |
 | The session ends after the final demo | The room joins a short recognition reveal |
@@ -86,81 +61,101 @@ It gives any workshop the energy and resolution of a judged finale.
 
 ---
 
-## ⏰ Why Now?
+## What you do in a showcase
 
-AI tools let more people build credible projects during a workshop or challenge.
-The amount of output has grown, but the way those sessions end has not. Hosts
-still collect links, pick a few demos, and move on.
+- **Drop the projects.** Paste HTTP(S) links and GitHub `owner/repo` entries — or let the room scan a QR and submit from their phones.
+- **Run one sealed panel.** A compact Copilot scorecard applies Innovation, Build Quality, and Impact lenses to every project. Scores stay sealed.
+- **Give everyone a moment.** Each project gets a spotlight with three brief judge reactions — no scores, no rank, no one left out.
+- **Bring the room in.** One operator-confirmed audience cue — a drumroll, a countdown, an applause check — right before the reveal.
+- **Land the podium.** Third, second, then the first-place Copilot Builder Award, with per-lens panel scores revealed only now.
+- **Keep the work.** Recap, private per-project feedback, validation, export, and replay are saved together. Top-three growth cards follow the awards.
 
-Copilot Builder Showcase closes that loop: every project gets a fair moment, the group
-gets something fun to watch, and the work gets a clear shared ending.
-
----
-
-## 🎯 Use Cases
-
-### 🧑‍🏫 Builder workshop
-
-Twenty people finish a two-hour workshop with twenty different prototypes.
-Paste the links and give the room a shared finale instead of ending on cleanup
-instructions.
-
-### 🎤 Product demo session
-
-A team brings several experiments to demo day. Run one consistent panel,
-spotlight every project, and leave each builder with private next-step feedback.
-
-### 🏟️ Conference project showcase
-
-Attendees build for fun during a conference session. Turn the final project list
-into a short audience moment without recruiting judges in advance.
-
-### 🌐 Online build challenge
-
-Participants submit links from different time zones. Preserve a consistent
-review, recognition slate, and replay bundle even when the builders cannot all
-present live.
+The whole thing runs in one visible Terminal, with a big-screen web view for the room. It never auto-opens a second window.
 
 ---
 
-## 🎬 What Happens in the Live Showcase?
+## A look inside
 
-```text
-project links -> sealed panel review -> every project gets a spotlight
-              -> audience cue -> recognition reveal -> feedback + replay
-```
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/look-scan-submit.svg" alt="A room QR on the big screen and a phone showing the add-your-project form" width="100%"><br><br>
+      <strong>Scan to submit.</strong> The big screen shows a room QR. Anyone adds a project from their phone — no app, no login, just a link and an optional team name.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/look-sealed-panel.svg" alt="Three Copilot judge scorecards with scores sealed, above a spotlighted project" width="100%"><br><br>
+      <strong>One sealed panel.</strong> Every project is reviewed on the same rubric and combined by median consensus. Scores stay sealed until the reveal.
+    </td>
+  </tr>
+</table>
 
-1. **Projects enter** — HTTP(S) project links and GitHub `owner/repo` entries
-   become project cards.
-2. **The rapid panel reviews** — one compact Copilot scorecard applies Innovation,
-   Build Quality, and Impact lenses to each project while scores remain sealed.
-   Official events keep the configured panel policy and do not silently downgrade
-   to a single-model decision.
-3. **Every project gets a spotlight** — three brief judge reactions appear without
-   exposing scores or rank.
-4. **The room joins in** — a quick audience cue asks for a drumroll, countdown,
-   applause check, or another participation moment.
-5. **The podium lands** — third place, second place, then the first-place Copilot
-   Builder Award.
-6. **The work stays useful** — recap, private feedback, validation, export, and
-   replay are saved together.
-7. **Top-three growth cards land after awards** — each podium project gets
-   improvement guidance, a Copilot-next suggestion, and an evidence-based
-   Copilot-use note.
+*The finale up top is the payoff — this is how the room gets there.*
 
-The complete showcase runs in one visible Terminal. Copilot Builder Showcase never
-auto-opens a dashboard or second audience window.
+---
 
-Every run keeps its status visible:
+## A real podium, useful feedback
 
-| Status | Meaning |
+Every project receives a brief on-screen review. Only the top three receive awards:
+
+| Award | Selection |
 |---|---|
-| **PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS** | Deterministic local judges are active. Use this for rehearsal and demonstration, not official awards. |
-| **OFFICIAL COPILOT PANEL** | A connected Copilot panel reviewed the projects. |
+| 🥉 **Third — Builder Bronze** | Third-highest complete result |
+| 🥈 **Second — Builder Silver** | Second-highest complete result |
+| 🏆 **First — Copilot Builder Award** | Strongest complete result |
+
+Each award explains why the project placed, what the panel uniquely liked, and one specific level-up move. After the reveal, top-three growth cards add one improvement move, one optional Copilot-next move, and one Copilot-use summary sourced only from builder-provided evidence.
+
+Exact ties follow the event's declared policy — shared placement, a predeclared rubric tiebreaker, or a logged human decision — never input order. Formal events can swap this slate for a traditional podium or any custom recognitions in the EventSpec.
 
 ---
 
-## 📦 Install
+## Fair by default
+
+| Guardrail | What it means |
+|---|---|
+| Persistent result status | Practice or Official status stays visible throughout the showcase and in the manifest. |
+| Sealed scores | Scores, rankings, prompts, and unrevealed awards stay hidden until the reveal. |
+| Equal spotlight | Every accepted project appears before the recognition ceremony. |
+| Same declared rubric | Every entry uses the same snapshotted review policy. |
+| Multi-model consensus | Official panels combine configured judges using median consensus. |
+| Strict official policy | Rapid scorecards keep the configured panel policy and never silently downgrade to one model. |
+| Evidence, not inference | Copilot and frontier claims require builder-provided evidence. |
+| Hidden diagnostic review | A sealed Shadow Spec review can warn the organizer but cannot alter winners. |
+| Read-only replay | Replays use stored artifacts and never call a judge. |
+| Tamper evidence | Exported bundles include `HASHES` and `SEAL` integrity records. |
+
+Run bundles can contain project context and judge feedback — treat them as internal artifacts unless a human approves publication. See [SECURITY.md](SECURITY.md).
+
+<details>
+<summary><strong>The hidden quality review, explained</strong></summary>
+
+<br>
+
+The visible rubric is not the only check. Before judging, Copilot Builder Showcase creates a second *sealed* diagnostic review. After the panel finishes, it looks for unsupported claims, shallow evidence, rubric gaps, calibration problems, and score leakage.
+
+This hidden review stays sealed until the awards stage, never changes public scores or awards, and gives the organizer private warnings when a result deserves another look. It follows the sealed-envelope principles behind [Shadow Score Spec](https://github.com/DUBSOpenHub/shadow-score-spec) — without turning hidden criteria into a secret way to pick winners.
+
+</details>
+
+---
+
+## Works today · On the roadmap · Opinions we hold
+
+| ✅ Works today | 🚧 On the roadmap | 💭 Opinions we hold |
+|---|---|---|
+| One-command install on macOS, Linux, and Windows | Turnkey hosted backend for QR live-submit | "Copilot-judged," never hand-wavy "AI-judged" |
+| Offline practice showcase with a bundled demo | More built-in EventSpec templates | No scores or ranks before the reveal — ever |
+| Official Copilot panel via authenticated Copilot CLI | Deeper accessibility narration | One operator-confirmed cue before the podium |
+| Paste links **or** scan a QR to submit *(optional backend)* | Richer big-screen theming | One visible Terminal; never a surprise second window |
+| Sealed median-consensus scoring | | Evidence over inference for Copilot/frontier claims |
+| Bronze / Silver / Copilot Builder Award podium | | Every accepted project gets a spotlight |
+| Private feedback + top-three growth cards | | |
+| Replay & validate from tamper-evident bundles | | |
+| Reduced-motion reveal pacing | | |
+
+---
+
+## Install
 
 ### Instant install
 
@@ -218,42 +213,37 @@ Set-Location copilot-builder-showcase
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Windows 10 or 11 with Windows Terminal or a modern PowerShell host is
-recommended for the Unicode ceremony and ANSI color output.
-
-For an Official Copilot Panel on Windows, install the native CLI:
-
-```powershell
-winget install GitHub.Copilot
-```
-
-Copilot Builder Showcase requires `copilot.exe` for official Windows judging
-and rejects `.cmd` or `.bat` shims so project text never passes through
-`cmd.exe`. Practice showcases do not require Copilot CLI.
+Windows 10 or 11 with Windows Terminal or a modern PowerShell host is recommended for the Unicode ceremony and ANSI color output. For an Official Copilot Panel on Windows, install the native CLI with `winget install GitHub.Copilot`. Copilot Builder Showcase requires `copilot.exe` for official Windows judging and rejects `.cmd` or `.bat` shims so project text never passes through `cmd.exe`. Practice showcases do not require Copilot CLI.
 
 ---
 
-## 🧪 Try the Complete Practice Showcase
+## Getting started — pick your path
+
+Not sure where to begin? Find the row that sounds like you.
+
+### 🎤 "I'm running a workshop."
+
+1. Install once (see [Install](#install) above).
+2. When the room finishes building, start the finale:
+   ```bash
+   showcase
+   ```
+3. Paste the project links — one link or the whole batch at once — **or** put the [big-screen live demo](https://dubsopenhub.github.io/copilot-builder-showcase/) on the projector and let people scan the QR to submit.
+4. Trigger the audience cue, then reveal the podium.
+
+Every event after that is just `showcase` again.
+
+### 🧪 "I just want to see it work."
 
 ```bash
 showcase --demo
 ```
 
-The bundled three-project demo avoids network metadata calls, follows the same
-intake-to-replay flow, and targets completion within two minutes. It requires no
-Copilot model calls and is always labeled:
+The bundled three-project demo runs offline in under two minutes, follows the same intake-to-reveal flow, and is always labeled `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS`. No Copilot calls, no network metadata.
 
-```text
-PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS
-```
+### 🛠️ "I want official judging or to customize."
 
----
-
-## 🤖 Connect an Official Copilot Panel
-
-Official judging runs through your authenticated
-[GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli).
-Sign in once, then check the panel:
+Connect an authenticated Copilot panel:
 
 ```bash
 copilot login
@@ -261,23 +251,11 @@ showcase doctor
 showcase --official https://example.com/project-one https://example.com/project-two
 ```
 
-No separate model API key or provider SDK is required. Copilot Builder Showcase invokes
-Copilot in non-interactive, tool-free mode and disables repository instructions,
-built-in MCP servers, remote control, and file or shell tools for every judge
-call.
-
-The default EventSpec declares a three-family Copilot panel. You can configure
-one to three Copilot model IDs, the minimum panel size, provider diversity,
-concurrency, and reasoning requirements in your event file.
-
-If `--official` is used without an authenticated Copilot CLI, the command
-blocks. It never silently converts an official event into a practice result.
-Official scoring policy is preserved even in rapid scorecard mode; it never
-falls back to a hidden single-model panel.
+Then bring your own rubric, recognitions, and panel policy with a custom EventSpec — see [Going further](#going-further).
 
 ---
 
-## 🔗 Project Links Are Enough
+## Project links are enough
 
 The beginner input can mix any safe HTTP(S) project or demo links:
 
@@ -288,9 +266,7 @@ https://demo.example.com/aurora
 https://example.net/showcase/project-three
 ```
 
-GitHub links may use public repository metadata for a richer spotlight. Generic
-links are not fetched by the intake process; Copilot Builder Showcase derives a safe
-project label from the URL and uses only the context the organizer supplies.
+GitHub links may use public repository metadata for a richer spotlight. Generic links are not fetched by the intake process; Copilot Builder Showcase derives a safe project label from the URL and uses only the context the organizer supplies.
 
 For advanced events, add optional context after each link:
 
@@ -298,121 +274,91 @@ For advanced events, add optional context after each link:
 https://demo.example/aurora | Team Aurora | Used Copilot for API design | Built a retrieval agent | Reduce missed follow-ups | Account executives | https://demo.example/aurora | Daily workflow demo
 ```
 
-The optional fields are team or builder, Copilot evidence, frontier evidence,
-problem statement, intended user, demo or artifact URL, and builder notes.
-Copilot Builder Showcase never infers Copilot or frontier-model use from a link, code,
-metadata, or judge impression.
+The optional fields are team or builder, Copilot evidence, frontier evidence, problem statement, intended user, demo or artifact URL, and builder notes. Copilot Builder Showcase never infers Copilot or frontier-model use from a link, code, metadata, or judge impression.
 
 ---
 
-## 🏅 A Real Podium, Useful Feedback
-
-Every project receives a brief on-screen review. Only the top three receive awards:
-
-| Award | Selection |
-|---|---|
-| 🥉 **Third Place — Builder Bronze** | Third-highest complete result |
-| 🥈 **Second Place — Builder Silver** | Second-highest complete result |
-| 🏆 **First Place — Copilot Builder Award** | Strongest complete result |
-
-Each award explains why the project placed, what the panel uniquely liked, and one
-specific level-up move. After the reveal, top-three growth cards add:
-1. one improvement move,
-2. one optional Copilot next move,
-3. one Copilot-use summary sourced only from builder-provided evidence.
-
-Exact ties follow the event's declared policy: shared placement, a predeclared
-rubric tiebreaker, or a logged human decision.
-
-Formal events can replace this slate with a traditional podium or any custom
-recognitions in the EventSpec.
-
----
-
-## 👻 Hidden Quality Review
-
-The visible rubric is not the only check.
-
-Before judging, Copilot Builder Showcase creates a second sealed diagnostic review. After
-the panel finishes, it checks for issues such as unsupported claims, shallow
-evidence, rubric gaps, calibration problems, and score leakage.
-
-This hidden review:
-
-- stays sealed until the awards stage,
-- never changes public scores, rankings, or awards,
-- gives the organizer private warnings when a result deserves another look,
-- and remains diagnostic-only by design.
-
-The approach follows the sealed-envelope principles behind
-[Shadow Score Spec](https://github.com/DUBSOpenHub/shadow-score-spec) without
-turning hidden criteria into a secret way to choose winners.
-
----
-
-## 🛡️ Fair by Default
-
-| Guardrail | What it means |
-|---|---|
-| Persistent result status | Practice or Official status remains visible throughout the showcase and in the manifest. |
-| Sealed scores | Scores, rankings, prompts, and unrevealed awards stay hidden until the reveal. |
-| Equal spotlight | Every accepted project appears before the recognition ceremony. |
-| Same declared rubric | Every entry uses the same snapshotted review policy. |
-| Multi-model consensus | Official panels combine configured judges using median consensus. |
-| Strict official panel policy | Rapid scorecards keep configured panel policy and never silently downgrade to one model. |
-| Evidence, not inference | Copilot and frontier claims require builder-provided evidence. |
-| Hidden diagnostic review | The Shadow Spec can warn the organizer but cannot alter winners. |
-| Declared tie policy | Exact ties use the event policy, never input order. |
-| Read-only replay | Replays use stored artifacts and never call a judge. |
-| Tamper evidence | Exported bundles include `HASHES` and `SEAL` integrity records. |
-
-Run bundles may contain project context and judge feedback. Treat them as
-internal artifacts unless a human approves publication. See
-[SECURITY.md](SECURITY.md).
-
----
-
-## 🚫 When Not to Use It
-
-- **A regulated or legally consequential decision** — use qualified human judges
-  and the required review process.
-- **Projects contain secrets or restricted data** — do not submit context that
-  cannot be shared with the configured model provider.
-- **You need expert certification** — a Copilot panel is not a substitute for domain
-  accreditation, safety review, or compliance approval.
-- **You only need private feedback on one project** — a direct review is simpler
-  than producing a live group finale.
-
-Copilot Builder Showcase is built for shared learning, recognition, and event resolution.
-Human approval remains required before external publication.
-
----
-
-## 📁 After the Showcase
-
-Runs are stored under:
+## How it works
 
 ```text
-~/.copilot_builder_showcase/runs/<run-id>/
+EventSpec -> project intake -> consensus review -> sealed artifacts
+          -> audience-safe showcase -> recognitions -> export/replay
 ```
 
-Useful commands:
+One compact Copilot scorecard applies the Innovation, Build Quality, and Impact lenses to every project. Official panels combine one to three configured Copilot models by median consensus and never silently downgrade to a single model. Everything the run produces — scores, feedback, validation, replay — is sealed into a tamper-evident bundle.
 
-```bash
-showcase replay <run-id>
-showcase validate <run-id>
-showcase feedback <run-id>
-showcase doctor
-showcase present <run-id> --operator
-```
+Every run keeps its status visible:
 
-Private feedback includes what judges liked, an actionable next step, an
-optional Copilot next move, and a bounded frontier experiment. Unsupported ideas
-are labeled as hypotheses.
+| Status | Meaning |
+|---|---|
+| **PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS** | Deterministic local judges are active. For rehearsal and demonstration, not official awards. |
+| **OFFICIAL COPILOT PANEL** | A connected Copilot panel reviewed the projects. |
+
+<details>
+<summary><strong>The files behind it</strong></summary>
+
+<br>
+
+- `showcase_launcher.py` — the beginner `showcase` entry point
+- `builder_showcase.py` — the canonical engine and advanced CLI
+- `builder_showcase_dashboard.py` — the optional Textual run monitor
+- `bundle_reader.py` — audience-safe and operator views
+- `event_spec.py` — portable event configuration and legacy bundle support
+
+The primary live showcase uses only the Python standard library. Textual is optional, and an install failure never blocks the showcase.
+
+</details>
 
 ---
 
-## ⚙️ Customize the Event
+## Going further
+
+<details>
+<summary><strong>Command reference</strong></summary>
+
+<br>
+
+| Command | Use it for |
+|---|---|
+| `showcase` | Paste links and start the complete live showcase. |
+| `showcase <links...>` | Start immediately with supplied projects. |
+| `showcase --demo` | Run the bundled two-minute practice showcase. |
+| `showcase --reduced-motion` | Prefer low-motion reveal pacing (or set `CBS_REDUCED_MOTION=1`; legacy `HJ_REDUCED_MOTION` still honored). |
+| `showcase --official <links...>` | Require a connected official Copilot panel. |
+| `showcase replay <run-id>` | Replay a prior showcase without judge calls. |
+| `showcase validate <run-id>` | Verify bundle hashes and seals. |
+| `showcase feedback <run-id>` | Write private per-project feedback. |
+| `showcase doctor` | Check setup, panel connection, and bundle health. |
+| `showcase present <run-id> --operator` | Inspect stored results after awards. |
+| `showcase tui <run-id> --projector` | Open the optional diagnostic monitor. |
+
+The installer also preserves `hackathon` and `hackathon-judge` as compatibility aliases for existing scripts.
+
+</details>
+
+<details>
+<summary><strong>Connect an official Copilot panel</strong></summary>
+
+<br>
+
+Official judging runs through your authenticated [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli). Sign in once, then check the panel:
+
+```bash
+copilot login
+showcase doctor
+showcase --official https://example.com/project-one https://example.com/project-two
+```
+
+No separate model API key or provider SDK is required. Copilot Builder Showcase invokes Copilot in non-interactive, tool-free mode and disables repository instructions, built-in MCP servers, remote control, and file or shell tools for every judge call.
+
+The default EventSpec declares a three-family Copilot panel. You can configure one to three Copilot model IDs, the minimum panel size, provider diversity, concurrency, and reasoning requirements in your event file. If `--official` is used without an authenticated Copilot CLI, the command blocks — it never silently converts an official event into a practice result, and never falls back to a hidden single-model panel.
+
+</details>
+
+<details>
+<summary><strong>Customize the event (EventSpec)</strong></summary>
+
+<br>
 
 Copy the starter EventSpec:
 
@@ -431,62 +377,40 @@ showcase \
   --yes
 ```
 
-The EventSpec defines:
+The EventSpec defines event name and tagline, scoring dimensions and review lenses, recognition categories and tie behavior, privacy and accessibility defaults, live-panel models and policy, presentation behavior, and the diagnostic Shadow Spec. Every run snapshots its resolved configuration so later edits cannot rewrite a past result.
 
-- event name and tagline,
-- scoring dimensions and review lenses,
-- recognition categories and tie behavior,
-- privacy and accessibility defaults,
-- live-panel models and policy,
-- presentation behavior,
-- and the diagnostic Shadow Spec.
+</details>
 
-Every run snapshots its resolved configuration so later edits cannot rewrite a
-past result.
+<details>
+<summary><strong>After the showcase — replay, validate, feedback</strong></summary>
 
----
+<br>
 
-## ❓ FAQ
+Runs are stored under:
 
-### Do I need an API key?
+```text
+~/.copilot_builder_showcase/runs/<run-id>/
+```
 
-No separate API key is required. The practice showcase is local and illustrative;
-an Official Copilot Panel uses your authenticated GitHub Copilot CLI subscription.
+Useful commands:
 
-### What links can I paste?
+```bash
+showcase replay <run-id>
+showcase validate <run-id>
+showcase feedback <run-id>
+showcase doctor
+showcase present <run-id> --operator
+```
 
-Any safe HTTP(S) project or demo URL, plus GitHub `owner/repo` shorthand.
+Private feedback includes what judges liked, an actionable next step, an optional Copilot next move, and a bounded frontier experiment. Unsupported ideas are labeled as hypotheses.
 
-### Does Copilot Builder Showcase open every website I paste?
-
-No. Generic non-GitHub links are not fetched during intake. GitHub repository
-links may use public metadata when available.
-
-### How are winners chosen?
-
-The panel scores the declared rubric, official model responses are combined by
-median consensus, and recognitions follow their declared dimensions and tie
-policy.
-
-### What does the hidden Shadow review do?
-
-It independently checks review quality and possible failure modes. It can warn
-the organizer, but it cannot change scores, rankings, or awards.
-
-### Can I replay a showcase without spending more model calls?
-
-Yes. Replay reads the sealed bundle and never contacts a judge.
-
-### Is the output public?
-
-No. Run bundles and feedback are internal by default. A human must approve
-external publishing.
+</details>
 
 ---
 
-## 🧭 Use It from Copilot CLI
+## From the CLI
 
-Add the skill:
+Use it straight from Copilot CLI. Add the skill:
 
 ```text
 /skills add DUBSOpenHub/copilot-builder-showcase
@@ -498,52 +422,51 @@ Then type:
 showcase
 ```
 
-The skill checks whether the command is installed, asks permission before
-installing anything, runs `showcase doctor`, and opens exactly one real terminal
-window for the audience experience.
+The skill checks whether the command is installed, asks permission before installing anything, runs `showcase doctor`, and opens exactly one real terminal window for the audience experience.
 
 ---
 
-## 📋 Command Reference
+## FAQ
 
-| Command | Use it for |
-|---|---|
-| `showcase` | Paste links and start the complete live showcase. |
-| `showcase <links...>` | Start immediately with supplied projects. |
-| `showcase --demo` | Run the bundled two-minute practice showcase. |
-| `showcase --reduced-motion` | Prefer low-motion reveal pacing in the live showcase (or set `CBS_REDUCED_MOTION=1`; legacy `HJ_REDUCED_MOTION` still honored). |
-| `showcase --official <links...>` | Require a connected official Copilot panel. |
-| `showcase replay <run-id>` | Replay a prior showcase without judge calls. |
-| `showcase validate <run-id>` | Verify bundle hashes and seals. |
-| `showcase feedback <run-id>` | Write private per-project feedback. |
-| `showcase doctor` | Check setup, panel connection, and bundle health. |
-| `showcase present <run-id> --operator` | Inspect stored results after awards. |
-| `showcase tui <run-id> --projector` | Open the optional diagnostic monitor. |
+**Do I need an API key?**
+No separate API key is required. The practice showcase is local and illustrative; an Official Copilot Panel uses your authenticated GitHub Copilot CLI subscription.
 
-The installer also preserves `hackathon` and `hackathon-judge` as compatibility
-aliases for existing scripts.
+**What links can I paste?**
+Any safe HTTP(S) project or demo URL, plus GitHub `owner/repo` shorthand.
 
----
+**Does it open every website I paste?**
+No. Generic non-GitHub links are not fetched during intake. GitHub repository links may use public metadata when available.
 
-## 🏗️ How It Is Built
+**How are winners chosen?**
+The panel scores the declared rubric, official model responses are combined by median consensus, and recognitions follow their declared dimensions and tie policy.
 
-```text
-EventSpec -> project intake -> consensus review -> sealed artifacts
-          -> audience-safe showcase -> recognitions -> export/replay
-```
+**What does the hidden Shadow review do?**
+It independently checks review quality and possible failure modes. It can warn the organizer, but it cannot change scores, rankings, or awards.
 
-- `showcase_launcher.py` is the beginner `showcase` entry point.
-- `builder_showcase.py` is the canonical engine and advanced CLI.
-- `builder_showcase_dashboard.py` is the optional Textual run monitor.
-- `bundle_reader.py` creates audience-safe and operator views.
-- `event_spec.py` resolves portable event configuration and legacy bundles.
+**Can I replay a showcase without spending more model calls?**
+Yes. Replay reads the sealed bundle and never contacts a judge.
 
-The primary live showcase uses the Python standard library. Textual is optional and
-an installation failure never blocks the showcase.
+**Is the output public?**
+No. Run bundles and feedback are internal by default. A human must approve external publishing.
 
 ---
 
-## 🛠️ Develop
+## What it is not
+
+Copilot Builder Showcase is **not**:
+
+- **A regulated or legally consequential decision-maker** — use qualified human judges and the required review process.
+- **A place for secrets or restricted data** — do not submit context that cannot be shared with the configured model provider.
+- **Expert certification** — a Copilot panel is not a substitute for domain accreditation, safety review, or compliance approval.
+- **A one-project feedback tool** — for a single review, a direct read is simpler than producing a live group finale.
+
+**What it is:** a fast, fair, watchable ending for shared building — recognition, useful feedback, and a replayable record. Human approval remains required before anything goes public.
+
+---
+
+## Contributing
+
+Keep the default experience neutral, beginner-first, and audience-safe. Do not commit run bundles, credentials, or confidential project metadata. See [AGENTS.md](AGENTS.md) for the working invariants.
 
 ```bash
 python3 -m pytest -q
@@ -553,21 +476,12 @@ bash -n install.sh
 
 ---
 
-## 🤝 Contributing
+<div align="center">
 
-Keep the default experience neutral, beginner-first, and audience-safe. Do not
-commit run bundles, credentials, or confidential project metadata. See
-[AGENTS.md](AGENTS.md) for the working invariants.
+## License and credits
 
----
+**[MIT](LICENSE)** — use it, fork it, build on it.
 
-## 📄 License
+🐙 Created with 💜 by **[@DUBSOpenHub](https://github.com/DUBSOpenHub)** with the **[GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli)**.
 
-[MIT](LICENSE) — use it, fork it, build on it.
-
----
-
-## 🐙 Credits
-
-🐙 Created with 💜 by [@DUBSOpenHub](https://github.com/DUBSOpenHub) with the
-[GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli).
+</div>
