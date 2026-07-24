@@ -15,7 +15,7 @@ Paste the links, activate the panel, reveal the winners — in under two minutes
 
 <img src="docs/images/builder-showcase-demo.svg" alt="Copilot Builder Showcase big-screen award reveal: the Copilot Builder Award, Builder Silver, and Builder Bronze podium with per-lens Copilot panel scores" width="100%">
 
-*Every accepted project gets a spotlight. One sealed Copilot panel scores them all on the same rubric. Then the room watches the podium land — Builder Bronze, Builder Silver, and the first-place Copilot Builder Award.*
+*Every accepted project gets a spotlight and the same sealed Copilot review. Only the top three take the podium — Builder Bronze, Builder Silver, and the first-place Copilot Builder Award.*
 
 </div>
 
