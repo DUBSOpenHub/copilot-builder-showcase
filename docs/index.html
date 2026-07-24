@@ -1236,13 +1236,26 @@ var QRClean = (function () {
   var FIREBASE = {
     databaseURL: ""  /* e.g. "https://your-project-default-rtdb.firebaseio.com" */
   };
-  function liveEnabled() {
+  function fbConfigured() {
     if (!FIREBASE || typeof FIREBASE.databaseURL !== "string") return false;
     var u = FIREBASE.databaseURL;
     /* https anywhere, or http only for a local Firebase emulator */
     return /^https:\/\/[^ ]+$/.test(u) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/.test(u);
   }
   function dbRoot() { return FIREBASE.databaseURL.replace(/\/+$/, ""); }
+
+  /* ---- Zero-config live relay (default): cross-device phone submit with NO
+     setup, via jsonblob.com — a free, no-signup JSON store used only as an
+     ephemeral relay. Each showcase gets its own room; the room auto-expires in
+     ~24h. If a Firebase databaseURL is configured above, that is used instead
+     (more control/uptime). Either way it's still a single self-contained file:
+     no SDK/CDN/font, just fetch() to a REST endpoint. ---- */
+  var RELAY = { base: "https://jsonblob.com/api/jsonBlob", enabled: true, force: false, failed: false, creating: false };
+  function isJsdom() { try { return /jsdom/i.test((navigator && navigator.userAgent) || ""); } catch (e) { return false; } }
+  function relayIntended() { return !!(RELAY.enabled && (typeof fetch === "function") && (!isJsdom() || RELAY.force)); }
+  function relayUsable() { return relayIntended() && !RELAY.failed; }
+  function liveEnabled() { return fbConfigured() || relayUsable(); }
+  function liveMode() { return fbConfigured() ? "fb" : (relayUsable() ? "relay" : "none"); }
 
   function onRemote(st) {
     var prevStatus = state.status, prevN = state.entries.length;
@@ -1282,13 +1295,35 @@ var QRClean = (function () {
   }
   function isLocalHost() { var h = (location.hostname || "").toLowerCase(); return location.protocol === "file:" || h === "" || h === "localhost" || h === "127.0.0.1" || h === "::1" || h === "0.0.0.0"; }
   function drawStageQR() {
+    var canvas = $("qrCanvas"), rm = $("qrRoom"), ln = $("qrLiveNote"), w = $("qrWarn");
+    if (w) w.style.display = isLocalHost() ? "" : "none";
+    if (rm) rm.style.display = "none";
+    function clearCanvas() { if (canvas && canvas.getContext) { var c = canvas.getContext("2d"); if (c) c.clearRect(0, 0, canvas.width, canvas.height); } }
+    var fb = fbConfigured();
+    /* zero-config relay is the intended transport → show honest pending / failed states */
+    if (!fb && relayIntended()) {
+      if (RELAY.failed) {
+        clearCanvas();
+        $("qrUrl").textContent = "Phone submissions unavailable";
+        if (ln) { ln.style.display = ""; ln.innerHTML = "Couldn’t set up phone submissions right now — use <b>Add these projects</b> above to paste links. Everything else works."; }
+        return;
+      }
+      if (!state.room) {
+        clearCanvas();
+        $("qrUrl").textContent = "Preparing the room…";
+        if (ln) { ln.style.display = ""; ln.innerHTML = "Setting up phone submissions — the QR appears in a moment. You can also use <b>Add these projects</b> above to paste links."; }
+        return;
+      }
+    }
     var url = submitURL();
-    var ok = drawQR($("qrCanvas"), url);
+    var ok = drawQR(canvas, url);
     $("qrUrl").textContent = ok ? url : ("Open " + url + " on another device.");
-    var rm = $("qrRoom");
-    if (rm) { if (liveEnabled() && state.room) { rm.style.display = ""; rm.innerHTML = "Room code <b>" + esc(state.room) + "</b>"; } else { rm.style.display = "none"; } }
-    var w = $("qrWarn"); if (w) w.style.display = isLocalHost() ? "" : "none";
-    var ln = $("qrLiveNote"); if (ln) ln.style.display = liveEnabled() ? "none" : "";
+    /* Room code only for Firebase (the relay uses a long server id, not a typeable code). */
+    if (rm && fb && state.room) { rm.style.display = ""; rm.innerHTML = "Room code <b>" + esc(state.room) + "</b>"; }
+    if (ln) {
+      if (!fb && !relayIntended()) { ln.style.display = ""; ln.innerHTML = "ℹ Phone submissions need a Realtime Database URL (one-time page setup). Until it’s added, a scan shows an “add it on the big screen” note — use <b>Add these projects</b> above to paste links."; }
+      else ln.style.display = "none";
+    }
   }
 
   /* =========================================================================
@@ -1307,16 +1342,16 @@ var QRClean = (function () {
   function fbPushEntry(room, entry) { return fetch(fbUrl("rooms/" + room + "/entries"), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(entry) }); }
 
   /* host: open / refresh the room and broadcast status */
-  function fbOpenRoom() { if (!liveEnabled() || !state.room) return; fbPutMeta(state.room, { status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now() }).catch(function () {}); }
-  function fbSetStatus(s) { if (!liveEnabled() || !state.room) return; fbPatchMeta(state.room, { status: s, at: Date.now() }).catch(function () {}); }
-  function fbFreshRoom() { if (!liveEnabled()) return; state.room = genRoom(); save(); fbOpenRoom(); fbSubscribeEntries(state.room); }
-  function fbEnsureRoom() { if (!liveEnabled()) return; if (!state.room) { fbFreshRoom(); return; } fbOpenRoom(); fbSubscribeEntries(state.room); }
+  function fbOpenRoom() { if (!fbConfigured() || !state.room) return; fbPutMeta(state.room, { status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now() }).catch(function () {}); }
+  function fbSetStatus(s) { if (!fbConfigured() || !state.room) return; fbPatchMeta(state.room, { status: s, at: Date.now() }).catch(function () {}); }
+  function fbFreshRoom() { if (!fbConfigured()) return; state.room = genRoom(); save(); fbOpenRoom(); fbSubscribeEntries(state.room); }
+  function fbEnsureRoom() { if (!fbConfigured()) return; if (!state.room) { fbFreshRoom(); return; } fbOpenRoom(); fbSubscribeEntries(state.room); }
 
   /* host: receive submissions live via RTDB REST streaming (Server-Sent Events) */
   var fbES = null, fbESRoom = "";
   function fbUnsubscribe() { if (fbES) { try { fbES.close(); } catch (e) {} } fbES = null; fbESRoom = ""; }
   function fbSubscribeEntries(room) {
-    if (!liveEnabled() || !room || !("EventSource" in window)) return;
+    if (!fbConfigured() || !room || !("EventSource" in window)) return;
     if (fbES && fbESRoom === room) return;
     fbUnsubscribe();
     try { fbES = new EventSource(fbUrl("rooms/" + room + "/entries")); } catch (e) { fbES = null; return; }
@@ -1370,7 +1405,7 @@ var QRClean = (function () {
       var team = (container.querySelector(".js-team").value || "").trim() || derived.team;
       var desc = (container.querySelector(".js-desc").value || "").trim();
       var btn = form.querySelector('button[type="submit"]'); if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
-      fbPushEntry(room, { proj: proj, link: link, team: team, desc: desc, at: Date.now() }).then(function (r) {
+      livePushEntry(room, { proj: proj, link: link, team: team, desc: desc, at: Date.now() }).then(function (r) {
         if (!r || !r.ok) throw new Error("bad");
         liveCtx.onForm = false;
         container.innerHTML = successMarkup({ proj: proj, link: link, team: team });
@@ -1387,7 +1422,7 @@ var QRClean = (function () {
     if (status === "open") renderLiveForm(container, room);
     else { liveCtx.onForm = false; container.innerHTML = liveClosedMarkup(status); }
   }
-  function liveMetaSubscribe(room, container) {
+  function fbMetaSubscribe(room, container) {
     if (!("EventSource" in window)) return;
     if (liveCtx.es) { try { liveCtx.es.close(); } catch (e) {} liveCtx.es = null; }
     var es; try { es = new EventSource(fbUrl("rooms/" + room + "/meta")); } catch (e) { return; }
@@ -1409,9 +1444,114 @@ var QRClean = (function () {
     var container = $("submitPanel");
     liveCtx.room = room; liveCtx.onForm = false;
     container.innerHTML = '<div class="submit-closed"><div class="big">\u23F3</div><h2>Connecting…</h2><p>Checking the showcase status.</p></div>';
-    fbGetMeta(room).then(function (meta) { renderLiveState(container, room, meta); }, function () { container.innerHTML = '<div class="submit-closed"><div class="big">\uD83D\uDCE1</div><h2>Couldn’t connect</h2><p>Check your connection, then reload this page.</p></div>'; });
+    liveGetMeta(room).then(function (meta) { renderLiveState(container, room, meta); }, function () { container.innerHTML = '<div class="submit-closed"><div class="big">\uD83D\uDCE1</div><h2>Couldn’t connect</h2><p>Check your connection, then reload this page.</p></div>'; });
     liveMetaSubscribe(room, container);
   }
+
+  /* =========================================================================
+     RELAY TRANSPORT — zero-config cross-device submit over jsonblob.com.
+     Single blob per room: { v, status, runId, mode, startedAt, at, entries:{rid:{...}} }.
+     Host creates the room (async), polls for entries, and writes status changes.
+     Phones read status and append their entry with optimistic concurrency
+     (If-Match ETag + retry) so simultaneous submissions never clobber.
+     ========================================================================= */
+  var relayPoll = { timer: null, room: "" };
+  var relayMeta = { timer: null };
+  function relayItemURL(room) { return RELAY.base + "/" + encodeURIComponent(room); }
+  function relayReadId(r) {
+    try { if (r.headers) { var id = r.headers.get("X-jsonblob-id"); if (id) return id; var loc = r.headers.get("Location"); if (loc) return loc.split("/").filter(Boolean).pop(); } } catch (e) {}
+    return "";
+  }
+  /* read-modify-write with ETag; retries on 412 (someone else wrote first) */
+  function relayRMW(room, mutate, tries) {
+    return fetch(relayItemURL(room)).then(function (r) {
+      if (!r || !r.ok) throw new Error("get " + (r && r.status));
+      var etag = ""; try { etag = (r.headers && r.headers.get("ETag")) || ""; } catch (e) {}
+      return r.json().then(function (doc) { return { doc: doc || {}, etag: etag }; });
+    }).then(function (cur) {
+      var next = mutate(cur.doc);
+      if (next === null) return null;
+      var headers = { "Content-Type": "application/json" };
+      if (cur.etag) headers["If-Match"] = cur.etag;
+      return fetch(relayItemURL(room), { method: "PUT", headers: headers, body: JSON.stringify(next) }).then(function (pr) {
+        if (pr && pr.status === 412 && tries > 1) return relayRMW(room, mutate, tries - 1);
+        if (!pr || !pr.ok) throw new Error("put " + (pr && pr.status));
+        return pr;
+      });
+    });
+  }
+  /* host: create a fresh relay room (async — id comes back from the server) */
+  function relayFreshRoom() {
+    if (!relayUsable() || RELAY.creating) return;
+    RELAY.creating = true; state.room = ""; RELAY.failed = false; save();
+    if (view === "stage") drawStageQR();
+    var doc = { v: 1, status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now(), entries: {} };
+    fetch(RELAY.base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc) }).then(function (r) {
+      if (!r || !r.ok) throw new Error("create " + (r && r.status));
+      var id = relayReadId(r);
+      if (!id) throw new Error("noid");
+      RELAY.creating = false; state.room = id; save();
+      if (view === "stage") drawStageQR();
+      relayStartPoll(id);
+    }).catch(function () { RELAY.creating = false; RELAY.failed = true; if (view === "stage") drawStageQR(); });
+  }
+  function relayEnsureRoom() {
+    if (!relayUsable()) return;
+    if (!state.room) { if (!RELAY.creating) relayFreshRoom(); return; }
+    relaySetStatus(state.status === "idle" ? "open" : state.status);
+    relayStartPoll(state.room);
+  }
+  function relaySetStatus(s) {
+    if (!relayUsable() || !state.room) return;
+    relayRMW(state.room, function (doc) { doc.status = s; doc.at = Date.now(); return doc; }, 3).catch(function () {});
+  }
+  function relayStopPoll() { if (relayPoll.timer) { clearInterval(relayPoll.timer); relayPoll.timer = null; } relayPoll.room = ""; }
+  function relayStartPoll(room) {
+    relayStopPoll(); relayPoll.room = room;
+    relayPoll.timer = setInterval(function () { relayPollOnce(room); }, 2500);
+    relayPollOnce(room);
+  }
+  function relayPollOnce(room) {
+    if (state.room !== room) return Promise.resolve();
+    return fetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) {
+      if (!doc || state.room !== room) return;
+      var ents = doc.entries || {};
+      Object.keys(ents).forEach(function (rid) { mergeRemoteEntry(rid, ents[rid], false); });
+    }).catch(function () {});
+  }
+  /* phone: read status / append an entry */
+  function relayGetMeta(room) {
+    return fetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) { return doc ? { status: doc.status || "idle" } : null; });
+  }
+  function relayPushEntry(room, entry) {
+    var rid = "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    return relayRMW(room, function (doc) {
+      if ((doc.status || "idle") !== "open") return null;
+      if (!doc.entries) doc.entries = {};
+      doc.entries[rid] = { proj: entry.proj, link: entry.link, team: entry.team, desc: entry.desc, at: entry.at || Date.now() };
+      return doc;
+    }, 4).then(function (res) { if (res === null) throw new Error("closed"); return { ok: true, rid: rid }; });
+  }
+  function relayMetaPoll(room, container) {
+    if (relayMeta.timer) { clearInterval(relayMeta.timer); relayMeta.timer = null; }
+    function tick() {
+      relayGetMeta(room).then(function (meta) {
+        var status = (meta && meta.status) ? meta.status : "idle";
+        if (status === "open") { if (!liveCtx.onForm) renderLiveForm(container, room); }
+        else { liveCtx.onForm = false; renderLiveState(container, room, { status: status }); }
+      }).catch(function () {});
+    }
+    relayMeta.timer = setInterval(tick, 3000);
+  }
+
+  /* ---- transport dispatch: Firebase if configured, else the zero-config relay ---- */
+  function liveFreshRoom() { if (fbConfigured()) return fbFreshRoom(); if (relayUsable()) return relayFreshRoom(); }
+  function liveEnsureRoom() { if (fbConfigured()) return fbEnsureRoom(); if (relayUsable()) return relayEnsureRoom(); }
+  function liveSetStatus(s) { if (fbConfigured()) return fbSetStatus(s); if (relayUsable()) return relaySetStatus(s); }
+  function liveUnsubscribe() { fbUnsubscribe(); relayStopPoll(); if (relayMeta.timer) { clearInterval(relayMeta.timer); relayMeta.timer = null; } }
+  function liveGetMeta(room) { return fbConfigured() ? fbGetMeta(room) : relayGetMeta(room); }
+  function livePushEntry(room, entry) { return fbConfigured() ? fbPushEntry(room, entry) : relayPushEntry(room, entry); }
+  function liveMetaSubscribe(room, container) { if (fbConfigured()) return fbMetaSubscribe(room, container); if (relayUsable()) return relayMetaPoll(room, container); }
 
   /* ---- demo projects ---- */
   var DEMO = [
@@ -1483,7 +1623,7 @@ var QRClean = (function () {
       state.startedAt = Date.now();
       seedRunning = false;
       save();
-      if (m === "live") fbFreshRoom();
+      if (m === "live") liveFreshRoom();
       feed = [];
       pushFeed(m === "demo"
         ? "Demo showcase — illustrative sample projects will roll in."
@@ -1500,13 +1640,13 @@ var QRClean = (function () {
   function enterStage() {
     setView("stage");
     resetStageUI();
-    if (liveEnabled() && state.mode === "live" && (state.status === "open" || state.status === "judging")) fbEnsureRoom();
+    if (liveEnabled() && state.mode === "live" && (state.status === "open" || state.status === "judging")) liveEnsureRoom();
     renderStage();
     drawStageQR();
     if (state.status === "judging") showJudging(true);
     if (state.status === "awarded") showPodium(false);
   }
-  $("exitStage").addEventListener("click", function () { stopHeroTimer(); fbUnsubscribe(); setView("app"); location.hash = ""; renderResume(); });
+  $("exitStage").addEventListener("click", function () { stopHeroTimer(); liveUnsubscribe(); setView("app"); location.hash = ""; renderResume(); });
 
   /* ---- stage rendering ---- */
   function setStepper() {
@@ -1668,7 +1808,7 @@ var QRClean = (function () {
     setTimeout(function () {
       if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open" || view !== "stage") return;
       if (state.entries.length < 3) return;
-      state.status = "judging"; state.calls = 0; save(); fbSetStatus("judging");
+      state.status = "judging"; state.calls = 0; save(); liveSetStatus("judging");
       renderStage(); showJudging(true);
       pushFeed("Demo — auto-running the Copilot judging panel.");
     }, reduceMotion ? 500 : 1700);
@@ -1733,7 +1873,7 @@ var QRClean = (function () {
 
   $("runPanelBtn").addEventListener("click", function () {
     if (state.status !== "open" || state.entries.length < 3) return;
-    state.status = "judging"; state.calls = 0; save(); fbSetStatus("judging");
+    state.status = "judging"; state.calls = 0; save(); liveSetStatus("judging");
     renderStage(); showJudging(true);
     pushFeed("Operator started the Copilot judging panel.");
   });
@@ -1744,7 +1884,7 @@ var QRClean = (function () {
   function newRun() {
     var m = state.mode || "live";
     state = freshState(); state.mode = m; state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
-    save(); if (m === "live") fbFreshRoom(); feed = []; heroIdx = 0;
+    save(); if (m === "live") liveFreshRoom(); feed = []; heroIdx = 0;
     pushFeed(m === "demo" ? "Fresh demo — illustrative samples incoming." : "Fresh showcase — open for submissions.");
     resetStageUI(); renderStage(); drawStageQR();
     if (m === "demo") scheduleSeed();
@@ -1893,7 +2033,7 @@ var QRClean = (function () {
   function reveal() {
     var ranked = rankEntries();
     state.podium = ranked.slice(0, 3).map(function (r) { return r.e.id; });
-    state.status = "awarded"; save(); fbSetStatus("awarded");
+    state.status = "awarded"; save(); liveSetStatus("awarded");
     showPodium(true);
     victoryFanfare();
     pushFeed("🏆 Copilot Builder Award goes to “" + ranked[0].e.proj + "”.");
@@ -2105,7 +2245,9 @@ var QRClean = (function () {
     else if (h === "" || h === "#") { if (view !== "stage") { setView("app"); renderResume(); } }
   });
   if (/(?:^|[?&])cbstest=1(?:&|$)/.test(location.search || "")) {
-    window.CBS = { fbApplyEvent: fbApplyEvent, mergeRemoteEntry: mergeRemoteEntry, renderLiveState: renderLiveState, genRoom: genRoom, submitURL: submitURL, getEntries: function () { return state.entries; }, setRoom: function (r) { state.room = r; }, getRoom: function () { return state.room; }, fbFreshRoom: fbFreshRoom, setLive: function (u) { FIREBASE.databaseURL = u; } };
+    window.CBS = { fbApplyEvent: fbApplyEvent, mergeRemoteEntry: mergeRemoteEntry, renderLiveState: renderLiveState, genRoom: genRoom, submitURL: submitURL, getEntries: function () { return state.entries; }, setRoom: function (r) { state.room = r; }, getRoom: function () { return state.room; }, fbFreshRoom: fbFreshRoom, setLive: function (u) { FIREBASE.databaseURL = u; },
+      liveMode: liveMode, enableRelay: function () { RELAY.force = true; }, setRelayBase: function (u) { RELAY.base = u; }, relayFailed: function () { return RELAY.failed; },
+      relayFreshRoom: relayFreshRoom, relayEnsureRoom: relayEnsureRoom, relaySetStatus: relaySetStatus, relayPushEntry: relayPushEntry, relayGetMeta: relayGetMeta, relayPollOnce: relayPollOnce, relayStopPoll: relayStopPoll, setStatus: function (s) { state.status = s; } };
   }
   boot();
 })();
