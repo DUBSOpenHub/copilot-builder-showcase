@@ -149,6 +149,27 @@ button { font-family: inherit; cursor: pointer; }
 .btn-lg { padding: 16px 28px; font-size: 17px; border-radius: 0.85rem; }
 .btn-sm { padding: 9px 15px; font-size: 13.5px; border-radius: 0.6rem; }
 .btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+/* Unmistakable primary CTA — the single action the host needs to take */
+.btn-cta-hot {
+  position: relative; overflow: hidden;
+  padding: 19px 38px; font-size: 19px; font-weight: 800; letter-spacing: 0.015em;
+  box-shadow: 0 14px 34px -14px var(--cp-accent), 0 0 0 0 var(--cp-accent-soft);
+  animation: cta-glow 2.4s ease-in-out infinite;
+}
+.btn-cta-hot::before {
+  content: ""; position: absolute; top: 0; left: 0; width: 55%; height: 100%;
+  background: linear-gradient(100deg, transparent, var(--cp-sheen), transparent);
+  transform: translateX(-160%); animation: cta-sheen 3.8s ease-in-out infinite;
+}
+.btn-cta-hot:hover { transform: translateY(-3px) scale(1.015); }
+@keyframes cta-glow {
+  0%, 100% { box-shadow: 0 14px 34px -14px var(--cp-accent), 0 0 0 0 var(--cp-accent-soft); }
+  50%      { box-shadow: 0 18px 44px -12px var(--cp-accent), 0 0 0 15px transparent; }
+}
+@keyframes cta-sheen {
+  0%, 55% { transform: translateX(-160%); }
+  82%, 100% { transform: translateX(340%); }
+}
 
 .icon-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
@@ -684,7 +705,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
           <div class="hero-cta">
-            <button class="btn btn-primary btn-lg" id="launchHero">▶&nbsp; Start my showcase</button>
+            <button class="btn btn-primary btn-lg btn-cta-hot" id="launchHero">▶&nbsp; Start my showcase</button>
           </div>
           <div class="hero-cta-sub"><a href="#how">See how it works ↓</a> <span class="sub-sep" aria-hidden="true">·</span> <button type="button" class="demo-link" id="demoHero">👁&nbsp; Watch a quick demo</button></div>
           <button type="button" class="command-chip command-chip-btn" id="copyCmdChip"
@@ -804,7 +825,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <h2>Give the room a finale worth staying for.</h2>
         <p>Start your showcase — <b>drop the project links</b>, or let <b>participants scan the QR</b> to add their own — then run the Copilot judging panel, live.</p>
         <div class="hero-cta">
-          <button class="btn btn-primary btn-lg" id="launchCta">▶&nbsp; Start my showcase</button>
+          <button class="btn btn-primary btn-lg btn-cta-hot" id="launchCta">▶&nbsp; Start my showcase</button>
         </div>
       </div>
     </section>
@@ -928,6 +949,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <div class="qr-room" id="qrRoom" style="display:none"></div>
         <div class="qr-url" id="qrUrl">…</div>
         <div class="qr-warn" id="qrWarn" style="display:none">⚠ Serving on <b>localhost</b> — phones on other devices can’t reach this address. Deploy the page (e.g. GitHub Pages) or serve it on your computer’s Wi-Fi IP so the room can scan. You can always use <b>Add these projects</b> to paste links directly.</div>
+        <div class="qr-warn" id="qrLiveNote" style="display:none">ℹ Phone submissions need a Realtime Database URL (one-time page setup). Until it’s added, a scan shows an “add it on the big screen” note — use <b>Add these projects</b> above to paste links.</div>
         <div class="qr-actions">
           <button class="btn btn-sm" id="copyUrl">⧉ Copy link</button>
           <button class="btn btn-sm btn-primary" id="openSubmit">Open submit ↗</button>
@@ -1266,6 +1288,7 @@ var QRClean = (function () {
     var rm = $("qrRoom");
     if (rm) { if (liveEnabled() && state.room) { rm.style.display = ""; rm.innerHTML = "Room code <b>" + esc(state.room) + "</b>"; } else { rm.style.display = "none"; } }
     var w = $("qrWarn"); if (w) w.style.display = isLocalHost() ? "" : "none";
+    var ln = $("qrLiveNote"); if (ln) ln.style.display = liveEnabled() ? "none" : "";
   }
 
   /* =========================================================================
@@ -1997,7 +2020,10 @@ var QRClean = (function () {
   }
   /* ---- shared submit (used by #submit route AND the Try-it-yourself modal) ---- */
   function closedMarkup() {
-    var m = { idle: ["🕓", "The showcase hasn’t started yet", "Submissions open when the host launches the experience."], judging: ["🔒", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."], awarded: ["🎉", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"] }[state.status] || ["🕓", "Not open yet", "Check back soon."];
+    var idle = liveEnabled()
+      ? ["🕓", "The showcase hasn’t started yet", "Submissions open when the host launches the experience."]
+      : ["🖥️", "Add your project on the big screen", "Live phone submissions aren’t switched on for this showcase. Share your project link with the host so it lands on the board. (Host tip: add a Realtime Database URL in the page setup to accept submissions straight from phones.)"];
+    var m = { idle: idle, judging: ["🔒", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."], awarded: ["🎉", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"] }[state.status] || idle;
     return '<div class="submit-closed"><div class="big">' + m[0] + '</div><h2>' + m[1] + "</h2><p>" + m[2] + "</p></div>";
   }
   function successMarkup(entry) {
