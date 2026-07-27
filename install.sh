@@ -61,8 +61,11 @@ install_checkout() {
 if [[ -d "$INSTALL_DIR/.git" ]]; then
   printf 'Updating Copilot Builder Showcase...\n'
   git -C "$INSTALL_DIR" fetch --quiet --depth 1 origin "$REF"
-  git -C "$INSTALL_DIR" checkout --quiet "$REF"
-  git -C "$INSTALL_DIR" pull --ff-only --quiet origin "$REF"
+  # A --depth 1 checkout shares no history with a later shallow fetch, so
+  # `pull --ff-only` aborts once upstream moves. Reset the managed checkout to
+  # the fetched ref instead so an existing install can always upgrade.
+  git -C "$INSTALL_DIR" reset --quiet --hard FETCH_HEAD
+  git -C "$INSTALL_DIR" checkout --quiet -B "$REF"
 elif [[ -e "$INSTALL_DIR" ]]; then
   die "Install directory exists but is not a Copilot Builder Showcase checkout: $INSTALL_DIR"
 else

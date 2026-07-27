@@ -73,6 +73,42 @@ jobs:
           grep -q "$expected_version" "$root/legacy-advanced-version.log"
           grep -q "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" "$root/demo.log"
 
+      - name: Smoke test installer upgrade of an existing checkout
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          cleanup() {
+            chmod -R u+w "$root" 2>/dev/null || true
+            rm -rf "$root"
+          }
+          trap cleanup EXIT
+
+          install_once() {
+            CBS_REPOSITORY_URL="file://$GITHUB_WORKSPACE" \
+              CBS_REF=installer-upgrade \
+              CBS_INSTALL_DIR="$root/install" \
+              CBS_BIN_DIR="$root/bin" \
+              CBS_SKIP_OPTIONAL_MONITOR=1 \
+              bash install.sh > "$1"
+          }
+
+          git branch -f installer-upgrade HEAD
+          install_once "$root/first.log"
+
+          # Move the published ref forward. A --depth 1 checkout shares no
+          # history with the next shallow fetch, so re-running the installer
+          # must still upgrade rather than abort on a fast-forward failure.
+          git -c user.email=ci@example.com -c user.name=CI \
+            commit --allow-empty -q -m "installer upgrade smoke"
+          git branch -f installer-upgrade HEAD
+
+          install_once "$root/second.log"
+
+          grep -q "Updating Copilot Builder Showcase" "$root/second.log"
+          "$root/bin/showcase" --version > "$root/upgraded-version.log"
+          grep -q "$(python -c 'import builder_showcase; print(builder_showcase.VERSION)')" \
+            "$root/upgraded-version.log"
+
   windows:
     name: Windows tests
     runs-on: windows-latest

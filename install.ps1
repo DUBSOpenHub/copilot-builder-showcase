@@ -67,10 +67,13 @@ if (Test-Path -LiteralPath $gitDirectory -PathType Container) {
     Write-Host "Updating Copilot Builder Showcase..."
     & $gitPath -C $installDir fetch --quiet --depth 1 origin $ref
     Assert-NativeSuccess "Could not fetch the requested repository ref."
-    & $gitPath -C $installDir checkout --quiet $ref
-    Assert-NativeSuccess "Could not check out the requested repository ref."
-    & $gitPath -C $installDir pull --ff-only --quiet origin $ref
+    # A --depth 1 checkout shares no history with a later shallow fetch, so
+    # `pull --ff-only` aborts once upstream moves. Reset the managed checkout to
+    # the fetched ref instead so an existing install can always upgrade.
+    & $gitPath -C $installDir reset --quiet --hard FETCH_HEAD
     Assert-NativeSuccess "Could not update the installed checkout."
+    & $gitPath -C $installDir checkout --quiet -B $ref
+    Assert-NativeSuccess "Could not check out the requested repository ref."
 }
 elseif (Test-Path -LiteralPath $installDir) {
     throw "Install directory exists but is not a Copilot Builder Showcase checkout: $installDir"
