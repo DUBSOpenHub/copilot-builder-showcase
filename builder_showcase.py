@@ -8577,6 +8577,17 @@ def _assert_bundle_exists(bundle_path: Path, run_id: str) -> None:
         _print_error(7, "ConfigValidationError",
                      f"Run '{run_id}' not found at {bundle_path}. Use 'init' first.")
         sys.exit(7)
+    if not bundle_path.is_dir():
+        _print_error(7, "ConfigValidationError",
+                     f"Run '{run_id}' is not a showcase run: {bundle_path} is a file, "
+                     f"not a run directory. Use 'list' to see available runs.")
+        sys.exit(7)
+    if not (bundle_path / "manifest" / "bundle.json").exists():
+        _print_error(7, "ConfigValidationError",
+                     f"Run '{run_id}' is missing its manifest at "
+                     f"{bundle_path / 'manifest' / 'bundle.json'}. The run may not have "
+                     f"finished 'init'. Use 'list' to see complete runs.")
+        sys.exit(7)
 
 
 def _assert_status_in(manifest: Dict, allowed: List[str], command: str) -> None:

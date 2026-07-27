@@ -3812,6 +3812,49 @@ class TestExitCodes:
         with pytest.raises(SystemExit):
             cbp.main(["nonexistent"])
 
+    def test_a_stray_file_in_the_runs_directory_is_rejected_cleanly(self, tmp_path, capsys):
+        stray = tmp_path / "showcase.bundle.tar.gz"
+        stray.write_text("not a run", encoding="utf-8")
+
+        with pytest.raises(SystemExit) as excinfo:
+            cbp._assert_bundle_exists(stray, "showcase.bundle.tar.gz")
+
+        assert excinfo.value.code == 7
+        captured = capsys.readouterr()
+        assert "Traceback" not in captured.out + captured.err
+        assert "is not a showcase run" in captured.out + captured.err
+
+    def test_a_run_without_a_manifest_is_rejected_cleanly(self, tmp_path):
+        half_baked = tmp_path / "half-baked"
+        half_baked.mkdir()
+
+        with pytest.raises(SystemExit) as excinfo:
+            cbp._assert_bundle_exists(half_baked, "half-baked")
+
+        assert excinfo.value.code == 7
+
+    def test_a_complete_run_directory_passes_the_bundle_guard(self, tmp_path):
+        run_dir = tmp_path / "good-run"
+        (run_dir / "manifest").mkdir(parents=True)
+        (run_dir / "manifest" / "bundle.json").write_text("{}", encoding="utf-8")
+
+        cbp._assert_bundle_exists(run_dir, "good-run")
+
+    @pytest.mark.parametrize("command", ["recap", "present", "export"])
+    def test_bundle_commands_never_traceback_on_a_bad_run_id(self, tmp_path, monkeypatch,
+                                                             capsys, command):
+        runs_dir = tmp_path / "runs"
+        runs_dir.mkdir()
+        (runs_dir / "stray.tar.gz").write_text("not a run", encoding="utf-8")
+        monkeypatch.setattr(cbp, "get_runs_dir", lambda: runs_dir)
+
+        with pytest.raises(SystemExit) as excinfo:
+            cbp.main([command, "stray.tar.gz"])
+
+        assert excinfo.value.code == 7
+        captured = capsys.readouterr()
+        assert "Traceback" not in captured.out + captured.err
+
 
 # ---------------------------------------------------------------------------
 # Config Validation Tests
