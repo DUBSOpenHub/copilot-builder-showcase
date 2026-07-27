@@ -7939,7 +7939,9 @@ def cmd_validate(args: argparse.Namespace, _gateway: Optional[Any] = None,
             failures.append(f"TAMPERED: {rel_path} (expected {stored_hash[:16]}... got {actual_hash[:16]}...)")
 
     actual_paths = {
-        str(path.relative_to(bundle_path))
+        # Must match the POSIX keys written into HASHES, or every artifact on
+        # Windows looks unsealed purely because of the separator.
+        path.relative_to(bundle_path).as_posix()
         for path in collect_bundle_artifacts(bundle_path)
     }
     for unexpected_path in sorted(actual_paths - stored_paths):
