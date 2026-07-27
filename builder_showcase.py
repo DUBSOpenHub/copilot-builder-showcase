@@ -544,6 +544,17 @@ def _boxed_terminal_lines(prefix: str, text: str, width: int) -> List[str]:
     ]
 
 
+def _open_card_rows(label: str, text: str, width: int) -> List[str]:
+    """Wrap a row for an open-sided card, keeping the left rule on every line."""
+    indent = " " * _terminal_text_width(label)
+    content_width = max(1, width - 2 - _terminal_text_width(label))
+    wrapped = _wrap_terminal_text(text, content_width)
+    return [
+        f"│ {label if index == 0 else indent}{line}"
+        for index, line in enumerate(wrapped)
+    ]
+
+
 def _score_bar(score: float, maximum: float = 10.0, width: int = 18) -> str:
     ratio = 0.0 if maximum <= 0 else max(0.0, min(1.0, score / maximum))
     filled = round(ratio * width)
@@ -7188,14 +7199,19 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
         project = _truncate(str(v.get("project_name", sid)), 68)
         width = min(76, _terminal_width(max_width=80))
         print()
-        print(_paint(f"┌─ 🌟 SPOTLIGHT: {project} ", "blue", bold=True) + _paint("─" * max(2, width - len(project) - 16), "blue"))
-        print(_paint(f"│ Built by: {v.get('builder_name', 'Unknown')}", "cyan"))
+        header = f"┌─ 🌟 SPOTLIGHT: {project} "
+        print(
+            _paint(header, "blue", bold=True)
+            + _paint("─" * max(2, width + 1 - _terminal_text_width(header)), "blue")
+        )
+        print(_paint(_truncate(f"│ Built by: {v.get('builder_name', 'Unknown')}", width), "cyan"))
         if meta.get("description"):
-            print(_paint(f"│ What it does: {_truncate(str(meta.get('description')), 82)}", "cyan"))
+            for row in _open_card_rows("What it does: ", str(meta.get("description")), width):
+                print(_paint(row, "cyan"))
         if badges:
-            print(_paint(f"│ Project signals: {_truncate(' · '.join(badges), 78)}", "blue"))
+            print(_paint(_truncate(f"│ Project signals: {' · '.join(badges)}", width), "blue"))
         if meta.get("homepage"):
-            print(_paint(f"│ Explore: {_truncate(str(meta['homepage']), 86)}", "blue"))
+            print(_paint(_truncate(f"│ Explore: {meta['homepage']}", width), "blue"))
         if show_scores:
             print(_paint(f"│ Score:   {score:.2f}/10  {_score_bar(score)}", "gold", bold=True))
         if showtime:
@@ -7226,7 +7242,8 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                         "The panel found a thoughtful detail worth celebrating.",
                     )
                 print(_paint(f"│ 🎙️ {arch_v['archetype_name']}", "magenta", bold=True))
-                print(_paint(f"│    {_truncate(reaction, 92)}", "green"))
+                for row in _open_card_rows("   ", reaction, width):
+                    print(_paint(row, "green"))
         fb = feedback.get(v.get("submission_id"), {})
         if fb:
             for label, field, icon in (
@@ -7246,7 +7263,8 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                         evidence,
                         f"{label} context will be shared after the reveal.",
                     )
-                print(_paint(f"│ {icon} {label}: {_truncate(evidence, 82)}", "blue"))
+                for row in _open_card_rows(f"{icon} {label}: ", evidence, width):
+                    print(_paint(row, "blue"))
             if fb.get("bright_spot") and not showtime:
                 bright_spot = fb.get("bright_spot", "")
                 if audience_locked:
@@ -7254,7 +7272,8 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                         bright_spot,
                         "This project brought a thoughtful moment to the room.",
                     )
-                print(_paint(f"│ ✨ Bright Spot: {_truncate(bright_spot, 86)}", "green"))
+                for row in _open_card_rows("✨ Bright Spot: ", bright_spot, width):
+                    print(_paint(row, "green"))
             if fb.get("next_commit") and not showtime:
                 next_commit = fb.get("next_commit", "")
                 if audience_locked:
@@ -7262,24 +7281,21 @@ def cmd_present(args: argparse.Namespace, _gateway: Optional[Any] = None,
                         next_commit,
                         "A helpful next step will be shared after the reveal.",
                     )
-                print(_paint(f"│ 🔜 Next Commit: {_truncate(next_commit, 86)}", "yellow"))
+                for row in _open_card_rows("🔜 Next Commit: ", next_commit, width):
+                    print(_paint(row, "yellow"))
             if not audience_locked:
                 copilot_moves = fb.get("copilot_next_moves", [])
                 if isinstance(copilot_moves, list) and copilot_moves:
-                    print(
-                        _paint(
-                            f"│ 🧠 Copilot next: {_truncate(str(copilot_moves[0]), 82)}",
-                            "blue",
-                        )
-                    )
+                    for row in _open_card_rows(
+                        "🧠 Copilot next: ", str(copilot_moves[0]), width
+                    ):
+                        print(_paint(row, "blue"))
                 frontier_ideas = fb.get("frontier_experiments", [])
                 if isinstance(frontier_ideas, list) and frontier_ideas:
-                    print(
-                        _paint(
-                            f"│ 🧭 Frontier idea: {_truncate(str(frontier_ideas[0]), 82)}",
-                            "blue",
-                        )
-                    )
+                    for row in _open_card_rows(
+                        "🧭 Frontier idea: ", str(frontier_ideas[0]), width
+                    ):
+                        print(_paint(row, "blue"))
         print(_paint("└" + "─" * width, "blue"))
         if spotlight_index in spotlight_milestones:
             _showtime_pause(args, 0.35)

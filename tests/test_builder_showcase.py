@@ -543,6 +543,22 @@ class TestShowtimeDelight:
         assert all(cbp._terminal_text_width(line) == 76 for line in banner_lines)
         assert "…" in output
 
+    def test_open_card_rows_wrap_inside_the_card_without_losing_text(self):
+        # Spotlight rows are the audience-facing card, so a long row must wrap
+        # inside the card width instead of overflowing and wrapping raw.
+        evidence = (
+            "Builder-provided Copilot use evidence: Used Copilot Chat to design "
+            "the workflow and refine the onboarding copy for new contributors."
+        )
+
+        rows = cbp._open_card_rows("🧠 Copilot: ", evidence, 76)
+
+        assert len(rows) > 1
+        assert all(cbp._terminal_text_width(row) <= 76 for row in rows)
+        assert all(row.startswith("│ ") for row in rows)
+        flowed = " ".join(" ".join(rows).replace("│", " ").split())
+        assert evidence in flowed
+
     def test_audience_reveal_moment_is_stable_per_run(self):
         args = argparse.Namespace(
             run_id="live-room",
@@ -2654,14 +2670,17 @@ class TestCommandFlows:
                 assert cbp.cmd_present(args, None, fixed_clock) == 0
 
         rendered = output.getvalue()
+        # The spotlight card wraps at the card width, so assert against a
+        # whitespace-normalised view rather than a specific line break.
+        flowed = " ".join(rendered.replace("│", " ").split())
         assert "SPOTLIGHT: Project Aurora" in rendered
         assert "Built by: Team Aurora" in rendered
-        assert "What it does: Turns meeting notes into clear action plans." in rendered
+        assert "What it does: Turns meeting notes into clear action plans." in flowed
         assert "Project signals:" in rendered
-        assert "Copilot: Builder-provided Copilot use evidence:" in rendered
-        assert "Used Copilot Chat to design the workflow." in rendered
-        assert "Frontier: Builder-provided frontier use evidence:" in rendered
-        assert "Uses an agent loop to classify actions." in rendered
+        assert "Copilot: Builder-provided Copilot use evidence:" in flowed
+        assert "Used Copilot Chat to design the workflow." in flowed
+        assert "Frontier: Builder-provided frontier use evidence:" in flowed
+        assert "Uses an agent loop to classify actions." in flowed
 
     def test_quick_judging_is_quiet_and_writes_feedback(self, tmp_path, capsys):
         run_id = "quick-flow"
