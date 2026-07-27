@@ -21,7 +21,7 @@ function Get-Setting {
     return $Default
 }
 
-function Require-Command {
+function Resolve-RequiredCommand {
     param([string]$Name)
 
     $command = Get-Command $Name -ErrorAction SilentlyContinue
@@ -56,8 +56,8 @@ $venvDir = Get-Setting "CBS_VENV_DIR" "HJ_VENV_DIR" (Join-Path $installDir ".ven
 $textualRequirement = Get-Setting "CBS_TEXTUAL_REQUIREMENT" "HJ_TEXTUAL_REQUIREMENT" "textual>=8,<9"
 $skipOptionalMonitor = Get-Setting "CBS_SKIP_OPTIONAL_MONITOR" "HJ_SKIP_OPTIONAL_MONITOR" "0"
 
-$gitPath = Require-Command "git"
-$pythonPath = Require-Command "python"
+$gitPath = Resolve-RequiredCommand "git"
+$pythonPath = Resolve-RequiredCommand "python"
 
 & $pythonPath -c "import sys; raise SystemExit(sys.version_info < (3, 11))"
 Assert-NativeSuccess "Copilot Builder Showcase requires Python 3.11 or newer."
