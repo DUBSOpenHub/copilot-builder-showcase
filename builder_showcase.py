@@ -590,8 +590,24 @@ def _magic_banner(title: str, subtitle: str = "") -> None:
     print(_paint("╚" + "═" * width + "╝", "magenta", bold=True))
 
 
+def _flowed_lines(message: str, indent: int) -> List[str]:
+    """Wrap prose to the terminal, leaving copy-pasteable tokens whole.
+
+    A path or URL longer than the terminal is better left overflowing than
+    hard-split, because a broken token cannot be copied out of the transcript.
+    """
+    width = max(_terminal_width() - indent, 20)
+    if any(_terminal_text_width(word) > width for word in message.split()):
+        return [message]
+    return _wrap_terminal_text(message, width)
+
+
 def _sideline(message: str, icon: str = "🎙️", color: str = "cyan") -> None:
-    print(_paint(f"{icon} {message}", color, bold=True))
+    indent = _terminal_text_width(f"{icon} ")
+    lines = _flowed_lines(message, indent)
+    print(_paint(f"{icon} {lines[0]}", color, bold=True))
+    for continued in lines[1:]:
+        print(_paint(f"{' ' * indent}{continued}", color, bold=True))
 
 
 @contextlib.contextmanager
@@ -666,7 +682,11 @@ def _drumroll(message: str = "The panel is ready to reveal its pick.",
 
 
 def _success(message: str) -> None:
-    print(_paint(f"✅ {message}", "green", bold=True))
+    indent = _terminal_text_width("✅ ")
+    lines = _flowed_lines(message, indent)
+    print(_paint(f"✅ {lines[0]}", "green", bold=True))
+    for continued in lines[1:]:
+        print(_paint(f"{' ' * indent}{continued}", "green", bold=True))
 
 
 def _warning(message: str) -> None:

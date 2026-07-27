@@ -418,6 +418,44 @@ class TestShowtimeDelight:
         assert any("scattered" in line for line in lines)
         assert all(cbp._terminal_text_width(line) <= 28 for line in lines)
 
+    def test_sideline_commentary_stays_inside_the_terminal(self, monkeypatch, capsys):
+        monkeypatch.setattr(cbp, "_terminal_width", lambda: 62)
+        message = (
+            "demo-day/pulseboard kicks open the arena doors — TypeScript, 128 stars, "
+            "tagged events, realtime, and collaborative review for workshop crews."
+        )
+
+        cbp._sideline(message, "🌟", "magenta")
+
+        printed = [
+            line for line in capsys.readouterr().out.split("\n") if line.strip()
+        ]
+        assert len(printed) > 1
+        assert all(cbp._terminal_text_width(line) <= 62 for line in printed)
+        flowed = " ".join(" ".join(printed).split())
+        assert message in flowed
+
+    def test_sideline_indents_wrapped_commentary_under_the_text(self, monkeypatch, capsys):
+        monkeypatch.setattr(cbp, "_terminal_width", lambda: 48)
+
+        cbp._sideline("A long sideline call that has to flow onto another line.", "🎙️")
+
+        printed = [
+            line for line in capsys.readouterr().out.split("\n") if line.strip()
+        ]
+        assert len(printed) > 1
+        indent = cbp._terminal_text_width("🎙️ ")
+        assert all(line.startswith(" " * indent) for line in printed[1:])
+
+    def test_status_lines_keep_long_paths_copy_pasteable(self, monkeypatch, capsys):
+        monkeypatch.setattr(cbp, "_terminal_width", lambda: 48)
+        archive = "/Users/organizer/.copilot_builder_showcase/runs/spring-demo-day.bundle.tar.gz"
+
+        cbp._success(f"Replay archive written: {archive}")
+
+        out = capsys.readouterr().out
+        assert archive in out
+
     def test_terminal_width_keeps_emoji_graphemes_together(self):
         for emoji in (
             "👍🏽",
