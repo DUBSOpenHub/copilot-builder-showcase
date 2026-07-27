@@ -264,6 +264,10 @@ button { font-family: inherit; cursor: pointer; }
   margin: 18px 0 0; max-width: 15ch;
 }
 .hero h1 .accent { color: var(--cp-accent); }
+/* Brand lock-up: "GitHub Copilot" over "Builder Showcase", with the product word
+   in the theme foreground so it stays readable in both light and dark. */
+.hero h1 .brand, .hero h1 .brand-row { display: block; }
+.hero h1 .cp-name { color: var(--cp-text); }
 .hero .lede { font-size: clamp(17px, 2.1vw, 21px); color: var(--cp-text-muted); margin-top: 20px; max-width: 46ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; align-items: center; }
 .command-chip {
@@ -798,7 +802,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1>Turn any workshop into a live <span class="accent">GitHub Copilot Builder Showcase</span>.</h1>
+          <h1>Turn any workshop into a live <span class="accent brand"><span class="brand-row">GitHub <span class="cp-name">Copilot</span></span><span class="brand-row">Builder Showcase.</span></span></h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
