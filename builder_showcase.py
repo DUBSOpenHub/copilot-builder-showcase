@@ -8033,23 +8033,24 @@ def _safe_extract_tar(archive: tarfile.TarFile, destination: Path) -> None:
 
 
 def _rmtree_sealed(path: Path) -> None:
-    """Remove a tree that may contain read-only sealed dirs/files (0o555 / 0o444)."""
-    def _force(func, target, _exc):
-        parent = os.path.dirname(target)
-        for p in (parent, target):
+    """Remove a tree that may contain read-only sealed dirs/files (0o555 / 0o444).
+
+    Deleting an entry requires write permission on its *parent*, so make every
+    directory writable first. Done up front rather than through rmtree's error
+    callback: `onerror` is deprecated and its replacement `onexc` is 3.12+, while
+    this project supports 3.11.
+    """
+    for root, dirs, files in os.walk(path, topdown=True):
+        for name in dirs + files:
             try:
-                os.chmod(p, 0o700)
+                os.chmod(os.path.join(root, name), 0o700)
             except OSError:
                 pass
-        try:
-            func(target)
-        except OSError:
-            pass
-
     try:
-        shutil.rmtree(path, onerror=_force)
+        os.chmod(path, 0o700)
     except OSError:
         pass
+    shutil.rmtree(path, ignore_errors=True)
 
 
 def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,

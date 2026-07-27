@@ -2054,7 +2054,7 @@ var QRClean = (function () {
   });
   $("resetBtn").addEventListener("click", function () { newRun(); });
   $("newRunBtn").addEventListener("click", function () { newRun(); });
-  $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); });
+  $("replayBtn").addEventListener("click", function () { $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); stopConfetti(); });
 
   function newRun() {
     var m = state.mode || "live";
@@ -2064,8 +2064,14 @@ var QRClean = (function () {
     resetStageUI(); renderStage(); drawStageQR();
     if (m === "demo") scheduleSeed();
   }
+  function stopConfetti() {
+    var cv = $("confetti"); if (!cv) return;
+    if (cv._raf) { cancelAnimationFrame(cv._raf); cv._raf = 0; }
+    var c = cv.getContext && cv.getContext("2d"); if (c) c.clearRect(0, 0, cv.width, cv.height);
+    cv.classList.remove("on");
+  }
   function resetStageUI() {
-    stopHeroTimer(); delibStop();
+    stopHeroTimer(); delibStop(); stopConfetti();
     $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
   }
 
@@ -2112,7 +2118,7 @@ var QRClean = (function () {
     delibRAF = requestAnimationFrame(loop);
   }
   function showJudging(run) {
-    $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on");
+    $("podiumWrap").classList.remove("on"); stopConfetti();
     $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); renderLensStrip(); clearJudgeTimers(); delibStart(); $("judgeReacts").innerHTML = "";
     if (!run) { $("judgeNow").innerHTML = "GitHub Copilot panel reviewing every project…"; $("judgeAgg").textContent = "Aggregate progress only — scores stay sealed."; $("judgeBar").style.width = "66%"; return; }
     runJudgeSequence();
