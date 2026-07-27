@@ -1743,7 +1743,6 @@ var QRClean = (function () {
       var map = { open: "Open for submissions", judging: "Copilot judging in progress", awarded: "Winners revealed" };
       $("resumeText").textContent = (isDemo ? "A demo showcase is running — " : "A live showcase is running — ") + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
     }
-    var _ts = $("topStatus"); if (_ts) _ts.innerHTML = '<span class="badge-dot"></span> ' + (live ? ((isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects") : "Ready to start");
   }
 
   /* ---- landing actions ---- */
@@ -1829,7 +1828,6 @@ var QRClean = (function () {
     renderHeroSpot();
     if (state.status === "open" && state.entries.length > 1) { if (!heroTimer) startHeroTimer(); } else if (state.status !== "open") { stopHeroTimer(); }
     renderTicker();
-    var _ts2 = $("topStatus"); if (_ts2) _ts2.innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · " : "Live · ") + state.entries.length + " projects";
   }
   function spotCard(e, idx) {
     var link = safeURL(e.link);

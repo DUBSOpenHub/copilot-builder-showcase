@@ -62,12 +62,15 @@ jobs:
             "$root/bin/showcase" --demo --run-id ci-demo --no-suspense --yes \
             > "$root/demo.log"
 
+          # Derived from the source of truth so a version bump never needs a CI edit.
+          expected_version="$(python -c 'import builder_showcase; print(builder_showcase.VERSION)')"
+
           grep -q "Type: showcase" "$root/install.log"
           grep -q "showcase owner/project-one owner/project-two" "$root/help.log"
-          grep -q "3.2.1" "$root/version.log"
-          grep -q "3.2.1" "$root/advanced-version.log"
-          grep -q "3.2.1" "$root/legacy-version.log"
-          grep -q "3.2.1" "$root/legacy-advanced-version.log"
+          grep -q "$expected_version" "$root/version.log"
+          grep -q "$expected_version" "$root/advanced-version.log"
+          grep -q "$expected_version" "$root/legacy-version.log"
+          grep -q "$expected_version" "$root/legacy-advanced-version.log"
           grep -q "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS" "$root/demo.log"
 
   windows:
@@ -138,22 +141,25 @@ jobs:
             Out-File (Join-Path $root "argument-demo.log")
           if ($LASTEXITCODE -ne 0) { throw "Windows argument-safety demo failed." }
 
+          # Derived from the source of truth so a version bump never needs a CI edit.
+          $expectedVersion = (python -c "import builder_showcase; print(builder_showcase.VERSION)").Trim()
+
           if (-not (Select-String -Quiet -Path (Join-Path $root "install.log") -Pattern "Type: showcase")) {
             throw "Installer output did not advertise showcase."
           }
           if (-not (Select-String -Quiet -Path (Join-Path $root "help.log") -Pattern "showcase --demo")) {
             throw "Beginner help did not include the demo command."
           }
-          if (-not (Select-String -Quiet -Path (Join-Path $root "version.log") -Pattern "3.2.1")) {
+          if (-not (Select-String -Quiet -Path (Join-Path $root "version.log") -Pattern $expectedVersion)) {
             throw "Primary command version is incorrect."
           }
-          if (-not (Select-String -Quiet -Path (Join-Path $root "advanced-version.log") -Pattern "3.2.1")) {
+          if (-not (Select-String -Quiet -Path (Join-Path $root "advanced-version.log") -Pattern $expectedVersion)) {
             throw "Advanced command version is incorrect."
           }
-          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-version.log") -Pattern "3.2.1")) {
+          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-version.log") -Pattern $expectedVersion)) {
             throw "Legacy command version is incorrect."
           }
-          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-advanced-version.log") -Pattern "3.2.1")) {
+          if (-not (Select-String -Quiet -Path (Join-Path $root "legacy-advanced-version.log") -Pattern $expectedVersion)) {
             throw "Legacy judge command version is incorrect."
           }
           if (-not (Select-String -Quiet -Path (Join-Path $root "demo.log") -Pattern "PRACTICE SHOWCASE")) {

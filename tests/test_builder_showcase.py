@@ -497,6 +497,52 @@ class TestShowtimeDelight:
         ]
         assert all(cbp._terminal_text_width(line) == 78 for line in card_lines)
 
+    def test_magic_banner_borders_align_with_emoji_and_long_subtitles(self, capsys):
+        # The banner is the shared-screen surface, so every row must be the
+        # same terminal-cell width even when emoji are wide and the subtitle
+        # is longer than the terminal.
+        cases = [
+            (
+                "Copilot Builder Showcase Recap",
+                "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS · 3 projects · 3 awards · envelope sealed",
+            ),
+            ("Copilot Builder Showcase", "OFFICIAL COPILOT PANEL"),
+            ("Sealing the Night", "Recap · export · validate · replay"),
+            ("X", ""),
+        ]
+
+        for title, subtitle in cases:
+            with patch.dict(os.environ, {"NO_COLOR": "1"}, clear=True):
+                with patch.object(cbp, "_terminal_width", return_value=74):
+                    cbp._magic_banner(title, subtitle)
+
+            banner_lines = [
+                line
+                for line in capsys.readouterr().out.splitlines()
+                if line.startswith(("╔", "║", "╚"))
+            ]
+            widths = {cbp._terminal_text_width(line) for line in banner_lines}
+            assert len(banner_lines) == (4 if subtitle else 3)
+            assert len(widths) == 1, f"misaligned banner for {title!r}: {widths}"
+
+    def test_magic_banner_truncates_instead_of_bursting_the_box(self, capsys):
+        subtitle = (
+            "an extremely long subtitle that cannot possibly fit inside the "
+            "available terminal width and therefore must be truncated"
+        )
+
+        with patch.dict(os.environ, {"NO_COLOR": "1"}, clear=True):
+            with patch.object(cbp, "_terminal_width", return_value=74):
+                cbp._magic_banner("Copilot Builder Showcase", subtitle)
+
+        output = capsys.readouterr().out
+        banner_lines = [
+            line for line in output.splitlines() if line.startswith(("╔", "║", "╚"))
+        ]
+        # 74 content cells plus the two border characters.
+        assert all(cbp._terminal_text_width(line) == 76 for line in banner_lines)
+        assert "…" in output
+
     def test_audience_reveal_moment_is_stable_per_run(self):
         args = argparse.Namespace(
             run_id="live-room",
@@ -3808,6 +3854,23 @@ class TestPackagingConfig:
         data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
 
         assert data["project"]["optional-dependencies"]["textual"] == ["textual>=8,<9"]
+
+    def test_pyproject_version_matches_the_engine_version(self):
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+
+        assert data["project"]["version"] == cbp.VERSION
+
+    def test_pyproject_exposes_every_command_entry_point(self):
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        data = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+
+        scripts = data["project"]["scripts"]
+        assert scripts["showcase"] == "showcase_launcher:main"
+        assert scripts["copilot-builder-showcase"] == "builder_showcase:main"
+        # Legacy aliases stay available for existing installations.
+        assert scripts["hackathon"] == "showcase_launcher:main"
+        assert scripts["hackathon-judge"] == "builder_showcase:main"
 
 
 # ---------------------------------------------------------------------------

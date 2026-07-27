@@ -6,30 +6,13 @@ from __future__ import annotations
 import sys
 from typing import Callable, Iterable, List, Optional, TextIO
 
+from builder_showcase import COMMAND_MAP
 from builder_showcase import main as showcase_main
 
 
-ADVANCED_COMMANDS = frozenset(
-    {
-        "award",
-        "compare",
-        "doctor",
-        "export",
-        "feedback",
-        "import-urls",
-        "init",
-        "judge",
-        "list",
-        "present",
-        "quick",
-        "replay",
-        "resume",
-        "submit",
-        "tui",
-        "validate",
-        "workshop",
-    }
-)
+# Derived from the engine so a new subcommand can never be silently swallowed
+# and re-routed into `workshop` as if it were a project link.
+ADVANCED_COMMANDS = frozenset(COMMAND_MAP)
 
 BEGINNER_HELP = """\
 Copilot Builder Showcase
@@ -49,6 +32,7 @@ More commands:
   showcase replay <run-id>
   showcase validate <run-id>
   showcase feedback <run-id>
+  showcase recap <run-id>
   showcase present <run-id> --operator
 
 Paste only project links to begin. Team names and extra details are optional.

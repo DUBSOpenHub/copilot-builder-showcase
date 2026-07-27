@@ -563,12 +563,19 @@ def _set_terminal_title(title: str) -> None:
 def _magic_banner(title: str, subtitle: str = "") -> None:
     title_line = f"✨  {title}  ✨"
     terminal_width = _terminal_width()
-    width = min(terminal_width, max(66, len(title_line) + 6, len(subtitle) + 6))
+    width = min(
+        terminal_width,
+        max(
+            66,
+            _terminal_text_width(title_line) + 6,
+            _terminal_text_width(subtitle) + 6,
+        ),
+    )
     print()
     print(_paint("╔" + "═" * width + "╗", "magenta", bold=True))
-    print(_paint("║" + title_line.center(width) + "║", "magenta", bold=True))
+    print(_paint("║" + _center_terminal_text(title_line, width) + "║", "magenta", bold=True))
     if subtitle:
-        print(_paint("║" + subtitle.center(width) + "║", "cyan"))
+        print(_paint("║" + _center_terminal_text(subtitle, width) + "║", "cyan"))
     print(_paint("╚" + "═" * width + "╝", "magenta", bold=True))
 
 

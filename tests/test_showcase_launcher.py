@@ -2,6 +2,7 @@ import io
 import sys
 from unittest.mock import patch
 
+import builder_showcase
 import showcase_launcher as launcher
 
 
@@ -65,3 +66,15 @@ def test_empty_noninteractive_input_gives_demo_hint():
         assert launcher.main([], output=output) == 7
 
     assert "showcase --demo" in output.getvalue()
+
+
+def test_every_engine_subcommand_is_routed_through():
+    """A new engine subcommand must never be swallowed as a project link."""
+    assert set(launcher.ADVANCED_COMMANDS) == set(builder_showcase.COMMAND_MAP)
+
+    for command in builder_showcase.COMMAND_MAP:
+        assert launcher.route_args([command, "show-1"]) == [command, "show-1"]
+
+
+def test_recap_reaches_the_engine_instead_of_the_live_show():
+    assert launcher.route_args(["recap", "show-1"]) == ["recap", "show-1"]

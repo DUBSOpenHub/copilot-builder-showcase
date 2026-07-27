@@ -398,6 +398,7 @@ Useful commands:
 showcase replay <run-id>
 showcase validate <run-id>
 showcase feedback <run-id>
+showcase recap <run-id>
 showcase doctor
 showcase present <run-id> --operator
 ```
@@ -470,7 +471,7 @@ Keep the default experience neutral, beginner-first, and audience-safe. Do not c
 
 ```bash
 python3 -m pytest -q
-python3 -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py
+python3 -m py_compile showcase_launcher.py builder_showcase.py builder_showcase_dashboard.py event_spec.py bundle_reader.py hackathon_launcher.py hackathon_judge.py hackathon_judge_dashboard.py
 bash -n install.sh
 ```
 

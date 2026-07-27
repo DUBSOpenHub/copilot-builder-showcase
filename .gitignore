@@ -13,8 +13,10 @@ dist/
 .DS_Store
 
 # Local Copilot Builder Showcase run artifacts
+.copilot_builder_showcase/
 .hackathon_judge/
 runs/
+repro-*/
 *.bundle.tar.gz
 HASHES
 SEAL
