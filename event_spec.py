@@ -1,4 +1,4 @@
-"""Portable, validated event configuration for Copilot Builder Showcase."""
+"""Portable, validated event configuration for GitHub Copilot Builder Showcase."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ EVENT_SPEC_VERSION = "1.0"
 DEFAULT_EVENT_SPEC: Dict[str, Any] = {
     "schema_version": EVENT_SPEC_VERSION,
     "event": {
-        "name": "Copilot Builder Showcase",
+        "name": "GitHub Copilot Builder Showcase",
         "tagline": "Drop the links. Activate the panel. Spotlight the winners.",
     },
     "rubric": {
@@ -84,7 +84,7 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
         },
         {
             "id": "grand-prize",
-            "name": "First Place — Copilot Builder Award",
+            "name": "First Place — GitHub Copilot Builder Award",
             "emoji": "🏆",
             "tagline": "The strongest complete build in the showcase.",
             "dimensions": [],

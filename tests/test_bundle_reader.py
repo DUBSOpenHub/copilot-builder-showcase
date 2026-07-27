@@ -126,7 +126,7 @@ class TestCurrentBundlePaths:
         assert manifest["run_id"] == "run-1"
         assert reader.status() == "collecting"
         assert reader.mode() == "workshop"
-        assert reader.audience_view().event_name == "Copilot Builder Showcase"
+        assert reader.audience_view().event_name == "GitHub Copilot Builder Showcase"
         # command_log is embedded in the manifest, not a separate artifact.
         assert reader.command_log() == manifest["command_log"]
         assert reader.command_log()[0]["command"] == "init"
@@ -347,8 +347,8 @@ class TestAudienceProjection:
         }]
         feedback["copilot_use"] = {
             "status": "evidenced",
-            "summary": "The winning project used Copilot for a perfect ten.",
-            "evidence": "First-place Copilot workflow, 9/10.",
+            "summary": "The winning project used GitHub Copilot for a perfect ten.",
+            "evidence": "First-place GitHub Copilot workflow, 9/10.",
         }
         feedback["innovation_signal"] = {
             "status": "assessed",
@@ -404,7 +404,7 @@ class TestAudienceProjection:
         assert "#1 project" not in rendered
         assert "manual incident escalation" not in rendered
         assert audience.feedback[0]["copilot_use"]["summary"] == (
-            "Copilot-use context will be shared after the reveal."
+            "GitHub Copilot-use context will be shared after the reveal."
         )
         assert audience.feedback[0]["frontier_use"]["summary"] == (
             "Frontier-use context will be shared after the reveal."
@@ -415,7 +415,7 @@ class TestAudienceProjection:
 
         operator = reader.operator_view()
         assert "Top score: 9/10." in operator.verdicts[0]["archetype_verdicts"][0]["bright_spot"]
-        assert operator.feedback[0]["copilot_use"]["evidence"] == "First-place Copilot workflow, 9/10."
+        assert operator.feedback[0]["copilot_use"]["evidence"] == "First-place GitHub Copilot workflow, 9/10."
         assert (
             operator.feedback[0]["grounding"]["sources"][0]["value"]
             == "Replace the manual incident escalation process."

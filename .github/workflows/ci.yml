@@ -104,7 +104,7 @@ jobs:
 
           install_once "$root/second.log"
 
-          grep -q "Updating Copilot Builder Showcase" "$root/second.log"
+          grep -q "Updating GitHub Copilot Builder Showcase" "$root/second.log"
           "$root/bin/showcase" --version > "$root/upgraded-version.log"
           grep -q "$(python -c 'import builder_showcase; print(builder_showcase.VERSION)')" \
             "$root/upgraded-version.log"

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-bundle_reader.py — Canonical read-only reader for Copilot Builder Showcase
+bundle_reader.py — Canonical read-only reader for GitHub Copilot Builder Showcase
 run bundles (the format written by builder_showcase.py).
 
 Reads the current primary bundle layout:
@@ -247,7 +247,7 @@ def _redact_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
     if "copilot_use" in feedback:
         redacted["copilot_use"] = _redact_feedback_assessment(
             feedback.get("copilot_use"),
-            "Copilot-use context will be shared after the reveal.",
+            "GitHub Copilot-use context will be shared after the reveal.",
         )
     if "innovation_signal" in feedback:
         redacted["innovation_signal"] = _redact_feedback_assessment(
@@ -270,7 +270,7 @@ def _redact_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
     for field, fallback in (
         (
             "copilot_next_moves",
-            "A Copilot improvement idea will be shared after the reveal.",
+            "A GitHub Copilot improvement idea will be shared after the reveal.",
         ),
         (
             "frontier_experiments",
@@ -321,7 +321,7 @@ class BundleView:
 
 
 class BundleReader:
-    """Read-only accessor for a single Copilot Builder Showcase run bundle.
+    """Read-only accessor for a single GitHub Copilot Builder Showcase run bundle.
 
     Every accessor re-reads its artifact from disk on each call — the
     reader intentionally holds no cache, so callers that poll a live bundle
@@ -349,7 +349,7 @@ class BundleReader:
         event = self.manifest().get("event", {})
         if isinstance(event, dict) and event.get("name"):
             return str(event["name"])
-        return "Copilot Builder Showcase"
+        return "GitHub Copilot Builder Showcase"
 
     def command_log(self) -> List[Dict[str, Any]]:
         """command_log is embedded directly in the manifest, not a

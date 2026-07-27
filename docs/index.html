@@ -4,23 +4,23 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
-<title>Copilot Builder Showcase — turn any workshop into a live showcase</title>
-<meta name="description" content="Turn any workshop into a live Copilot Builder Showcase. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
+<title>GitHub Copilot Builder Showcase — turn any workshop into a live showcase</title>
+<meta name="description" content="Turn any workshop into a live GitHub Copilot Builder Showcase. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <link rel="canonical" href="https://dubsopenhub.github.io/copilot-builder-showcase/" />
 <meta property="og:type" content="website" />
-<meta property="og:site_name" content="Copilot Builder Showcase" />
+<meta property="og:site_name" content="GitHub Copilot Builder Showcase" />
 <meta property="og:url" content="https://dubsopenhub.github.io/copilot-builder-showcase/" />
-<meta property="og:title" content="Copilot Builder Showcase — turn any workshop into a live showcase" />
+<meta property="og:title" content="GitHub Copilot Builder Showcase — turn any workshop into a live showcase" />
 <meta property="og:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta property="og:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/builder-showcase-demo.png" />
 <meta property="og:image:width" content="1280" />
 <meta property="og:image:height" content="900" />
-<meta property="og:image:alt" content="The Copilot Builder Showcase award reveal — an illustrative podium with Aurora Recall taking the Copilot Builder Award, above sealed panel scores for innovation, build quality, and impact." />
+<meta property="og:image:alt" content="The GitHub Copilot Builder Showcase award reveal — an illustrative podium with Aurora Recall taking the GitHub Copilot Builder Award, above sealed panel scores for innovation, build quality, and impact." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Copilot Builder Showcase — turn any workshop into a live showcase" />
+<meta name="twitter:title" content="GitHub Copilot Builder Showcase — turn any workshop into a live showcase" />
 <meta name="twitter:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta name="twitter:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/builder-showcase-demo.png" />
-<meta name="twitter:image:alt" content="The Copilot Builder Showcase award reveal — an illustrative podium with Aurora Recall taking the Copilot Builder Award, above sealed panel scores for innovation, build quality, and impact." />
+<meta name="twitter:image:alt" content="The GitHub Copilot Builder Showcase award reveal — an illustrative podium with Aurora Recall taking the GitHub Copilot Builder Award, above sealed panel scores for innovation, build quality, and impact." />
 <script>
   (function () {
     try {
@@ -82,7 +82,7 @@
   --cp-panel-strong: hsl(var(--card) / 0.97);
   --cp-sheen: hsl(0 0% 100% / 0.05);
   --cp-highlight: hsl(var(--primary) / 0.12);
-  --cp-gold: hsl(45 98% 51%);               /* amber gold for the Copilot Builder Award */
+  --cp-gold: hsl(45 98% 51%);               /* amber gold for the GitHub Copilot Builder Award */
   --cp-silver: hsl(220 10% 78%);
   --cp-bronze: hsl(24 55% 58%);
 }
@@ -506,7 +506,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .judge-card h3 { font-size: 24px; font-weight: 800; margin-top: 14px; letter-spacing: -0.01em; }
 .judge-card .sub { color: var(--cp-text-muted); font-size: 14px; margin-top: 6px; }
 .panel-judges { display: flex; justify-content: center; gap: 10px; margin: 20px 0 6px; flex-wrap: wrap; }
-.judge { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 108px; }
+.judge { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 136px; }
 .judge .dot { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-size: 22px; background: var(--cp-surface); border: 1px solid var(--cp-border); position: relative; }
 .judge .dot.thinking { animation: judge-pulse 1.1s ease-in-out infinite; }
 .judge .dot.done { border-color: var(--cp-success); color: var(--cp-success); }
@@ -544,7 +544,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .award .why { font-size: 13px; color: var(--cp-text-muted); margin-top: 12px; border-top: 1px dashed var(--cp-border); padding-top: 12px; text-align: left; }
 .award .why b { color: var(--cp-text); }
 .award .consensus { display: inline-flex; align-items: center; gap: 7px; margin-top: 12px; font-size: 11.5px; font-weight: 700; color: var(--cp-text-soft); background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 11px; }
-.award.first { border-color: color-mix(in srgb, var(--cp-gold) 60%, var(--cp-border)); background: linear-gradient(180deg, color-mix(in srgb, var(--cp-gold) 12%, var(--cp-surface)), var(--cp-surface)); padding-top: 30px; }
+.award.first { border-color: color-mix(in srgb, var(--cp-gold) 60%, var(--cp-border)); background: linear-gradient(180deg, color-mix(in srgb, var(--cp-gold) 12%, var(--cp-surface)), var(--cp-surface)); padding-top: 54px; padding-bottom: 32px; }
 .award.first::before { content: ""; position: absolute; inset: -1px; border-radius: 1.1rem; padding: 1px; background: linear-gradient(180deg, var(--cp-gold), transparent 60%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
 .award.first .place { color: var(--cp-gold); }
 .award.second { border-color: color-mix(in srgb, var(--cp-silver) 50%, var(--cp-border)); }
@@ -601,7 +601,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
   .fr-desc { display: none; }
 }
 
-/* ---- Copilot sparkles ---- */
+/* ---- GitHub Copilot sparkles ---- */
 .sparkles { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
 .spark { position: absolute; font-size: 16px; line-height: 1; opacity: 0; color: var(--cp-accent); text-shadow: 0 0 8px color-mix(in srgb, var(--cp-accent) 55%, transparent); animation: spark-tw 2.6s ease-in-out infinite; will-change: transform, opacity; }
 .spark.gold { color: var(--cp-gold); text-shadow: 0 0 10px color-mix(in srgb, var(--cp-gold) 65%, transparent); }
@@ -717,6 +717,14 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 /* reaction pills (named panelists) */
 .rx-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; min-height: 30px; }
 .rx-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--cp-text); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 12px; animation: spot-in .4s ease both; }
+/* Rubric sweep shown while each project is reviewed. Lenses are the three named
+   criteria being examined — never a score, value, or rank (audience-safe). */
+.judge-lenses { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 13px 0 4px; min-height: 30px; }
+.jlens { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; color: var(--cp-text-soft); background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 13px; opacity: .5; transition: opacity .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease, transform .3s cubic-bezier(.2,.8,.2,1); }
+.jlens .jl-tick { font-size: 11px; opacity: 0; transition: opacity .3s ease; }
+.jlens.on { opacity: 1; color: var(--cp-text); border-color: var(--cp-accent); background: var(--cp-accent-soft); transform: translateY(-2px) scale(1.04); box-shadow: 0 0 0 4px var(--cp-accent-soft); }
+.jlens.done { opacity: 1; color: var(--cp-success); border-color: var(--cp-success); background: var(--cp-surface); transform: none; box-shadow: none; }
+.jlens.done .jl-tick { opacity: 1; }
 .rx-pill b { font-size: 13px; font-weight: 700; }
 .rx-pill .who { color: var(--cp-text-soft); font-weight: 700; }
 
@@ -790,7 +798,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1>Turn any workshop into a live <span class="accent">Copilot Builder Showcase</span>.</h1>
+          <h1>Turn any workshop into a live <span class="accent">GitHub Copilot Builder Showcase</span>.</h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
@@ -801,10 +809,10 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <button type="button" class="command-chip command-chip-btn" id="copyCmdChip"
             aria-label="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
             title="Copy a GitHub Copilot CLI prompt to spin up your own showcase"
-            data-cmd='copilot -p "Clone github.com/DUBSOpenHub/copilot-builder-showcase and open docs/index.html so I can run a live Copilot Builder Showcase at my workshop"'>
+            data-cmd='copilot -p "Clone github.com/DUBSOpenHub/copilot-builder-showcase and open docs/index.html so I can run a live GitHub Copilot Builder Showcase at my workshop"'>
             <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
             <span class="cmd">showcase</span><span class="caret" aria-hidden="true"></span>
-            <span class="chip-hint">⚡ Copy the Copilot CLI prompt</span>
+            <span class="chip-hint">⚡ Copy the GitHub Copilot CLI prompt</span>
           </button>
           <div class="hero-note">🛈 No judging panel to recruit. No dashboard to wire up. Just paste links and go.</div>
           <div class="resume-banner" id="resumeBanner">
@@ -823,7 +831,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <div class="mini-stage">
             <div class="mini-podium">
               <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div><div class="riser"><span>3</span></div></div>
-              <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">Copilot Builder Award</div><div class="riser"><span>1</span></div></div>
+              <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">GitHub Copilot Builder Award</div><div class="riser"><span>1</span></div></div>
               <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div><div class="riser"><span>2</span></div></div>
             </div>
           </div>
@@ -881,11 +889,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <span class="num">3</span>
           <div class="p-ic">🏆</div>
           <h3>Run the panel &amp; reveal</h3>
-          <p>A Copilot judging panel reviews every project through the same rubric, the room joins the cue, and the podium lands.</p>
+          <p>A GitHub Copilot judging panel reviews every project through the same rubric, the room joins the cue, and the podium lands.</p>
           <ul>
-            <li><span class="ck">✓</span> Median consensus of a Copilot CLI panel</li>
+            <li><span class="ck">✓</span> Median consensus of a GitHub Copilot CLI panel</li>
             <li><span class="ck">✓</span> Scores stay sealed until the reveal</li>
-            <li><span class="ck">✓</span> Builder Bronze · Silver · Copilot Builder Award</li>
+            <li><span class="ck">✓</span> Builder Bronze · Silver · GitHub Copilot Builder Award</li>
           </ul>
         </article>
       </div>
@@ -896,15 +904,15 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="section-head">
         <span class="eyebrow">Fair by default</span>
         <h2>Credible judging, not a gimmick.</h2>
-        <p>Copilot judging combines a configured Copilot CLI panel by median consensus. The audience view never leaks a result early.</p>
+        <p>GitHub Copilot judging combines a configured GitHub Copilot CLI panel by median consensus. The audience view never leaks a result early.</p>
       </div>
       <div class="guards">
         <div class="guard"><span class="g-ic">🔒</span><div><h4>Sealed scores</h4><p>No scores, ranks, or awards on the big screen until the reveal.</p></div></div>
         <div class="guard"><span class="g-ic">✨</span><div><h4>Equal spotlight</h4><p>Every accepted project appears before the ceremony.</p></div></div>
         <div class="guard"><span class="g-ic">📐</span><div><h4>Same rubric</h4><p>Every entry is reviewed against one declared rubric.</p></div></div>
-        <div class="guard"><span class="g-ic">🤝</span><div><h4>Median consensus</h4><p>A multi-model Copilot panel is combined, never one hidden judge.</p></div></div>
-        <div class="guard"><span class="g-ic">🧾</span><div><h4>Evidence, not inference</h4><p>Copilot use is only claimed from builder-provided evidence.</p></div></div>
-        <div class="guard"><span class="g-ic">🏷️</span><div><h4>Status always visible</h4><p>Practice or Official Copilot Panel is labeled throughout the run.</p></div></div>
+        <div class="guard"><span class="g-ic">🤝</span><div><h4>Median consensus</h4><p>A multi-model GitHub Copilot panel is combined, never one hidden judge.</p></div></div>
+        <div class="guard"><span class="g-ic">🧾</span><div><h4>Evidence, not inference</h4><p>GitHub Copilot use is only claimed from builder-provided evidence.</p></div></div>
+        <div class="guard"><span class="g-ic">🏷️</span><div><h4>Status always visible</h4><p>Practice or Official GitHub Copilot Panel is labeled throughout the run.</p></div></div>
       </div>
     </section>
 
@@ -913,7 +921,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <div class="cta-band">
         <span class="badge" style="margin:0 auto 12px">Ready when you are</span>
         <h2>Give the room a finale worth staying for.</h2>
-        <p>Start your showcase — <b>drop the project links</b>, or let <b>participants scan the QR</b> to add their own — then run the Copilot judging panel, live.</p>
+        <p>Start your showcase — <b>drop the project links</b>, or let <b>participants scan the QR</b> to add their own — then run the GitHub Copilot judging panel, live.</p>
         <div class="hero-cta">
           <button class="btn btn-primary btn-lg btn-cta-hot" id="launchCta">▶&nbsp; Start my showcase</button>
         </div>
@@ -924,7 +932,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
   <footer>
     <div class="wrap foot">
       <a class="foot-brand repo-link" href="https://github.com/DUBSOpenHub/copilot-builder-showcase" target="_blank" rel="noopener"><span class="gh-mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></span> DUBSOpenHub/copilot-builder-showcase</a>
-      <span class="foot-by">Built with the <a href="https://docs.github.com/en/copilot/github-copilot-in-the-cli" target="_blank" rel="noopener">Copilot CLI</a> by <a href="https://github.com/DUBSOpenHub" target="_blank" rel="noopener">@DUBSOpenHub</a></span>
+      <span class="foot-by">Built with the <a href="https://docs.github.com/en/copilot/github-copilot-in-the-cli" target="_blank" rel="noopener">GitHub Copilot CLI</a> by <a href="https://github.com/DUBSOpenHub" target="_blank" rel="noopener">@DUBSOpenHub</a></span>
       <span>Practice showcase · illustrative results · no judging panel required</span>
     </div>
   </footer>
@@ -933,11 +941,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 <!-- ============ STAGE / BIG SCREEN ============ -->
 <div class="stage" id="stage" aria-hidden="true">
   <div class="stage-top">
-    <div class="stage-title"><span class="logo">🏆</span> Copilot Builder Showcase</div>
+    <div class="stage-title"><span class="logo">🏆</span> GitHub Copilot Builder Showcase</div>
     <div class="stepper" id="stepper">
       <div class="step" data-step="open"><span class="n">1</span><span class="lbl">Open for submissions</span></div>
       <span class="step-sep"></span>
-      <div class="step" data-step="judging"><span class="n">2</span><span class="lbl">Copilot judging</span></div>
+      <div class="step" data-step="judging"><span class="n">2</span><span class="lbl">GitHub Copilot judging</span></div>
       <span class="step-sep"></span>
       <div class="step" data-step="awarded"><span class="n">3</span><span class="lbl">Awarded</span></div>
     </div>
@@ -988,13 +996,14 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
       <!-- judging overlay -->
       <div class="judging" id="judging">
         <div class="judge-card">
-          <span class="badge"><span class="badge-dot"></span> Copilot judging panel</span>
+          <span class="badge"><span class="badge-dot"></span> GitHub Copilot judging panel</span>
           <h3>Reviewing every project…</h3>
-          <div class="sub">One shared rubric — Innovation, Build Quality, Impact — combined by median consensus of a Copilot CLI panel. Scores stay sealed.</div>
+          <div class="sub">One shared rubric — Innovation, Build Quality, Impact — combined by median consensus of a GitHub Copilot CLI panel. Scores stay sealed.</div>
           <div class="panel-judges" id="panelJudges"></div>
           <canvas id="deliberate" class="deliberate" aria-hidden="true"></canvas>
           <div class="progress"><i id="judgeBar"></i></div>
           <div class="judge-now" id="judgeNow">Warming up the panel…</div>
+          <div class="judge-lenses" id="judgeLenses" aria-hidden="true"></div>
           <div class="rx-row" id="judgeReacts"></div>
           <div class="judge-agg" id="judgeAgg"></div>
           <div class="reveal-cue" id="revealCue">
@@ -1017,8 +1026,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <div class="sparkles" id="sparkles" aria-hidden="true"></div>
         <div class="podium-head">
           <span class="badge">🎉 The podium</span>
-          <h2>Copilot Builder Showcase — winners</h2>
-          <p>Chosen by median consensus of a Copilot CLI panel · practice showcase, illustrative results</p>
+          <h2>GitHub Copilot Builder Showcase — winners</h2>
+          <p>Chosen by median consensus of a GitHub Copilot CLI panel · practice showcase, illustrative results</p>
         </div>
         <div class="reveal-bar" id="revealBar">
           <div class="reveal-fx">
@@ -1062,8 +1071,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
       <div class="op" id="opPanel">
         <div class="op-t">◆ Operator controls</div>
-        <div class="op-hint" id="opHint">When the room has submitted, run the Copilot judging panel. You need at least 3 projects for a podium.</div>
-        <button class="btn btn-primary" id="runPanelBtn" disabled>Run the Copilot judging panel</button>
+        <div class="op-hint" id="opHint">When the room has submitted, run the GitHub Copilot judging panel. You need at least 3 projects for a podium.</div>
+        <button class="btn btn-primary" id="runPanelBtn" disabled>Run the GitHub Copilot judging panel</button>
         <div class="op-row">
           <button class="btn btn-sm" id="seedBtn" title="Add a sample project for the demo">＋ Demo entry</button>
           <button class="btn btn-sm" id="resetBtn" title="Clear entries and reopen">↺ Reset</button>
@@ -1081,7 +1090,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 <!-- ============ SUBMIT (mobile) ============ -->
 <div class="submit-view" id="submitView" aria-hidden="true">
   <div class="submit-card">
-    <div class="submit-brand"><span class="logo">🏆</span><b>Copilot Builder Showcase</b></div>
+    <div class="submit-brand"><span class="logo">🏆</span><b>GitHub Copilot Builder Showcase</b></div>
     <div class="submit-panel" id="submitPanel"><!-- filled by JS --></div>
     <div class="submit-foot"><a href="#" id="backToShow">← Back to the showcase</a> · <button class="icon-btn" id="themeToggleSubmit" style="width:auto;height:auto;padding:4px 10px;font-size:13px;border-radius:8px;display:inline-flex" title="Toggle theme">🌙 Theme</button></div>
   </div>
@@ -1186,7 +1195,7 @@ var QRClean = (function () {
 })();
 
 /* ============================================================
-   Copilot Builder Showcase — live experience controller
+   GitHub Copilot Builder Showcase — live experience controller
    ============================================================ */
 (function () {
   "use strict";
@@ -1535,7 +1544,7 @@ var QRClean = (function () {
   function liveClosedMarkup(status) {
     var m = ({
       idle: ["\u23F3", "Waiting for the host to start", "Keep this page open — it updates automatically the moment submissions open."],
-      judging: ["\uD83D\uDD12", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."],
+      judging: ["\uD83D\uDD12", "Submissions are closed", "The GitHub Copilot judging panel is reviewing every project right now."],
       awarded: ["\uD83C\uDF89", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"]
     })[status] || ["\u23F3", "Waiting for the host to start", "Keep this page open — it updates automatically."];
     return '<div class="submit-closed"><div class="big">' + m[0] + '</div><h2>' + m[1] + "</h2><p>" + m[2] + "</p></div>";
@@ -1713,7 +1722,7 @@ var QRClean = (function () {
     { proj: "Signal Garden", link: "https://github.com/example/signal-garden", team: "Team Signal Garden", desc: "Turns noisy alerts into one calm, prioritized morning digest." }
   ];
 
-  /* ---- deterministic Copilot-panel scoring (practice, illustrative) ---- */
+  /* ---- deterministic GitHub Copilot-panel scoring (practice, illustrative) ---- */
   function hash(str) { var h = 2166136261 >>> 0; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   var LENSES = ["Innovation", "Build Quality", "Impact"];
   function scoreEntry(e) {
@@ -1755,7 +1764,7 @@ var QRClean = (function () {
     var isDemo = state.mode === "demo";
     var b = $("resumeBanner"); b.classList.toggle("on", live);
     if (live) {
-      var map = { open: "Open for submissions", judging: "Copilot judging in progress", awarded: "Winners revealed" };
+      var map = { open: "Open for submissions", judging: "GitHub Copilot judging in progress", awarded: "Winners revealed" };
       $("resumeText").textContent = (isDemo ? "A demo showcase is running — " : "A live showcase is running — ") + (map[state.status] || state.status) + " · " + state.entries.length + " projects.";
     }
   }
@@ -1816,8 +1825,8 @@ var QRClean = (function () {
     $("stageMode").innerHTML = '<span class="badge-dot"></span> ' + (isDemo ? "Demo · illustrative" : "Live · illustrative results");
     var titles = {
       open: ["Open for submissions", "Scan the code — every project that lands gets a spotlight."],
-      judging: ["Copilot judging in progress", "One rubric, applied to every project. Scores stay sealed."],
-      awarded: ["The winners are in", "Chosen by median consensus of a Copilot CLI panel."]
+      judging: ["GitHub Copilot judging in progress", "One rubric, applied to every project. Scores stay sealed."],
+      awarded: ["The winners are in", "Chosen by median consensus of a GitHub Copilot CLI panel."]
     };
     var tt = titles[state.status] || titles.open;
     $("boardTitle").textContent = tt[0];
@@ -1835,8 +1844,8 @@ var QRClean = (function () {
     var canRun = state.status === "open" && state.entries.length >= 3;
     var rp = $("runPanelBtn"); rp.disabled = !canRun;
     $("seedBtn").style.display = (state.status === "open" && isDemo) ? "" : "none";
-    if (state.status === "open") { $("opHint").textContent = state.entries.length < 3 ? ("Need at least 3 projects for a podium — " + state.entries.length + "/3 so far.") : "The room is ready. Run the Copilot judging panel when you are."; }
-    else if (state.status === "judging") $("opHint").textContent = "The Copilot panel is reviewing every project…";
+    if (state.status === "open") { $("opHint").textContent = state.entries.length < 3 ? ("Need at least 3 projects for a podium — " + state.entries.length + "/3 so far.") : "The room is ready. Run the GitHub Copilot judging panel when you are."; }
+    else if (state.status === "judging") $("opHint").textContent = "The GitHub Copilot panel is reviewing every project…";
     else $("opHint").textContent = "Showcase complete. Start another run whenever you like.";
     $("qrCard").style.opacity = state.status === "open" ? "1" : "0.55";
     syncSpotlights();
@@ -1958,7 +1967,7 @@ var QRClean = (function () {
       if (state.entries.length < 3) return;
       state.status = "judging"; state.calls = 0; save(); liveSetStatus("judging");
       renderStage(); showJudging(true);
-      pushFeed("Demo — auto-running the Copilot judging panel.");
+      pushFeed("Demo — auto-running the GitHub Copilot judging panel.");
     }, reduceMotion ? 500 : 1700);
   }
   $("seedBtn").addEventListener("click", function () {
@@ -2009,7 +2018,7 @@ var QRClean = (function () {
     var hint = copyCmdChip.querySelector(".chip-hint");
     var hintDefault = hint ? hint.textContent : "";
     function ok() {
-      toast("Copilot CLI prompt copied — paste it into your terminal");
+      toast("GitHub Copilot CLI prompt copied — paste it into your terminal");
       copyCmdChip.classList.add("copied");
       if (hint) hint.textContent = "✓ Copied — paste in your terminal";
       clearTimeout(copyCmdChip._h);
@@ -2023,7 +2032,7 @@ var QRClean = (function () {
     if (state.status !== "open" || state.entries.length < 3) return;
     state.status = "judging"; state.calls = 0; save(); liveSetStatus("judging");
     renderStage(); showJudging(true);
-    pushFeed("Operator started the Copilot judging panel.");
+    pushFeed("Operator started the GitHub Copilot judging panel.");
   });
   $("resetBtn").addEventListener("click", function () { newRun(); });
   $("newRunBtn").addEventListener("click", function () { newRun(); });
@@ -2043,7 +2052,7 @@ var QRClean = (function () {
   }
 
   /* ---- judging sequence ---- */
-  var JUDGES = [{ n: "Copilot · Panel A", ic: "🧭" }, { n: "Copilot · Panel B", ic: "🛠️" }, { n: "Copilot · Panel C", ic: "🎯" }];
+  var JUDGES = [{ n: "GitHub Copilot · Panel A", ic: "🧭" }, { n: "GitHub Copilot · Panel B", ic: "🛠️" }, { n: "GitHub Copilot · Panel C", ic: "🎯" }];
   var REACTIONS = ["clean build", "clear problem", "strong demo", "thoughtful UX", "ambitious scope", "tidy code", "genuinely useful", "nice polish", "well scoped", "solid docs"];
   function renderJudges() {
     $("panelJudges").innerHTML = JUDGES.map(function (j) { return '<div class="judge"><div class="dot thinking">' + j.ic + "</div><div class=\"jn\">" + esc(j.n) + '</div><div class="js">median</div></div>'; }).join("");
@@ -2083,40 +2092,71 @@ var QRClean = (function () {
   }
   function showJudging(run) {
     $("podiumWrap").classList.remove("on"); $("confetti").classList.remove("on");
-    $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); delibStart(); $("judgeReacts").innerHTML = "";
-    if (!run) { $("judgeNow").innerHTML = "Copilot panel reviewing every project…"; $("judgeAgg").textContent = "Aggregate progress only — scores stay sealed."; $("judgeBar").style.width = "66%"; return; }
+    $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); renderLensStrip(); clearJudgeTimers(); delibStart(); $("judgeReacts").innerHTML = "";
+    if (!run) { $("judgeNow").innerHTML = "GitHub Copilot panel reviewing every project…"; $("judgeAgg").textContent = "Aggregate progress only — scores stay sealed."; $("judgeBar").style.width = "66%"; return; }
     runJudgeSequence();
   }
+  /* Judging pace. Every project gets real dwell time so the room can read which
+     project is up and watch the rubric sweep across it. Large fields compress
+     toward a floor so a big showcase still finishes in a sane window. */
+  var PROJECT_REVIEW_MS = 3400;     /* ideal time on screen per project */
+  var JUDGE_FLOOR_MS = 1500;        /* never faster than this, however big the field */
+  var JUDGE_PASS_TARGET_MS = 26000; /* soft target for the whole judging pass */
+  var LENS_ICONS = { "Innovation": "💡", "Build Quality": "🛠️", "Impact": "🎯" };
+  var JUDGE_TIMERS = [];
+  function judgeLater(fn, ms) { JUDGE_TIMERS.push(setTimeout(fn, ms)); }
+  function clearJudgeTimers() { JUDGE_TIMERS.forEach(clearTimeout); JUDGE_TIMERS = []; }
+  /* The strip names the rubric lens currently being examined. It never carries a
+     value, score, or rank — only which criterion the panel is looking at. */
+  function renderLensStrip() {
+    $("judgeLenses").innerHTML = LENSES.map(function (L) {
+      return '<span class="jlens">' + (LENS_ICONS[L] || "•") + " " + esc(L) + ' <b class="jl-tick">✓</b></span>';
+    }).join("");
+  }
+  /* Reveal pacing. The sealed-scores pane holds long enough for the room to settle
+     before any place appears, and each revealed place stays up long enough to
+     actually be read: project, team, three lens bars, why it placed, level-up. */
+  var SEALED_HOLD_MS = 5200;      /* "Every project reviewed. Consensus sealed." */
+  var FIRST_PLACE_BEAT_MS = 1800; /* beat before third place lands */
+  var PLACE_READ_MS = 6200;       /* reading time for a place before the next one */
   function runJudgeSequence() {
     var entries = state.entries.slice(0), total = entries.length, idx = 0;
     $("judgeBar").style.width = "0%";
-    var stepMs = reduceMotion ? 120 : Math.max(430, Math.min(900, Math.round(5200 / Math.max(1, total))));
+    var stepMs = reduceMotion ? 120 : Math.max(JUDGE_FLOOR_MS, Math.min(PROJECT_REVIEW_MS, Math.round(JUDGE_PASS_TARGET_MS / Math.max(1, total))));
     (function step() {
       if (view !== "stage" || state.status !== "judging") return;
       if (idx >= total) { finishJudging(); return; }
       var e = entries[idx]; idx++;
+      clearJudgeTimers();
       state.calls = (state.calls || 0) + JUDGES.length; save({ silent: true });
       $("judgeBar").style.width = Math.round(idx / total * 100) + "%";
       var picks = pick3(e);
       $("judgeNow").innerHTML = "Reviewing <b>" + esc(e.proj) + "</b>";
-      $("judgeReacts").innerHTML = JUDGES.map(function (j, ix) { return '<span class="rx-pill"><b>' + j.ic + '</b> <span class="who">' + esc(j.n.replace(/^Copilot · /, "")) + ":</span> " + esc(picks[ix]) + "</span>"; }).join("");
-      $("judgeAgg").textContent = "Project " + idx + " of " + total + " · " + state.calls + " Copilot panel calls · scores sealed";
+      $("judgeReacts").innerHTML = JUDGES.map(function (j, ix) { return '<span class="rx-pill" style="animation-delay:' + Math.round(stepMs * (0.20 + ix * 0.22)) + 'ms"><b>' + j.ic + '</b> <span class="who">' + esc(j.n.replace(/^GitHub Copilot · /, "")) + ":</span> " + esc(picks[ix]) + "</span>"; }).join("");
+      var etaMs = (total - idx) * stepMs;
+      $("judgeAgg").textContent = "Project " + idx + " of " + total + " · " + state.calls + " GitHub Copilot panel calls · scores sealed" + (etaMs > 1200 ? " · ~" + Math.round(etaMs / 1000) + "s left" : "");
       $("cCalls").textContent = state.calls;
+      Array.prototype.forEach.call(document.querySelectorAll("#judgeLenses .jlens"), function (el, i) {
+        el.className = "jlens";
+        judgeLater(function () { el.classList.add("on"); }, stepMs * (0.10 + i * 0.26));
+        judgeLater(function () { el.classList.remove("on"); el.classList.add("done"); }, stepMs * (0.30 + i * 0.26));
+      });
       var dots = document.querySelectorAll("#panelJudges .dot");
-      Array.prototype.forEach.call(dots, function (d, i) { d.classList.remove("done"); d.classList.add("thinking"); setTimeout(function () { d.classList.remove("thinking"); d.classList.add("done"); }, stepMs * (0.4 + i * 0.15)); });
-      setTimeout(step, stepMs);
+      Array.prototype.forEach.call(dots, function (d, i) { d.classList.remove("done"); d.classList.add("thinking"); judgeLater(function () { d.classList.remove("thinking"); d.classList.add("done"); }, stepMs * (0.45 + i * 0.16)); });
+      judgeLater(step, stepMs);
     })();
   }
   function finishJudging() {
-    delibStop();
+    delibStop(); clearJudgeTimers();
     Array.prototype.forEach.call(document.querySelectorAll("#panelJudges .dot"), function (d) { d.classList.remove("thinking"); d.classList.add("done"); });
+    Array.prototype.forEach.call(document.querySelectorAll("#judgeLenses .jlens"), function (d) { d.className = "jlens done"; });
     $("judgeBar").style.width = "100%";
     $("judgeNow").innerHTML = "Every project reviewed. Consensus sealed. 🔒";
     $("judgeReacts").innerHTML = "";
-    $("judgeAgg").textContent = state.entries.length + " projects · " + state.calls + " Copilot panel calls · median consensus locked";
+    $("judgeAgg").textContent = state.entries.length + " projects · " + state.calls + " GitHub Copilot panel calls · median consensus locked";
     $("revealCue").classList.add("on");
-    pushFeed("Copilot panel finished — scores sealed until the reveal.");
-    if (state.mode === "demo") { var myRun = state.runId; setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "judging" && view === "stage") reveal(true); }, reduceMotion ? 500 : 1600); }
+    pushFeed("GitHub Copilot panel finished — scores sealed until the reveal.");
+    if (state.mode === "demo") { var myRun = state.runId; setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "judging" && view === "stage") reveal(true); }, reduceMotion ? 500 : SEALED_HOLD_MS); }
   }
   /* Reveal is operator-gated and paced one place at a time. Drumroll / applause are
      audible atmosphere cues (no reveal); "Reveal the winners" starts the podium. */
@@ -2197,12 +2237,12 @@ var QRClean = (function () {
     showPodium(true, mode);
     pushFeed(mode === "manual"
       ? "🎬 Podium is set — reveal each place when the room is ready."
-      : "🏆 Revealing the winners — Copilot Builder Award to “" + ranked[0].e.proj + "”.");
+      : "🏆 Revealing the winners — GitHub Copilot Builder Award to “" + ranked[0].e.proj + "”.");
   }
 
   /* ---- podium ---- */
   var AWARD_META = [
-    { cls: "first", place: "First place", name: "Copilot Builder Award", rosette: "🏆" },
+    { cls: "first", place: "First place", name: "GitHub Copilot Builder Award", rosette: "🏆" },
     { cls: "second", place: "Second place", name: "Builder Silver", rosette: "🥈" },
     { cls: "third", place: "Third place", name: "Builder Bronze", rosette: "🥉" }
   ];
@@ -2251,7 +2291,7 @@ var QRClean = (function () {
     clearTimeout(REVEAL.timer);
     $("judging").classList.remove("on");
     $("podiumWrap").classList.add("on");
-    setStepper(); $("cStage").textContent = "Awarded"; $("boardTitle").textContent = "The winners are in"; $("boardSub").textContent = "Chosen by median consensus of a Copilot CLI panel."; $("qrCard").style.opacity = "0.55";
+    setStepper(); $("cStage").textContent = "Awarded"; $("boardTitle").textContent = "The winners are in"; $("boardSub").textContent = "Chosen by median consensus of a GitHub Copilot CLI panel."; $("qrCard").style.opacity = "0.55";
     var rp = $("runPanelBtn"); rp.disabled = true; $("opHint").textContent = "Showcase complete. Start another run whenever you like.";
     var ranked = rankEntries(), order = [];
     if (state.podium && state.podium.length) { state.podium.forEach(function (id) { var f = ranked.filter(function (r) { return r.e.id === id; })[0]; if (f) order.push(f); }); }
@@ -2263,9 +2303,9 @@ var QRClean = (function () {
     /* "How the panel decided" — the method + supporting data behind the result */
     var methodStats = [
       ["Rubric", "Innovation · Build Quality · Impact"],
-      ["How scores combined", "Median consensus of a 3-panel Copilot CLI review"],
+      ["How scores combined", "Median consensus of a 3-panel GitHub Copilot CLI review"],
       ["Projects reviewed", String(state.entries.length)],
-      ["Copilot panel calls", String(state.calls || 0)]
+      ["GitHub Copilot panel calls", String(state.calls || 0)]
     ];
     $("growthGrid").innerHTML = methodStats.map(function (s) { return '<div class="gc"><div class="gp">' + esc(s[0]) + '</div><div class="gl">' + esc(s[1]) + "</div></div>"; }).join("");
     renderFullResults(ranked);
@@ -2296,7 +2336,7 @@ var QRClean = (function () {
     var labels = [
       { t: "🥉 Reveal Builder Bronze", p: "Third place first — press when the room is ready." },
       { t: "🥈 Reveal Builder Silver", p: "Second place next — build the suspense." },
-      { t: "🏆 Reveal the Copilot Builder Award", p: "The winner. Drumroll, then reveal." }
+      { t: "🏆 Reveal the GitHub Copilot Builder Award", p: "The winner. Drumroll, then reveal." }
     ];
     var l = labels[REVEAL.step] || labels[2];
     var btn = $("revealStepBtn"), prog = $("revealProgress");
@@ -2308,7 +2348,7 @@ var QRClean = (function () {
     REVEAL.timer = setTimeout(function () {
       if (state.status !== "awarded" || view !== "stage") return;
       revealNextPlace();
-    }, REVEAL.step === 0 ? 900 : 1800);
+    }, REVEAL.step === 0 ? FIRST_PLACE_BEAT_MS : PLACE_READ_MS);
   }
   function revealNextPlace() {
     if (!REVEAL.mode || REVEAL.step >= 3) return;
@@ -2339,7 +2379,7 @@ var QRClean = (function () {
     if (!reduceMotion) confetti();
     victoryFanfare();
     $("revealBar").classList.remove("on");
-    pushFeed("🏆 The Copilot Builder Award goes to “" + (ranked[0] ? ranked[0].e.proj : "the winner") + "”.");
+    pushFeed("🏆 The GitHub Copilot Builder Award goes to “" + (ranked[0] ? ranked[0].e.proj : "the winner") + "”.");
     setTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : 400);
     setTimeout(function () { $("fullResults").classList.add("show"); }, reduceMotion ? 0 : 700);
     setTimeout(function () { $("podiumActions").classList.add("on"); }, reduceMotion ? 0 : 950);
@@ -2366,15 +2406,15 @@ var QRClean = (function () {
     }).join("");
     el.innerHTML = '<div class="op-t">Full results · every project, ranked by median consensus</div>' +
       '<div class="fr-list">' + rows + "</div>" +
-      '<p class="fr-note">Every accepted project is scored on the same rubric — Innovation, Build Quality &amp; Impact — each combined by the median consensus of a Copilot CLI panel, then summed to a score out of 30. Practice showcase · illustrative results.</p>';
+      '<p class="fr-note">Every accepted project is scored on the same rubric — Innovation, Build Quality &amp; Impact — each combined by the median consensus of a GitHub Copilot CLI panel, then summed to a score out of 30. Practice showcase · illustrative results.</p>';
   }
   function renderSparkles(intense) {
     var el = $("sparkles"); if (!el) return;
     if (reduceMotion) { el.innerHTML = ""; return; }
-    var glyphs = ["✦", "✧", "✨", "⟡"], n = intense ? 22 : 13, html = "";
+    var glyphs = ["✦", "✧", "✨", "⟡"], n = intense ? 46 : 15, html = "";
     for (var i = 0; i < n; i++) {
       var x = Math.round(Math.random() * 100), y = Math.round(Math.random() * 100);
-      var gold = intense && Math.random() < 0.5, sz = 11 + Math.round(Math.random() * 16);
+      var gold = intense && Math.random() < 0.62, sz = 11 + Math.round(Math.random() * 16);
       var dl = (Math.random() * 2.4).toFixed(2), du = (2 + Math.random() * 1.8).toFixed(2);
       html += '<span class="spark' + (gold ? " gold" : "") + '" style="left:' + x + "%;top:" + y + "%;font-size:" + sz + "px;animation-delay:" + dl + "s;animation-duration:" + du + 's">' + glyphs[i % glyphs.length] + "</span>";
     }
@@ -2410,15 +2450,16 @@ var QRClean = (function () {
         parts.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * spread, vy: up * (0.7 + Math.random() * 0.85), g: 0.15 + Math.random() * 0.13, s: 5 + Math.random() * 7, rot: Math.random() * 6.28, vr: (Math.random() - 0.5) * 0.36, c: c, life: 0, ttl: 150 + Math.random() * 80, shape: shape });
       }
     }
-    spawn(W * 0.5, H * 0.32, Math.min(190, Math.max(90, Math.round(W / 8))), 9, -8, 0.5);   /* center, gold-rich */
-    spawn(W * 0.07, H * 0.72, 44, 6, -13, 0.3);                                             /* left cannon */
-    spawn(W * 0.93, H * 0.72, 44, 6, -13, 0.3);                                             /* right cannon */
-    setTimeout(function () { spawn(W * 0.5, H * 0.28, 90, 11, -7, 0.78); }, 650);           /* gold finale burst */
+    spawn(W * 0.5, H * 0.32, Math.min(320, Math.max(170, Math.round(W / 5))), 10, -8, 0.5);  /* center, gold-rich */
+    spawn(W * 0.07, H * 0.72, 85, 7, -13, 0.3);                                             /* left cannon */
+    spawn(W * 0.93, H * 0.72, 85, 7, -13, 0.3);                                             /* right cannon */
+    setTimeout(function () { spawn(W * 0.5, H * 0.28, 165, 12, -7, 0.78); }, 620);          /* gold finale burst */
+    setTimeout(function () { spawn(W * 0.22, H * 0.4, 80, 10, -9, 0.7); spawn(W * 0.78, H * 0.4, 80, 10, -9, 0.7); }, 1250); /* second wave, keeps the room lit */
     var t0 = performance.now();
     function frame(now) {
       ctx.clearRect(0, 0, W, H); var alive = false;
       for (var i = 0; i < parts.length; i++) { var p = parts[i]; p.life++; if (p.life > p.ttl) continue; alive = true; p.vy += p.g; p.x += p.vx; p.y += p.vy; p.vx *= 0.99; p.rot += p.vr; var a = Math.max(0, 1 - p.life / p.ttl); ctx.save(); ctx.globalAlpha = a; ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = p.c; if (p.shape === 0) ctx.fillRect(-p.s / 2, -p.s / 2, p.s, p.s * 0.6); else if (p.shape === 1) { ctx.beginPath(); ctx.arc(0, 0, p.s * 0.5, 0, 6.28); ctx.fill(); } else ctx.fillRect(-p.s * 0.18, -p.s * 1.1, p.s * 0.36, p.s * 2.2); ctx.restore(); }
-      if ((alive || now - t0 < 780) && now - t0 < 5200) cv._raf = requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); cv.classList.remove("on"); }
+      if ((alive || now - t0 < 780) && now - t0 < 7200) cv._raf = requestAnimationFrame(frame); else { ctx.clearRect(0, 0, W, H); cv.classList.remove("on"); }
     }
     if (cv._raf) cancelAnimationFrame(cv._raf); cv._raf = requestAnimationFrame(frame);
   }
@@ -2446,7 +2487,7 @@ var QRClean = (function () {
     var idle = liveEnabled()
       ? ["🕓", "The showcase hasn’t started yet", "Submissions open when the host launches the experience."]
       : ["🖥️", "Add your project on the big screen", "Live phone submissions aren’t switched on for this showcase. Share your project link with the host so it lands on the board. (Host tip: add a Realtime Database URL in the page setup to accept submissions straight from phones.)"];
-    var m = { idle: idle, judging: ["🔒", "Submissions are closed", "The Copilot judging panel is reviewing every project right now."], awarded: ["🎉", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"] }[state.status] || idle;
+    var m = { idle: idle, judging: ["🔒", "Submissions are closed", "The GitHub Copilot judging panel is reviewing every project right now."], awarded: ["🎉", "This showcase has wrapped", "The winners are up on the big screen. Thanks for building!"] }[state.status] || idle;
     return '<div class="submit-closed"><div class="big">' + m[0] + '</div><h2>' + m[1] + "</h2><p>" + m[2] + "</p></div>";
   }
   function successMarkup(entry) {

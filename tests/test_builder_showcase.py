@@ -1,5 +1,5 @@
 """
-Test suite for Copilot Builder Showcase
+Test suite for GitHub Copilot Builder Showcase
 Tests all layers: tone safety, hash/seal, write-once, freshness gate,
 shadow score, eval engine, command flows, registry, exit codes.
 
@@ -541,10 +541,10 @@ class TestShowtimeDelight:
         # is longer than the terminal.
         cases = [
             (
-                "Copilot Builder Showcase Recap",
+                "GitHub Copilot Builder Showcase Recap",
                 "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS · 3 projects · 3 awards · envelope sealed",
             ),
-            ("Copilot Builder Showcase", "OFFICIAL COPILOT PANEL"),
+            ("GitHub Copilot Builder Showcase", "OFFICIAL COPILOT PANEL"),
             ("Sealing the Night", "Recap · export · validate · replay"),
             ("X", ""),
         ]
@@ -571,7 +571,7 @@ class TestShowtimeDelight:
 
         with patch.dict(os.environ, {"NO_COLOR": "1"}, clear=True):
             with patch.object(cbp, "_terminal_width", return_value=74):
-                cbp._magic_banner("Copilot Builder Showcase", subtitle)
+                cbp._magic_banner("GitHub Copilot Builder Showcase", subtitle)
 
         output = capsys.readouterr().out
         banner_lines = [
@@ -585,11 +585,11 @@ class TestShowtimeDelight:
         # Spotlight rows are the audience-facing card, so a long row must wrap
         # inside the card width instead of overflowing and wrapping raw.
         evidence = (
-            "Builder-provided Copilot use evidence: Used Copilot Chat to design "
+            "Builder-provided GitHub Copilot use evidence: Used GitHub Copilot Chat to design "
             "the workflow and refine the onboarding copy for new contributors."
         )
 
-        rows = cbp._open_card_rows("🧠 Copilot: ", evidence, 76)
+        rows = cbp._open_card_rows("🧠 GitHub Copilot: ", evidence, 76)
 
         assert len(rows) > 1
         assert all(cbp._terminal_text_width(row) <= 76 for row in rows)
@@ -636,7 +636,7 @@ class TestShowtimeDelight:
                 {
                     "placement": 1,
                     "award_id": "grand-prize",
-                    "award_name": "First Place — Copilot Builder Award",
+                    "award_name": "First Place — GitHub Copilot Builder Award",
                     "emoji": "🥇",
                     "winner_submission_id": "sub-a",
                     "project_name": "Aurora",
@@ -660,7 +660,7 @@ class TestShowtimeDelight:
                 "copilot_use": {
                     "status": "evidenced",
                     "source": "builder-provided",
-                    "evidence": "Used Copilot to scaffold onboarding prompts.",
+                    "evidence": "Used GitHub Copilot to scaffold onboarding prompts.",
                 },
             },
             "sub-b": {
@@ -677,10 +677,10 @@ class TestShowtimeDelight:
 
         assert len(cards) == 2
         assert cards[0]["copilot_used_well"] == (
-            "Builder-provided: Used Copilot to scaffold onboarding prompts."
+            "Builder-provided: Used GitHub Copilot to scaffold onboarding prompts."
         )
         assert cards[1]["copilot_used_well"] == (
-            "No Copilot-use evidence was provided; no usage claim is made."
+            "No GitHub Copilot-use evidence was provided; no usage claim is made."
         )
 
     def test_top3_feedback_cards_use_podium_placements_not_award_order(self):
@@ -1489,7 +1489,7 @@ class TestFreshnessGate:
         rubric = cbp.load_rubric(bundle_path)
         cbp.run_freshness_gate(bundle_path, rubric, MockGateway(), fixed_clock)
 
-        with pytest.raises(cbp.ModelAPIError, match="Official Copilot Panel"):
+        with pytest.raises(cbp.ModelAPIError, match="Official GitHub Copilot Panel"):
             cbp.run_freshness_gate(bundle_path, rubric, None, fixed_clock)
         with pytest.raises(cbp.FreshnessGateBlock, match="revalidation"):
             cbp.run_freshness_gate(
@@ -1855,8 +1855,8 @@ class TestBulkUrlImport:
         assert "Create the workshop run bundle?" not in output
         assert "Third Place — Builder Bronze" in output
         assert "Second Place — Builder Silver" in output
-        assert "First Place — Copilot Builder Award" in output
-        assert "Copilot Builder Showcase Recap" in output
+        assert "First Place — GitHub Copilot Builder Award" in output
+        assert "GitHub Copilot Builder Showcase Recap" in output
         assert "ACT I — PROJECTS ENTER" in output
         assert "Sealing the Night" in output
         assert "SHARE THIS MOMENT" in output
@@ -2182,7 +2182,7 @@ class TestCommandFlows:
                 "builder_name": "Team Aurora",
                 "project_name": "Aurora",
                 "description": "A",
-                "copilot_evidence": "Used Copilot to draft onboarding logic.",
+                "copilot_evidence": "Used GitHub Copilot to draft onboarding logic.",
                 "artifacts": [],
                 "submitted_at": FIXED_TS,
                 "file_size_bytes": 0,
@@ -2233,7 +2233,7 @@ class TestCommandFlows:
             for card in cards
         )
         assert any(
-            card["copilot_used_well"] == "No Copilot-use evidence was provided; no usage claim is made."
+            card["copilot_used_well"] == "No GitHub Copilot-use evidence was provided; no usage claim is made."
             for card in cards
         )
 
@@ -2246,7 +2246,7 @@ class TestCommandFlows:
                 "builder_name": "Team Aurora",
                 "project_name": "Aurora",
                 "description": "A",
-                "copilot_evidence": "Used Copilot for onboarding scaffolding.",
+                "copilot_evidence": "Used GitHub Copilot for onboarding scaffolding.",
                 "artifacts": [],
                 "submitted_at": FIXED_TS,
                 "file_size_bytes": 0,
@@ -2290,7 +2290,7 @@ class TestCommandFlows:
 
         recap_text = (tmp_path / run_id / "recap.md").read_text(encoding="utf-8")
         assert "## Top-3 Growth Cards" in recap_text
-        assert "Copilot next:" in recap_text
+        assert "GitHub Copilot next:" in recap_text
 
     def test_bundled_demo_runs_the_complete_single_screen_show(self, tmp_path, capsys):
         args = build_args(
@@ -2426,13 +2426,13 @@ class TestCommandFlows:
     def test_structured_submission_intake_preserves_evidence(self, tmp_path):
         run_id = "structured-intake"
         entries = cbp.parse_submission_entries(
-            "DUBSOpenHub/example | Team Aurora | Used Copilot Chat for the API contract | "
+            "DUBSOpenHub/example | Team Aurora | Used GitHub Copilot Chat for the API contract | "
             "Built an agent workflow with retrieval"
         )
         assert entries == [{
             "url": "https://github.com/DUBSOpenHub/example",
             "builder_name": "Team Aurora",
-            "copilot_evidence": "Used Copilot Chat for the API contract",
+            "copilot_evidence": "Used GitHub Copilot Chat for the API contract",
             "frontier_evidence": "Built an agent workflow with retrieval",
         }]
 
@@ -2454,7 +2454,7 @@ class TestCommandFlows:
                 created = cbp.import_url_submissions(tmp_path / run_id, entries, clock=fixed_clock)
 
         assert created[0]["builder_name"] == "Team Aurora"
-        assert created[0]["copilot_evidence"] == "Used Copilot Chat for the API contract"
+        assert created[0]["copilot_evidence"] == "Used GitHub Copilot Chat for the API contract"
         assert created[0]["frontier_evidence"] == "Built an agent workflow with retrieval"
 
     def test_structured_intake_preserves_feedback_context_and_sources(self, tmp_path):
@@ -2692,7 +2692,7 @@ class TestCommandFlows:
                     "pushed_at": "2026-07-09T12:00:00Z",
                     "homepage": "https://example.test/aurora",
                 },
-                "copilot_evidence": "Used Copilot Chat to design the workflow.",
+                "copilot_evidence": "Used GitHub Copilot Chat to design the workflow.",
                 "frontier_evidence": "Uses an agent loop to classify actions.",
                 "artifacts": [],
                 "submitted_at": FIXED_TS,
@@ -2715,8 +2715,8 @@ class TestCommandFlows:
         assert "Built by: Team Aurora" in rendered
         assert "What it does: Turns meeting notes into clear action plans." in flowed
         assert "Project signals:" in rendered
-        assert "Copilot: Builder-provided Copilot use evidence:" in flowed
-        assert "Used Copilot Chat to design the workflow." in flowed
+        assert "GitHub Copilot: Builder-provided GitHub Copilot use evidence:" in flowed
+        assert "Used GitHub Copilot Chat to design the workflow." in flowed
         assert "Frontier: Builder-provided frontier use evidence:" in flowed
         assert "Uses an agent loop to classify actions." in flowed
 
@@ -2738,7 +2738,7 @@ class TestCommandFlows:
         args = argparse.Namespace(
             run_id=run_id,
             urls=[
-                "DUBSOpenHub/project-one | Team One | Used Copilot for test design",
+                "DUBSOpenHub/project-one | Team One | Used GitHub Copilot for test design",
                 "DUBSOpenHub/project-two | Team Two",
             ],
             file=None,
@@ -3411,7 +3411,7 @@ class TestMultiModelConsensusAndShadowSpec:
                                 },
                                 "panel_favorite": "Top Pick",
                                 "next_commit": "Show one complete workflow end-to-end.",
-                                "copilot_next_move": "Use Copilot to draft a focused regression test.",
+                                "copilot_next_move": "Use GitHub Copilot to draft a focused regression test.",
                                 "frontier_experiment": "Prototype one bounded automation with human review.",
                                 "grounding_refs": ["submission.project_description"],
                             }
@@ -4000,7 +4000,7 @@ def generate_sample_fixture(fixture_path: Path) -> None:
     cbp.init_bundle(run_id, "workshop", rubric, bundle_path, fixed_clock)
 
     submissions_data = [
-        ("Alice Chen", "Copilot Code Compass", "AI-powered navigation for legacy codebases."),
+        ("Alice Chen", "GitHub Copilot Code Compass", "AI-powered navigation for legacy codebases."),
         ("Bob Torres", "BuildBot Pro", "Automated CI/CD pipeline builder using natural language."),
         ("Carol Kim", "DataLens", "Real-time dashboard generator from unstructured data sources."),
     ]

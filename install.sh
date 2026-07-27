@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copilot Builder Showcase installer.
+# GitHub Copilot Builder Showcase installer.
 # One-command install:
 # bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
 #   -H "Accept: application/vnd.github.raw+json" | bash'
@@ -35,7 +35,7 @@ require_command python3
 
 PYTHON_BIN="$(command -v python3)"
 if ! "$PYTHON_BIN" -c 'import sys; raise SystemExit(sys.version_info < (3, 11))'; then
-  die "Copilot Builder Showcase requires Python 3.11 or newer."
+  die "GitHub Copilot Builder Showcase requires Python 3.11 or newer."
 fi
 
 if [[ -L "$INSTALL_DIR" ]]; then
@@ -59,7 +59,7 @@ install_checkout() {
 }
 
 if [[ -d "$INSTALL_DIR/.git" ]]; then
-  printf 'Updating Copilot Builder Showcase...\n'
+  printf 'Updating GitHub Copilot Builder Showcase...\n'
   git -C "$INSTALL_DIR" fetch --quiet --depth 1 origin "$REF"
   # A --depth 1 checkout shares no history with a later shallow fetch, so
   # `pull --ff-only` aborts once upstream moves. Reset the managed checkout to
@@ -67,9 +67,9 @@ if [[ -d "$INSTALL_DIR/.git" ]]; then
   git -C "$INSTALL_DIR" reset --quiet --hard FETCH_HEAD
   git -C "$INSTALL_DIR" checkout --quiet -B "$REF"
 elif [[ -e "$INSTALL_DIR" ]]; then
-  die "Install directory exists but is not a Copilot Builder Showcase checkout: $INSTALL_DIR"
+  die "Install directory exists but is not a GitHub Copilot Builder Showcase checkout: $INSTALL_DIR"
 else
-  printf 'Installing Copilot Builder Showcase...\n'
+  printf 'Installing GitHub Copilot Builder Showcase...\n'
   install_checkout
 fi
 
@@ -80,7 +80,7 @@ if [[ -L "$VENV_DIR" ]]; then
   die "Virtual environment directory must not be a symbolic link: $VENV_DIR"
 fi
 
-printf 'Preparing Copilot Builder Showcase...\n'
+printf 'Preparing GitHub Copilot Builder Showcase...\n'
 if ! "$PYTHON_BIN" -m venv "$VENV_DIR"; then
   die "Could not create the Python virtual environment at $VENV_DIR."
 fi
@@ -120,7 +120,7 @@ chmod 0755 \
   "$LEGACY_PRIMARY_COMMAND_PATH" \
   "$LEGACY_ADVANCED_COMMAND_PATH"
 
-printf '\n🏆 Copilot Builder Showcase is ready.\n'
+printf '\n🏆 GitHub Copilot Builder Showcase is ready.\n'
 printf '   Type: showcase\n'
 printf '   Then paste project links, one per line.\n'
 printf '   Practice first: showcase --demo\n'

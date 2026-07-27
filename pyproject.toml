@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "copilot-builder-showcase"
 version = "3.2.1"
-description = "Live Copilot judging showcases for builder workshops and project events."
+description = "Live GitHub Copilot judging showcases for builder workshops and project events."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Beginner-first launcher for Copilot Builder Showcase."""
+"""Beginner-first launcher for GitHub Copilot Builder Showcase."""
 
 from __future__ import annotations
 
@@ -15,12 +15,12 @@ from builder_showcase import main as showcase_main
 ADVANCED_COMMANDS = frozenset(COMMAND_MAP)
 
 BEGINNER_HELP = """\
-Copilot Builder Showcase
+GitHub Copilot Builder Showcase
 
 Start a showcase:
   showcase owner/project-one owner/project-two
   showcase --file submissions.txt
-  showcase | Team | Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes
+  showcase | Team | GitHub Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes
 
 Try the built-in practice showcase:
   showcase --demo
@@ -61,7 +61,7 @@ def collect_project_links(
     output = output or sys.stdout
     print("Paste project or demo links, one per line.", file=output)
     print(
-        "Optional: URL | Team | Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes",
+        "Optional: URL | Team | GitHub Copilot evidence | Frontier evidence | Problem | Intended user | Demo or artifact | Builder notes",
         file=output,
     )
     print("Press Return on an empty line to start the showcase.", file=output)

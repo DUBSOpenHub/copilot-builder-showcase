@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Copilot Builder Showcase: Optional Run Monitor (Textual TUI)
+GitHub Copilot Builder Showcase: Optional Run Monitor (Textual TUI)
 
-A real-time optional terminal monitor for Copilot Builder Showcase. Shows
+A real-time optional terminal monitor for GitHub Copilot Builder Showcase. Shows
 submissions, review progress, spotlight cards, and award reveals with
 animated in-place rendering. The primary showcase never auto-launches it.
 
@@ -375,7 +375,7 @@ class HeaderBar(Static):
 
     def compose(self) -> ComposeResult:
         yield Static(
-            f"🏟️  Copilot Builder Showcase  🏟️\n"
+            f"🏟️  GitHub Copilot Builder Showcase  🏟️\n"
             f"Run: {self.run_id}",
             id="header-text",
         )
@@ -491,7 +491,7 @@ class SpotlightCard(Static):
         # Feedback
         if self._fb:
             for label, field, icon in (
-                ("Copilot", "copilot_use", "🧠"),
+                ("GitHub Copilot", "copilot_use", "🧠"),
                 ("Frontier", "frontier_use", "🧭"),
             ):
                 assessment = self._fb.get(field, {})
@@ -508,7 +508,7 @@ class SpotlightCard(Static):
                 copilot_moves = self._fb.get("copilot_next_moves", [])
                 if isinstance(copilot_moves, list) and copilot_moves:
                     lines.append(
-                        f"   🧠 Copilot next: {str(copilot_moves[0])[:84]}\n",
+                        f"   🧠 GitHub Copilot next: {str(copilot_moves[0])[:84]}\n",
                         style=LINK,
                     )
                 frontier_ideas = self._fb.get("frontier_experiments", [])
@@ -694,7 +694,7 @@ class SidePanel(Static):
 
 
 class BuilderDashboard(App):
-    """Copilot Builder Showcase optional run monitor."""
+    """GitHub Copilot Builder Showcase optional run monitor."""
 
     CSS = DASHBOARD_CSS
     BINDINGS = [
@@ -713,9 +713,9 @@ class BuilderDashboard(App):
         self.state = BundleState(run_id, operator=operator)
         self._auto_refresh: Optional[Timer] = None
         self.title = (
-            "Copilot Builder Showcase — Optional Operator Monitor"
+            "GitHub Copilot Builder Showcase — Optional Operator Monitor"
             if operator
-            else "Copilot Builder Showcase — Optional Run Monitor"
+            else "GitHub Copilot Builder Showcase — Optional Run Monitor"
         )
 
     @property
@@ -844,7 +844,7 @@ class BuilderDashboard(App):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Copilot Builder Showcase: Optional Run Monitor",
+        description="GitHub Copilot Builder Showcase: Optional Run Monitor",
     )
     parser.add_argument("run_id", help="Run ID to display")
     parser.add_argument("--projector", action="store_true",

@@ -1,4 +1,4 @@
-# Copilot Builder Showcase Agent Guide
+# GitHub Copilot Builder Showcase Agent Guide
 
 ## Canonical surfaces
 
@@ -11,17 +11,17 @@
 - Use `CBS_RUNS_DIR`, `CBS_REGISTRY_PATH`, `CBS_COLOR`, `CBS_NO_COLOR`, and
   `CBS_SHOWTIME` for local configuration; preserve `HJ_*` fallbacks for existing
   installations. Official judging uses the authenticated `copilot` command;
-  never persist or log Copilot credentials.
+  never persist or log GitHub Copilot credentials.
 - Treat `config/event.example.json` as the supported starting point for a new
   event.
 
 ## Product invariants
 
-- Position Copilot Builder Showcase as the resolution layer for builder workshops,
+- Position GitHub Copilot Builder Showcase as the resolution layer for builder workshops,
   product demos, conference build sessions, online challenges, and hackathons.
-  Any list of projects built together should become a live Copilot judging showcase
+  Any list of projects built together should become a live GitHub Copilot judging showcase
   without requiring a pre-organized human judging panel. Prefer
-  "Copilot-judged" or "Copilot judging showcase" over generic "AI-judged"
+  "GitHub Copilot-judged" or "GitHub Copilot judging showcase" over generic "AI-judged"
   language.
 - The first instruction is `showcase`. With no arguments it collects pasted
   links; with links it starts immediately. Do not require users to know the
@@ -39,7 +39,7 @@
   Textual as optional. Keep `install.sh` and `install.ps1` behavior aligned.
 - Keep the default experience general-purpose: no named host personality or
   organization branding. Default live showcase uses a ranked Builder Bronze,
-  Builder Silver, and first-place Copilot Builder Award podium; custom EventSpecs
+  Builder Silver, and first-place GitHub Copilot Builder Award podium; custom EventSpecs
   may define an alternate award slate.
 - Keep one primary audience surface: the current live showcase terminal contains
   the run of show and commentary. Never auto-open a dashboard or second terminal.
@@ -50,7 +50,7 @@
 - Keep the bundled practice flow within the 120-second showcase budget.
 - Audience views must not reveal numeric scores, rankings, prompts, or awards
   before the event status is `awarded` or `exported`.
-- Only assess Copilot use or frontier use from explicit builder-provided
+- Only assess GitHub Copilot use or frontier use from explicit builder-provided
   evidence. When no evidence is supplied, say so; never infer either claim
   from a project link, repository metadata, or model impression.
 - Keep Quick and Slack judging quiet and operator-facing. Fun emcee commentary,
@@ -67,7 +67,7 @@
 - Keep the Shadow Spec sealed until awards and diagnostic-only. It may flag
   quality risks, calibration issues, or leakage, but it must never change
   public scores, rankings, or awards.
-- Feedback may suggest optional Copilot next moves and frontier experiments,
+- Feedback may suggest optional GitHub Copilot next moves and frontier experiments,
   but it must not turn those suggestions into claims that a project used either
   capability.
 - Preserve source labels for builder-provided project context. Project-specific
@@ -75,7 +75,7 @@
   a hypothesis; audience projections must withhold raw context and redact any
   score, rank, winner, or award language before awards. Safe grounded project
   summaries may remain specific.
-- Keep Copilot panel calls bounded by the configured concurrency limit. A live
+- Keep GitHub Copilot panel calls bounded by the configured concurrency limit. A live
   time budget is warn-only unless a future EventSpec policy explicitly defines
   another safe behavior; it must never silently reduce a strict panel.
 - Live progress telemetry may expose only aggregate stage, project-count, call

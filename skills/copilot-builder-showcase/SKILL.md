@@ -1,7 +1,7 @@
 ---
 name: copilot-builder-showcase
 description: >
-  Turn any workshop into a live Copilot Builder Showcase. Drop the links,
+  Turn any workshop into a live GitHub Copilot Builder Showcase. Drop the links,
   activate the judging panel, and spotlight the winners in under two minutes.
   The same single-screen flow works for builder workshops, product demos,
   conference build sessions, and online challenges. Say "showcase" to start.
@@ -11,7 +11,7 @@ tools:
   - ask_user
 ---
 
-# Copilot Builder Showcase
+# GitHub Copilot Builder Showcase
 
 The primary experience is one live showcase. Use the installed `showcase` command;
 never ask a beginner to run Python or know the internal `workshop` subcommand.
@@ -100,7 +100,7 @@ shell profiles automatically.
 Plain links are enough. GitHub links may use public repository context and label
 an unnamed entry as `<repository owner> team`. Generic links are never fetched
 during intake; derive a safe project label and use `Project team` when no team is
-supplied. Never infer Copilot or frontier use from a link, code, metadata, or a
+supplied. Never infer GitHub Copilot or frontier use from a link, code, metadata, or a
 judge impression. Missing evidence stays `not provided`.
 
 ## Result status
@@ -113,7 +113,7 @@ Keep the showcase result status explicit:
 Installed local runs use the authenticated GitHub Copilot CLI when available.
 `showcase --demo` is always a deterministic practice showcase. If the organizer
 requires an official event, add `--official`; the command must block rather than
-silently produce practice results. Never request or expose Copilot credentials.
+silently produce practice results. Never request or expose GitHub Copilot credentials.
 On Windows, official judging requires the native `copilot.exe` installation
 from `winget install GitHub.Copilot`; never invoke an npm `.cmd` or `.bat` shim
 with project text.
@@ -195,19 +195,19 @@ the ceremony concise enough for a two-minute demo.
 ## Awards, ties, and feedback
 
 The default reveal is a ranked podium: Builder Bronze, Builder Silver, then the
-first-place Copilot Builder Award. Every project receives three brief judge takes
+first-place GitHub Copilot Builder Award. Every project receives three brief judge takes
 before the reveal, but only the top three receive awards. Exact ties follow the
 EventSpec policy: shared placement, a predeclared sealed tiebreaker, or a logged
 human decision. Never use entry order as a tiebreaker.
 
 Private feedback may include award rationale, what judges liked, one actionable
-next step, a Copilot next move, a bounded frontier experiment, and explicit
+next step, a GitHub Copilot next move, a bounded frontier experiment, and explicit
 evidence status. Project-specific claims must use supplied context; unsupported
 suggestions must be labeled hypotheses.
 
 Immediately after the reveal, each podium project also receives a Top-3 growth
-card: one improvement move, one optional Copilot-next suggestion, and one
-Copilot-use note sourced only from builder-provided evidence. These are
+card: one improvement move, one optional GitHub Copilot-next suggestion, and one
+GitHub Copilot-use note sourced only from builder-provided evidence. These are
 diagnostic/growth content, not additional awards.
 
 ## Accessibility

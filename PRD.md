@@ -1,22 +1,22 @@
-# Copilot Builder Showcase
+# GitHub Copilot Builder Showcase
 ## Product Requirements Document
 
 ## Purpose
 
-Copilot Builder Showcase gives workshops, product demos, conference build
+GitHub Copilot Builder Showcase gives workshops, product demos, conference build
 sessions, and online challenges a shared resolution. A host types `showcase`,
-pastes the projects people built, and creates a live Copilot judging showcase with
+pastes the projects people built, and creates a live GitHub Copilot judging showcase with
 consistent reviews, one spotlight per output, audience participation, awards,
 feedback, and a replayable event bundle.
 
-The product turns any list of session outputs into a lightweight Copilot-judged
+The product turns any list of session outputs into a lightweight GitHub Copilot-judged
 finale without requiring the host to recruit judges or produce a ceremony by
 hand.
 
 The product is event-neutral: it does not impose a named host personality,
 organization identity, or judge character. The default showcase gives every project
 a brief three-lens review, then awards Builder Bronze, Builder Silver, and the
-first-place Copilot Builder Award. EventSpecs may replace that podium.
+first-place GitHub Copilot Builder Award. EventSpecs may replace that podium.
 
 ## Primary users
 
@@ -53,12 +53,12 @@ first-place Copilot Builder Award. EventSpecs may replace that podium.
 11. Safe HTTP(S) project and demo links work without requiring a GitHub
     repository. Intake never fetches arbitrary non-GitHub URLs.
 12. Installed runs connect to the authenticated GitHub Copilot CLI when
-    available; `--official` blocks when no compliant live Copilot panel can be
+    available; `--official` blocks when no compliant live GitHub Copilot panel can be
     reached.
 13. Native Bash and PowerShell installers provide the same primary and
     compatibility commands on macOS, Linux, and Windows.
 14. After awards, each podium project receives a Top-3 growth card with one
-    improvement move, one optional Copilot-next suggestion, and one Copilot-use
+    improvement move, one optional GitHub Copilot-next suggestion, and one GitHub Copilot-use
     summary sourced only from builder-provided evidence.
 15. Rapid scorecard judging preserves declared official panel policy and never
     silently downgrades a strict event to a single-model decision.
@@ -153,7 +153,7 @@ remains unavailable before awards.
 - All initial EventSpec, rubric, input, evaluation, verdict, and award artifacts
   are write-once or append-only as appropriate.
 - `freshness_gate.json` records the selected judges and whether the run used an
-  Official Copilot Panel or illustrative practice judges.
+  Official GitHub Copilot Panel or illustrative practice judges.
 - `HASHES` and `SEAL` bind exported artifacts to a replayable bundle.
 - A sealed bundle cannot be force re-sealed.
 - Replay archives reject paths, symlinks, hardlinks, and device entries that

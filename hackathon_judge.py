@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compatibility entry point for Copilot Builder Showcase."""
+"""Compatibility entry point for GitHub Copilot Builder Showcase."""
 
 import builder_showcase as _implementation
 

@@ -60,11 +60,11 @@ $gitPath = Resolve-RequiredCommand "git"
 $pythonPath = Resolve-RequiredCommand "python"
 
 & $pythonPath -c "import sys; raise SystemExit(sys.version_info < (3, 11))"
-Assert-NativeSuccess "Copilot Builder Showcase requires Python 3.11 or newer."
+Assert-NativeSuccess "GitHub Copilot Builder Showcase requires Python 3.11 or newer."
 
 $gitDirectory = Join-Path $installDir ".git"
 if (Test-Path -LiteralPath $gitDirectory -PathType Container) {
-    Write-Host "Updating Copilot Builder Showcase..."
+    Write-Host "Updating GitHub Copilot Builder Showcase..."
     & $gitPath -C $installDir fetch --quiet --depth 1 origin $ref
     Assert-NativeSuccess "Could not fetch the requested repository ref."
     # A --depth 1 checkout shares no history with a later shallow fetch, so
@@ -76,16 +76,16 @@ if (Test-Path -LiteralPath $gitDirectory -PathType Container) {
     Assert-NativeSuccess "Could not check out the requested repository ref."
 }
 elseif (Test-Path -LiteralPath $installDir) {
-    throw "Install directory exists but is not a Copilot Builder Showcase checkout: $installDir"
+    throw "Install directory exists but is not a GitHub Copilot Builder Showcase checkout: $installDir"
 }
 else {
-    Write-Host "Installing Copilot Builder Showcase..."
+    Write-Host "Installing GitHub Copilot Builder Showcase..."
     $parent = Split-Path -Parent $installDir
     New-Item -ItemType Directory -Force -Path $parent | Out-Null
 
     if (-not [string]::IsNullOrWhiteSpace($repositoryUrl)) {
         & $gitPath clone --quiet --depth 1 --branch $ref -- $repositoryUrl $installDir
-        Assert-NativeSuccess "Could not clone Copilot Builder Showcase."
+        Assert-NativeSuccess "Could not clone GitHub Copilot Builder Showcase."
     }
     else {
         $gh = Get-Command "gh" -ErrorAction SilentlyContinue
@@ -96,11 +96,11 @@ else {
         }
         if ($ghReady) {
             & $gh.Source repo clone $repository $installDir -- --depth 1 --branch $ref
-            Assert-NativeSuccess "Could not clone Copilot Builder Showcase with GitHub CLI."
+            Assert-NativeSuccess "Could not clone GitHub Copilot Builder Showcase with GitHub CLI."
         }
         else {
             & $gitPath clone --quiet --depth 1 --branch $ref -- "https://github.com/$repository.git" $installDir
-            Assert-NativeSuccess "Could not clone Copilot Builder Showcase."
+            Assert-NativeSuccess "Could not clone GitHub Copilot Builder Showcase."
         }
     }
 }
@@ -118,7 +118,7 @@ if (-not (Test-Path -LiteralPath $projectConfig -PathType Leaf)) {
     throw "Installed checkout is missing pyproject.toml."
 }
 
-Write-Host "Preparing Copilot Builder Showcase..."
+Write-Host "Preparing GitHub Copilot Builder Showcase..."
 & $pythonPath -m venv $venvDir
 Assert-NativeSuccess "Could not create the Python virtual environment at $venvDir."
 
@@ -166,7 +166,7 @@ foreach ($command in $commands) {
 }
 
 Write-Host ""
-Write-Host "Copilot Builder Showcase is ready."
+Write-Host "GitHub Copilot Builder Showcase is ready."
 Write-Host "   Type: showcase"
 Write-Host "   Then paste project links, one per line."
 Write-Host "   Practice first: showcase --demo"
