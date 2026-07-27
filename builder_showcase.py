@@ -192,16 +192,6 @@ DEMO_REPO_METADATA = {
 
 AUDIENCE_REVEAL_MOMENTS = (
     {
-        "cue": "Hands on knees—give this final envelope your loudest drumroll.",
-        "confirm": "Is the room rolling?",
-        "payoff": "That drumroll has reached the stage. Open the envelope.",
-    },
-    {
-        "cue": "Applause meter check—show these builders how loud this room can get.",
-        "confirm": "Is the applause up?",
-        "payoff": "The room is officially loud enough. Bring on the result.",
-    },
-    {
         "cue": "Five fingers up. Count the final five seconds together.",
         "confirm": "Is everybody counting?",
         "payoff": "Countdown confirmed. The final result is ready.",
@@ -225,11 +215,6 @@ AUDIENCE_REVEAL_MOMENTS = (
         "cue": "Give me your most dramatic collective gasp—practice it once.",
         "confirm": "Did the gasp land?",
         "payoff": "Drama level confirmed. Reveal the result.",
-    },
-    {
-        "cue": "Start a table tap—quiet first, then build it into thunder.",
-        "confirm": "Is the thunder building?",
-        "payoff": "The floor is rumbling. Time for the reveal.",
     },
     {
         "cue": "If something inspired you tonight, put both hands in the air.",
@@ -679,20 +664,6 @@ def _step(step: int, total: int, message: str, icon: str = "⬢") -> None:
     print(_paint(f"  {icon} [{step}/{total}] {message}", "cyan"))
 
 
-def _drumroll(message: str = "The panel is ready to reveal its pick.",
-              args: Optional[argparse.Namespace] = None) -> None:
-    live = _suspense_enabled(args)
-    print(_paint("🥁 ...", "yellow", bold=True))
-    if live:
-        _showtime_pause(args, 0.45)
-    print(_paint("🥁🥁 ...", "yellow", bold=True))
-    if live:
-        _showtime_pause(args, 0.45)
-    print(_paint(f"🥁🥁🥁 {message}", "gold", bold=True))
-    if live:
-        _showtime_pause(args, 0.45)
-
-
 def _success(message: str) -> None:
     indent = _terminal_text_width("✅ ")
     lines = _flowed_lines(message, indent)
@@ -910,12 +881,12 @@ def _project_count_hero(count: int, args: Optional[argparse.Namespace] = None) -
 
 def _countdown_reveal(args: Optional[argparse.Namespace] = None) -> None:
     if not _suspense_enabled(args):
-        _drumroll("And the award goes to...", args)
+        print(_paint("AND THE AWARD GOES TO...", "gold", bold=True))
         return
     for n in (3, 2, 1):
-        print(_paint(f"    {'🥁' * n}  {n}...", "yellow", bold=True))
+        print(_paint(f"    {n}...", "yellow", bold=True))
         _showtime_pause(args, 0.75)
-    print(_paint("    🥁🥁🥁🥁  AND THE AWARD GOES TO...", "gold", bold=True))
+    print(_paint("    AND THE AWARD GOES TO...", "gold", bold=True))
     _showtime_pause(args, 0.55)
 
 
@@ -5843,10 +5814,11 @@ def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] 
     _sideline("The panel did the thinking. The room gets the cheering.", "🎙️", "magenta")
     for note in _tie_ceremony_notes(awards_card):
         _sideline(note, "⚖️", "cyan")
-    _drumroll(
+    _sideline(
         f"{len(awards)} award{'s' if len(awards) != 1 else ''}. "
         "Every builder moment is ready.",
-        args,
+        "🏆",
+        "gold",
     )
     for idx, award in enumerate(awards, 1):
         if awards:
@@ -5856,7 +5828,7 @@ def _print_award_ceremony(awards_card: Dict, args: Optional[argparse.Namespace] 
             _audience_reveal_moment(args)
             _countdown_reveal(args)
         else:
-            _drumroll("Opening the next envelope.", args)
+            _sideline("Opening the next envelope.", "✉️", "gold")
         _showtime_pause(args, 0.6)
 
         emoji = award.get("emoji", "🏆")
@@ -6962,7 +6934,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
                 "🕵️ Every superlative needs evidence. Receipts are being checked.",
                 "🎛️ Scorecards are moving; the leaderboard stays completely dark.",
                 "📣 The room can speculate. The judges are not blinking.",
-                "🥁 Podium math is getting spicy — nobody owns a medal yet.",
+                "📊 Podium math is getting spicy — nobody owns a medal yet.",
                 "🔐 No participation trophies. Every placement has to earn the envelope.",
                 "🏆 The crown is still sitting center stage with no name on it.",
             ]
