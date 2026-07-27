@@ -649,15 +649,27 @@ def _live_wait_commentary(
         narrator.join(timeout=1.0)
 
 
+PRACTICE_STATUS = "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS"
+OFFICIAL_STATUS = "OFFICIAL GITHUB COPILOT PANEL"
+# Bundles sealed before the label was branded still carry the old wording. They are
+# write-once, so replay and recap have to keep recognizing them as official runs;
+# otherwise an official archive would be re-labelled as practice on read-back.
+LEGACY_OFFICIAL_STATUSES = ("OFFICIAL COPILOT PANEL",)
+
+
+def _is_official_status(status: Optional[str]) -> bool:
+    return status == OFFICIAL_STATUS or status in LEGACY_OFFICIAL_STATUSES
+
+
 def _result_status(gateway: Optional[Any]) -> tuple[str, str, str]:
     if gateway is None:
         return (
-            "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS",
+            PRACTICE_STATUS,
             "Practice judges are active; every result is illustrative.",
             "yellow",
         )
     return (
-        "OFFICIAL COPILOT PANEL",
+        OFFICIAL_STATUS,
         "The connected GitHub Copilot judging panel is active for this official showcase.",
         "green",
     )
@@ -871,7 +883,7 @@ def _tonight_card(run_id: str, repo_count: int, awards: str,
         ("Run", run_id),
         ("Projects entered", str(repo_count)),
         ("Awards on offer", award_labels),
-        ("Results", getattr(args, "result_status", "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS")),
+        ("Results", getattr(args, "result_status", PRACTICE_STATUS)),
         ("Mode", "Showtime Autopilot"),
         ("Envelope", "sealed live, replayable forever"),
     ]
@@ -1094,7 +1106,8 @@ def hash_artifacts(bundle_path: Path) -> Dict[str, str]:
     """Compute SHA-256 for every artifact in the bundle (excluding HASHES/SEAL)."""
     result: Dict[str, str] = {}
     for p in collect_bundle_artifacts(bundle_path):
-        rel = str(p.relative_to(bundle_path))
+        # POSIX separators always: a bundle sealed on Windows must verify everywhere.
+        rel = p.relative_to(bundle_path).as_posix()
         result[rel] = _sha256_file(p)
     return result
 
@@ -6084,11 +6097,11 @@ def _print_workshop_receipt(bundle_path: Path, run_id: str) -> None:
     if not result_status:
         provenance = gate.get("evaluation_provenance", {})
         result_status = (
-            "OFFICIAL COPILOT PANEL"
+            OFFICIAL_STATUS
             if provenance.get("mode") == "live"
-            else "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS"
+            else PRACTICE_STATUS
         )
-    status_color = "green" if result_status == "OFFICIAL COPILOT PANEL" else "yellow"
+    status_color = "green" if _is_official_status(result_status) else "yellow"
     _magic_banner(
         "GitHub Copilot Builder Showcase Recap",
         f"{result_status} · {len(verdicts)} projects · {len(awards)} awards · {envelope_status}",
@@ -6582,10 +6595,10 @@ def cmd_quick(args: argparse.Namespace, _gateway: Optional[Any] = None,
     print(f"Quick judging complete: {run_id}")
     print(f"Projects reviewed: {len(created)}")
     if evaluation_mode == "simulated":
-        print("Results status: PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS; do not publish as official awards.")
+        print(f"Results status: {PRACTICE_STATUS}; do not publish as official awards.")
     else:
         print(
-            f"Results status: OFFICIAL COPILOT PANEL · "
+            f"Results status: {OFFICIAL_STATUS} · "
             f"panel: {_model_panel_label(freshness_gate)}"
         )
     _print_quiet_award_results(awards_card.get("awards", []))
@@ -6611,7 +6624,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     official_panel_required = (
         manifest.get("official_copilot_panel_connected") is True
         or manifest.get("official_live_panel_connected") is True
-        or manifest.get("result_status") == "OFFICIAL COPILOT PANEL"
+        or _is_official_status(manifest.get("result_status"))
     )
 
     if gate_path.exists() and manifest.get("status") == "sealed":
@@ -6699,7 +6712,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             )
         else:
             _sideline(
-                f"Results status: OFFICIAL COPILOT PANEL · {panel_label}.",
+                f"Results status: {OFFICIAL_STATUS} · {panel_label}.",
                 "🧠",
                 "green",
             )
@@ -8025,8 +8038,44 @@ def _safe_extract_tar(archive: tarfile.TarFile, destination: Path) -> None:
                 raise ConfigValidationError(
                     "Replay archive exceeds the maximum safe extraction size."
                 )
+    directories = []
     for member in members:
+        if member.isdir():
+            # A sealed bundle ships its `sealed/` directory read-only (0o555). Extracting
+            # it with that mode would make the files inside it unextractable, so mirror
+            # tarfile.extractall(): extract directories writable, restore modes after.
+            directories.append(member)
+            member = copy.copy(member)
+            member.mode = 0o700
         archive.extract(member, path=destination)
+
+    for member in sorted(directories, key=lambda m: m.name, reverse=True):
+        target = destination / member.name
+        try:
+            archive.utime(member, target)
+            archive.chmod(member, target)
+        except (tarfile.ExtractError, OSError):
+            pass
+
+
+def _rmtree_sealed(path: Path) -> None:
+    """Remove a tree that may contain read-only sealed dirs/files (0o555 / 0o444)."""
+    def _force(func, target, _exc):
+        parent = os.path.dirname(target)
+        for p in (parent, target):
+            try:
+                os.chmod(p, 0o700)
+            except OSError:
+                pass
+        try:
+            func(target)
+        except OSError:
+            pass
+
+    try:
+        shutil.rmtree(path, onerror=_force)
+    except OSError:
+        pass
 
 
 def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
@@ -8160,7 +8209,7 @@ def cmd_replay(args: argparse.Namespace, _gateway: Optional[Any] = None,
         return 0
     finally:
         if temp_extract_dir is not None:
-            shutil.rmtree(temp_extract_dir, ignore_errors=True)
+            _rmtree_sealed(temp_extract_dir)
 
 
 def cmd_resume(args: argparse.Namespace, _gateway: Optional[Any] = None,
@@ -8512,7 +8561,7 @@ def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
             non_deprecated = [m for m in models if not m.get("deprecated", False)]
             backend = getattr(_gateway, "backend_name", "configured model gateway")
             ok.append(
-                f"Judge panel: OFFICIAL COPILOT PANEL connected via {backend} "
+                f"Judge panel: {OFFICIAL_STATUS} connected via {backend} "
                 f"({len(non_deprecated)} active judges)"
             )
             ok.append(f"Lead judge: {_select_best_model(models)}")

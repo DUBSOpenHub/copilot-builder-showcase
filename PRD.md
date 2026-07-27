@@ -44,7 +44,7 @@ first-place GitHub Copilot Builder Award. EventSpecs may replace that podium.
    120 seconds under supported local conditions.
 8. The final result follows one randomly selected audience-participation cue and
    explicit operator confirmation in an interactive showcase.
-9. `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` or `OFFICIAL COPILOT PANEL` remains
+9. `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` or `OFFICIAL GITHUB COPILOT PANEL` remains
    visible in the title, opening, run card, act breaks, receipt, and manifest.
 10. Installation creates the primary `showcase` command and advanced
     `copilot-builder-showcase` CLI, preserves `hackathon` and `hackathon-judge`,

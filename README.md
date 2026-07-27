@@ -83,7 +83,7 @@ The whole thing runs in one visible Terminal, with a big-screen web view for the
       <strong>Scan to submit.</strong> The big screen shows a room QR. Anyone adds a project from their phone — no app, no login, just a link and an optional team name.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/look-sealed-panel.svg" alt="Three GitHub Copilot judge scorecards with scores sealed, above a spotlighted project" width="100%"><br><br>
+      <img src="docs/images/look-judging-panel.png" alt="The live judging pane: a GitHub Copilot judging panel badge, the shared Innovation, Build Quality and Impact rubric, three GitHub Copilot panel judges, and a progress readout showing scores sealed" width="100%"><br><br>
       <strong>One sealed panel.</strong> Every project is reviewed on the same rubric and combined by median consensus. Scores stay sealed until the reveal.
     </td>
   </tr>
@@ -292,7 +292,7 @@ Every run keeps its status visible:
 | Status | Meaning |
 |---|---|
 | **PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS** | Deterministic local judges are active. For rehearsal and demonstration, not official awards. |
-| **OFFICIAL COPILOT PANEL** | A connected GitHub Copilot panel reviewed the projects. |
+| **OFFICIAL GITHUB COPILOT PANEL** | A connected GitHub Copilot panel reviewed the projects. |
 
 <details>
 <summary><strong>The files behind it</strong></summary>

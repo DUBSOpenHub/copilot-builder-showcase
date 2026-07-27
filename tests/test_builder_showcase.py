@@ -544,7 +544,7 @@ class TestShowtimeDelight:
                 "GitHub Copilot Builder Showcase Recap",
                 "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS · 3 projects · 3 awards · envelope sealed",
             ),
-            ("GitHub Copilot Builder Showcase", "OFFICIAL COPILOT PANEL"),
+            ("GitHub Copilot Builder Showcase", "OFFICIAL GITHUB COPILOT PANEL"),
             ("Sealing the Night", "Recap · export · validate · replay"),
             ("X", ""),
         ]
@@ -783,7 +783,7 @@ class TestShowtimeDelight:
 
         cbp._print_workshop_receipt(bundle_path, "legacy-official")
 
-        assert "OFFICIAL COPILOT PANEL" in capsys.readouterr().out
+        assert "OFFICIAL GITHUB COPILOT PANEL" in capsys.readouterr().out
 
     def test_workshop_caps_total_showtime_animation(self, tmp_path):
         env = {
@@ -1795,7 +1795,7 @@ class TestBulkUrlImport:
                 "Demo Day Grand Prize",
             ]
             assert manifest["event"]["name"] == "Demo Day"
-            assert manifest["result_status"] == "OFFICIAL COPILOT PANEL"
+            assert manifest["result_status"] == "OFFICIAL GITHUB COPILOT PANEL"
             assert manifest["results_are_illustrative"] is False
             assert manifest["official_copilot_panel_connected"] is True
             assert manifest["official_live_panel_connected"] is True
@@ -1807,7 +1807,7 @@ class TestBulkUrlImport:
             assert (bundle / "HASHES").exists()
             assert (bundle / "SEAL").exists()
             assert len(list((bundle / "inputs").glob("*.json"))) == 2
-        assert capsys.readouterr().out.count("OFFICIAL COPILOT PANEL") >= 5
+        assert capsys.readouterr().out.count("OFFICIAL GITHUB COPILOT PANEL") >= 5
 
     def test_workshop_showtime_defaults_to_audience_autopilot(self, tmp_path, capsys):
         env = {
@@ -1982,6 +1982,10 @@ class TestCopilotCLIGateway:
         assert model_kwargs["encoding"] == "utf-8"
         assert model_kwargs["env"]["COPILOT_ALLOW_ALL"] == "false"
 
+    @pytest.mark.skipif(
+        os.name == "nt",
+        reason="POSIX lookup path; Windows is covered by test_windows_uses_native_executable_from_trusted_path",
+    )
     def test_environment_uses_installed_copilot_cli(self):
         with patch.object(cbp.shutil, "which", return_value=None):
             assert cbp._live_gateway_from_environment({"PATH": "/opt/homebrew/bin"}) is None
@@ -2344,7 +2348,7 @@ class TestCommandFlows:
         bundle_path = make_run(tmp_path, "official-resume")
         add_submission(bundle_path)
         manifest = cbp.load_manifest(bundle_path)
-        manifest["result_status"] = "OFFICIAL COPILOT PANEL"
+        manifest["result_status"] = "OFFICIAL GITHUB COPILOT PANEL"
         manifest["official_copilot_panel_connected"] = True
         cbp.save_manifest(bundle_path, manifest)
 
@@ -2357,6 +2361,34 @@ class TestCommandFlows:
 
         assert "cannot continue with practice judges" in capsys.readouterr().err
         assert not (bundle_path / "freshness_gate.json").exists()
+        assert not list((bundle_path / "verdicts").glob("*.json"))
+
+    def test_legacy_official_status_still_reads_as_official(self):
+        """Bundles sealed before the label was branded must stay official on read-back."""
+        for legacy in cbp.LEGACY_OFFICIAL_STATUSES:
+            assert cbp._is_official_status(legacy)
+        assert cbp._is_official_status(cbp.OFFICIAL_STATUS)
+        assert not cbp._is_official_status(cbp.PRACTICE_STATUS)
+        assert not cbp._is_official_status(None)
+
+    def test_legacy_official_bundle_cannot_downgrade_to_practice(self, tmp_path, capsys):
+        """A pre-rename official bundle keeps its official guard on resume."""
+        bundle_path = make_run(tmp_path, "legacy-official-resume")
+        add_submission(bundle_path)
+        manifest = cbp.load_manifest(bundle_path)
+        manifest["result_status"] = "OFFICIAL COPILOT PANEL"
+        manifest.pop("official_copilot_panel_connected", None)
+        manifest.pop("official_live_panel_connected", None)
+        cbp.save_manifest(bundle_path, manifest)
+
+        with patch.dict(os.environ, self._env(tmp_path)):
+            assert cbp.cmd_judge(
+                build_args("judge", run_id="legacy-official-resume"),
+                None,
+                fixed_clock,
+            ) == 8
+
+        assert "cannot continue with practice judges" in capsys.readouterr().err
         assert not list((bundle_path / "verdicts").glob("*.json"))
 
     def test_showcase_scorecards_keep_configured_panel_requirements(self, tmp_path):

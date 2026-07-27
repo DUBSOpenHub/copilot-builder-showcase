@@ -31,7 +31,7 @@
   links and `Project team` for generic links when no team is supplied, while
   keeping explicit builder names authoritative. Do not fetch arbitrary
   non-GitHub URLs during intake.
-- Keep `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` or `OFFICIAL COPILOT PANEL` visible
+- Keep `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` or `OFFICIAL GITHUB COPILOT PANEL` visible
   throughout every run and in the manifest. `--official` must block when no
   official panel is connected; never silently downgrade.
 - The installer must create `showcase` and `copilot-builder-showcase`, preserve

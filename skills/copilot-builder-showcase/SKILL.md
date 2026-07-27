@@ -108,7 +108,7 @@ judge impression. Missing evidence stays `not provided`.
 Keep the showcase result status explicit:
 
 - `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS` means local practice judges are active.
-- `OFFICIAL COPILOT PANEL` means an authenticated GitHub Copilot CLI panel is connected.
+- `OFFICIAL GITHUB COPILOT PANEL` means an authenticated GitHub Copilot CLI panel is connected.
 
 Installed local runs use the authenticated GitHub Copilot CLI when available.
 `showcase --demo` is always a deterministic practice showcase. If the organizer
