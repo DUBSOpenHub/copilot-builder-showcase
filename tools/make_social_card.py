@@ -28,6 +28,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "docs" / "index.html"
 OUT = ROOT / "docs" / "images" / "social-card-v2.png"
+# Slack, Teams and LinkedIn cache a page's preview by image URL, so a redesign
+# only reaches people who have never shared the link unless the filename
+# changes. But the previous filename cannot simply disappear either: clients
+# holding the old page still request it, and a 404 shows them no image at all.
+# Every past filename keeps working and serves the current artwork.
+LEGACY_OUT = [ROOT / "docs" / "images" / "social-card.png"]
 
 WIDTH, HEIGHT = 1200, 630
 
@@ -62,22 +68,25 @@ body {{
   filter: blur(20px);
 }}
 .inner {{ position: relative; }}
+/* Line breaks are explicit. This renders at one fixed size and never reflows,
+   and the name has to land whole on its own line rather than wherever the
+   text happens to wrap. */
 h1 {{
-  font-size: 82px; line-height: 1.04; font-weight: 800; letter-spacing: -.024em;
-  max-width: 1030px;
+  font-size: 78px; line-height: 1.14; font-weight: 800; letter-spacing: -.028em;
+  white-space: nowrap;
 }}
 h1 .accent {{ color: var(--cp-accent); }}
+/* The headline already says GitHub Copilot, so the subline does not repeat it. */
 p {{
-  font-size: 32px; line-height: 1.4; font-weight: 500; color: var(--cp-text);
-  margin-top: 30px; max-width: 1000px;
+  font-size: 29px; line-height: 1.45; font-weight: 500;
+  color: var(--cp-text-muted); margin-top: 40px; max-width: 940px;
 }}
-p b {{ color: var(--cp-accent); font-weight: 700; }}
 </style></head>
 <body>
   <div class="glow"></div>
   <div class="inner">
-    <h1>Turn any workshop into a <span class="accent">live showcase</span>.</h1>
-    <p>Drop the links, let a <b>GitHub Copilot</b> panel judge every project, and spotlight the winners &mdash; in under two minutes.</p>
+    <h1>Turn any workshop into a live<br />GitHub Copilot<br /><span class="accent">Builder Showcase.</span></h1>
+    <p>Drop the links, activate the judging panel, and spotlight the winners &mdash; in under two minutes.</p>
   </div>
 </body></html>"""
 
@@ -111,7 +120,13 @@ def main() -> int:
         server.shutdown()
         card.unlink(missing_ok=True)
 
-    print(f"wrote {OUT.relative_to(ROOT)} ({WIDTH}x{HEIGHT})")
+    for legacy in LEGACY_OUT:
+        legacy.write_bytes(OUT.read_bytes())
+
+    written = ", ".join(
+        str(p.relative_to(ROOT)) for p in [OUT, *LEGACY_OUT]
+    )
+    print(f"wrote {written} ({WIDTH}x{HEIGHT})")
     return 0
 
 

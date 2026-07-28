@@ -9,8 +9,10 @@ cutting the headline in half.
 
 from __future__ import annotations
 
+import html
 import re
 import struct
+import sys
 from pathlib import Path
 
 import pytest
@@ -83,3 +85,54 @@ def test_share_alt_text_does_not_name_a_demo_project(meta: dict[str, str]) -> No
             assert project not in meta[key], (
                 f"{key} names the demo project {project!r}, which changes every run"
             )
+
+
+def _card_words() -> str:
+    """The words the generator actually paints onto the card."""
+    sys.path.insert(0, str(ROOT / "tools"))
+    import make_social_card
+
+    body = re.search(r"<h1>(.*?)</h1>", make_social_card.card_html(), re.DOTALL)
+    assert body, "the card no longer has a headline"
+    return html.unescape(re.sub(r"<[^>]+>", " ", body.group(1)))
+
+
+def test_alt_text_describes_the_words_on_the_card() -> None:
+    """
+    Alt text drifted once already: the card lost its award chips and the tags
+    kept describing them, because the only assertion was that the two alt tags
+    agreed with each other. Bind the description to the rendered copy instead.
+    """
+    source = PAGE.read_text(encoding="utf-8")
+    alt = html.unescape(
+        re.search(r'og:image:alt" content="([^"]*)"', source).group(1)
+    )
+    for word in _card_words().split():
+        assert word in alt, f"alt text omits {word!r}, which is on the card"
+
+
+def test_alt_text_does_not_describe_things_that_were_removed() -> None:
+    card = _card_words().lower()
+    alt = PAGE.read_text(encoding="utf-8").lower()
+    for gone in ("builder silver", "builder bronze", "chips", "podium"):
+        if gone not in card:
+            assert gone not in re.search(
+                r'og:image:alt" content="([^"]*)"', alt
+            ).group(1), f"alt text still describes {gone!r}, which is not on the card"
+
+
+def test_every_past_image_url_still_resolves() -> None:
+    """
+    A renamed card busts the platform cache, but clients holding the old page
+    keep requesting the old filename. Deleting it showed them no image at all,
+    so every past name stays and serves the current artwork.
+    """
+    sys.path.insert(0, str(ROOT / "tools"))
+    import make_social_card
+
+    current = make_social_card.OUT.read_bytes()
+    for legacy in make_social_card.LEGACY_OUT:
+        assert legacy.is_file(), f"{legacy.name} was deleted; cached shares will 404"
+        assert legacy.read_bytes() == current, (
+            f"{legacy.name} still serves the old artwork"
+        )
