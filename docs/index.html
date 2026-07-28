@@ -1292,8 +1292,12 @@ var QRClean = (function () {
   var state = readState() || freshState();
   /* A demo is a rehearsal, not a record. Never restore one across a page load, so a
      refresh always lands on a clean start. A live showcase DOES resume — a real event
-     must never lose submissions to an accidental refresh. */
-  if (state.mode === "demo") { state = freshState(); writeState(state); }
+     must never lose submissions to an accidental refresh.
+     The #submit route is exempt: it is a guest surface opened by scanning the QR, and
+     on the same browser as the host it shares this storage. Resetting there would wipe
+     the run the presenter is currently showing. It must join the run, never restart it. */
+  var IS_SUBMIT_VIEW = (location.hash || "").toLowerCase().indexOf("submit") !== -1;
+  if (state.mode === "demo" && !IS_SUBMIT_VIEW) { state = freshState(); writeState(state); }
   function save(opts) { writeState(state); try { if (CH) CH.postMessage({ t: "sync", s: state, from: TAB }); } catch (e) {} if (!(opts && opts.silent)) {} }
   var TAB = Math.random().toString(36).slice(2);
 
