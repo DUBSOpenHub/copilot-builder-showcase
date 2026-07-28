@@ -1368,7 +1368,7 @@ var QRClean = (function () {
      ~24h. If a Firebase databaseURL is configured above, that is used instead
      (more control/uptime). Either way it's still a single self-contained file:
      no SDK/CDN/font, just fetch() to a REST endpoint. ---- */
-  var RELAY = { base: "https://jsonblob.com/api/jsonBlob", enabled: true, force: false, failed: false, creating: false };
+  var RELAY = { base: "https://jsonblob.com/api/jsonBlob", enabled: true, force: false, failed: false, creating: false, gen: 0 };
   function isJsdom() { try { return /jsdom/i.test((navigator && navigator.userAgent) || ""); } catch (e) { return false; } }
   function relayIntended() { return !!(RELAY.enabled && (typeof fetch === "function") && (!isJsdom() || RELAY.force)); }
   function relayUsable() { return relayIntended() && !RELAY.failed; }
@@ -1619,8 +1619,18 @@ var QRClean = (function () {
     });
   }
   /* host: create a fresh relay room (async — id comes back from the server) */
-  function relayFreshRoom() {
-    if (!relayUsable() || RELAY.creating) return;
+  function relayFreshRoom(prevRoom) {
+    if (!relayUsable()) return;
+    /* Supersede any creation still in flight. Bailing out on RELAY.creating instead
+       used to let a restart inherit the previous run's room: the older response would
+       land afterwards and assign its id — and its poll — to the new run. */
+    var gen = ++RELAY.gen;
+    /* Retire the previous room: stop polling it, and mark it closed so a phone that
+       still has its form open reports "submissions closed" instead of posting into a
+       room the host no longer reads. */
+    prevRoom = prevRoom || state.room;
+    relayStopPoll();
+    if (prevRoom) { try { relayRMW(prevRoom, function (doc) { doc.status = "closed"; doc.at = Date.now(); return doc; }, 2).catch(function () {}); } catch (e) {} }
     RELAY.creating = true; state.room = ""; RELAY.failed = false; save();
     if (view === "stage") drawStageQR();
     var doc = { v: 1, status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now(), entries: {} };
@@ -1628,10 +1638,14 @@ var QRClean = (function () {
       if (!r || !r.ok) throw new Error("create " + (r && r.status));
       var id = relayReadId(r);
       if (!id) throw new Error("noid");
+      if (gen !== RELAY.gen) return;
       RELAY.creating = false; state.room = id; save();
       if (view === "stage") drawStageQR();
       relayStartPoll(id);
-    }).catch(function () { RELAY.creating = false; RELAY.failed = true; if (view === "stage") drawStageQR(); });
+    }).catch(function () {
+      if (gen !== RELAY.gen) return;
+      RELAY.creating = false; RELAY.failed = true; if (view === "stage") drawStageQR();
+    });
   }
   function relayEnsureRoom() {
     if (!relayUsable()) return;
@@ -1683,7 +1697,7 @@ var QRClean = (function () {
   }
 
   /* ---- transport dispatch: Firebase if configured, else the zero-config relay ---- */
-  function liveFreshRoom() { if (fbConfigured()) return fbFreshRoom(); if (relayUsable()) return relayFreshRoom(); }
+  function liveFreshRoom(prevRoom) { if (fbConfigured()) return fbFreshRoom(); if (relayUsable()) return relayFreshRoom(prevRoom); }
   function liveEnsureRoom() { if (fbConfigured()) return fbEnsureRoom(); if (relayUsable()) return relayEnsureRoom(); }
   function liveSetStatus(s) { if (fbConfigured()) return fbSetStatus(s); if (relayUsable()) return relaySetStatus(s); }
   function liveUnsubscribe() { fbUnsubscribe(); relayStopPoll(); if (relayMeta.timer) { clearInterval(relayMeta.timer); relayMeta.timer = null; } }
@@ -1786,13 +1800,14 @@ var QRClean = (function () {
     clearJudgeTimers();
     liveUnsubscribe();
     seedRunning = false;
+    var prevRoom = state.room;
     state = freshState();
     state.mode = m;
     state.status = "open";
     state.runId = "run-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
     state.startedAt = Date.now();
     save();
-    liveFreshRoom();
+    liveFreshRoom(prevRoom);
     feed = [];
     pushFeed(m === "demo" ? "Demo restarted — sample projects will roll in again."
                           : "Showcase restarted — submissions are open again.");
@@ -2062,8 +2077,14 @@ var QRClean = (function () {
 
   function newRun() {
     var m = state.mode || "live";
-    state = freshState(); state.mode = m; state.status = "open"; state.runId = "run-" + Date.now().toString(36); state.startedAt = Date.now();
-    save(); if (m === "live") liveFreshRoom(); feed = []; heroIdx = 0;
+    clearJudgeTimers(); liveUnsubscribe(); seedRunning = false;
+    var prevRoom = state.room;
+    state = freshState(); state.mode = m; state.status = "open";
+    state.runId = "run-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    state.startedAt = Date.now();
+    /* Both modes need a room: the QR is drawn from it, and a demo without one sits at
+       "Preparing the room…" forever. */
+    save(); liveFreshRoom(prevRoom); feed = []; heroIdx = 0;
     pushFeed(m === "demo" ? "Fresh demo — illustrative samples incoming." : "Fresh showcase — open for submissions.");
     resetStageUI(); renderStage(); drawStageQR();
     if (m === "demo") scheduleSeed();
@@ -2075,7 +2096,7 @@ var QRClean = (function () {
     cv.classList.remove("on");
   }
   function resetStageUI() {
-    stopHeroTimer(); delibStop(); stopConfetti(); clearFxTimers();
+    stopHeroTimer(); delibStop(); stopConfetti(); clearFxTimers(); clearJudgeTimers();
     if (REVEAL.timer) { clearTimeout(REVEAL.timer); REVEAL.timer = null; }
     REVEAL.step = 0; REVEAL.mode = null;
     $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
