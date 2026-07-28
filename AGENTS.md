@@ -96,6 +96,12 @@
   award, podium, or result in the new one.
 - A transient relay failure must not end phone submissions for the rest of a
   showcase. Retry before declaring the room unusable.
+- The big screen must score the way the engine scores. `docs/index.html` embeds
+  its own copy of the rubric because Pages cannot read `event_spec.py` at
+  runtime, so keep the two axes distinct — four weighted dimensions are what is
+  scored, three review lenses are who scores — and keep the weighted total out
+  of 10. `tests/test_rubric_parity.py` fails on any drift; update the embedded
+  copy and `config/rubric.json` together whenever the shipped rubric changes.
 - Do not weaken write-once artifacts, hash seals, run-ID validation, or safe
   archive extraction.
 

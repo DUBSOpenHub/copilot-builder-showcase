@@ -13,7 +13,7 @@ Paste the links, activate the panel, reveal the winners — in under two minutes
 
 **[Live demo](https://dubsopenhub.github.io/copilot-builder-showcase/) · [What it does](#what-it-does) · [Install](#install) · [How it works](#how-it-works) · [From the CLI](#from-the-cli) · [FAQ](#faq) · [License](#license-and-credits)**
 
-<img src="docs/images/builder-showcase-demo.png" alt="GitHub Copilot Builder Showcase big-screen award reveal: the GitHub Copilot Builder Award, Builder Silver, and Builder Bronze podium with per-lens GitHub Copilot panel scores" width="100%">
+<img src="docs/images/builder-showcase-demo.png" alt="GitHub Copilot Builder Showcase big-screen award reveal: the GitHub Copilot Builder Award, Builder Silver, and Builder Bronze podium, each card showing scores for all four rubric dimensions and a weighted panel total out of 10" width="100%">
 
 *Every accepted project gets a spotlight and the same sealed GitHub Copilot review. Only the top three take the podium — Builder Bronze, Builder Silver, and the first-place GitHub Copilot Builder Award.*
 
@@ -65,10 +65,10 @@ It gives any session the energy and resolution of a judged finale, without recru
 ## What you do in a showcase
 
 - **Drop the projects.** Paste HTTP(S) links and GitHub `owner/repo` entries — or let the room scan a QR and submit from their phones.
-- **Run one sealed panel.** A compact GitHub Copilot scorecard applies Innovation, Build Quality, and Impact lenses to every project. Scores stay sealed.
+- **Run one sealed panel.** Three GitHub Copilot review lenses score every project on the same four weighted rubric dimensions. Scores stay sealed.
 - **Give everyone a moment.** Each project gets a spotlight with three brief judge reactions — no scores, no rank, no one left out.
 - **Bring the room in.** One operator-confirmed audience cue — a countdown, a champion pose, a suspense freeze — right before the reveal. Nothing is revealed until you confirm.
-- **Land the podium.** Third, second, then the first-place GitHub Copilot Builder Award, with per-lens panel scores revealed only now.
+- **Land the podium.** Third, second, then the first-place GitHub Copilot Builder Award, with the per-dimension panel scores revealed only now.
 - **Keep the work.** Recap, private per-project feedback, validation, export, and replay are saved together. Top-three growth cards follow the awards.
 - **Recover without a reload.** A ↺ Restart control on the big screen stops a wedged showcase and starts a clean one — for a bad link, a stalled panel, or the wrong room — with no page reload in front of an audience.
 
@@ -87,7 +87,7 @@ The whole thing runs in one visible Terminal, with a big-screen web view for the
       <strong>Scan to submit.</strong> The big screen shows a room QR. Anyone adds a project from their phone — no app, no login, just a link and an optional team name.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/look-judging-panel.png" alt="The live judging pane: a GitHub Copilot judging panel badge, the shared Innovation, Build Quality and Impact rubric, three GitHub Copilot panel judges, and a progress readout showing scores sealed" width="100%"><br><br>
+      <img src="docs/images/look-judging-panel.png" alt="The live judging pane: a GitHub Copilot judging panel badge, the four weighted rubric dimensions with their descriptions, three GitHub Copilot panel judges, the review lenses being applied, and a progress readout showing scores sealed" width="100%"><br><br>
       <strong>One sealed panel.</strong> Every project is reviewed on the same rubric and combined by median consensus. Scores stay sealed until the reveal.
     </td>
   </tr>
@@ -284,7 +284,7 @@ EventSpec -> project intake -> consensus review -> sealed artifacts
           -> audience-safe showcase -> recognitions -> export/replay
 ```
 
-One compact GitHub Copilot scorecard applies the Innovation, Build Quality, and Impact lenses to every project. Official panels combine one to three configured GitHub Copilot models by median consensus and never silently downgrade to a single model. Everything the run produces — scores, feedback, validation, replay — is sealed into a tamper-evident bundle.
+Three GitHub Copilot review lenses — Innovation, Build quality and Impact — read every project and score the same four weighted rubric dimensions, which combine into one total out of 10. Official panels combine one to three configured GitHub Copilot models by median consensus and never silently downgrade to a single model. Everything the run produces — scores, feedback, validation, replay — is sealed into a tamper-evident bundle.
 
 Every run keeps its status visible:
 
@@ -446,18 +446,22 @@ No. Generic non-GitHub links are not fetched during intake. GitHub repository li
 **How are winners chosen?**
 The panel scores the declared rubric, official model responses are combined by median consensus, and recognitions follow their declared dimensions and tie policy.
 
-**What do the three lenses mean?**
-Every project is read through the same three, and each is worth up to 10 points:
+**What is the rubric, and what does "Impact" mean?**
+Every project is scored on the same four dimensions. Each is marked out of 10, then weighted into a single total out of 10:
 
-| Lens | What it measures |
-| --- | --- |
-| 💡 **Innovation** | Originality, problem framing, and useful creative choices. |
-| 🛠️ **Build Quality** | Technical execution, completeness, and thoughtful implementation. |
-| 🎯 **Impact** | User value, feasibility, and the strength of the demo story. |
+| Dimension | Weight | What it measures |
+| --- | --- | --- |
+| 💡 **Innovation** | 30% | Originality and a thoughtful approach to the challenge. |
+| 🎯 **Potential Impact** | 25% | Value for people using the project. |
+| 🛠️ **Technical Execution** | 25% | Quality, completeness, and craft. |
+| 🎤 **Clarity and Demo** | 20% | How clearly the project and its value are communicated. |
 
-Impact is the one people ask about most, so it is worth saying plainly: it is not "how big could this company get." It asks whether the project solves a real problem for someone you can name, whether it could plausibly work, and whether the demo made that case. A tiny tool that clearly saves one team an hour a week can out-score a grand idea nobody showed working.
+Impact is the one people ask about, so it is worth saying plainly: it is not "how big could this company get." It asks whether the project solves a real problem for someone you can name, and whether it could plausibly work. A tiny tool that clearly saves one team an hour a week can out-score a grand idea nobody showed working. Note that how well you *showed* it is scored separately under Clarity and Demo, so a rough demo of a genuinely useful thing does not lose its Impact marks twice.
 
-These definitions come from [`config/rubric.json`](config/rubric.json), which is also what the judges are given — so what the room is shown is exactly what was measured. Custom events can declare their own dimensions and weights in an EventSpec.
+**Then what are the three "lenses" on screen?**
+Those are the reviewers, not the score. Three review lenses — Innovation, Build quality and Impact — each read every project and score all four dimensions. Their scores are combined by median consensus, so no single lens can decide a placing on its own.
+
+These definitions ship in [`event_spec.py`](event_spec.py) and are exactly what the judges are given, so what the room is shown is what was measured. A practice showcase on the big screen uses the same weights and the same maths as an Official Panel — [`tests/test_rubric_parity.py`](tests/test_rubric_parity.py) fails the build if the two ever drift apart. Custom events can declare their own dimensions and weights in an EventSpec, or pass a rubric file with `--config`.
 
 **What does the hidden Shadow review do?**
 It independently checks review quality and possible failure modes. It can warn the organizer, but it cannot change scores, rankings, or awards.

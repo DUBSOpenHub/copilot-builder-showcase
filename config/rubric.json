@@ -2,10 +2,10 @@
   "version": "1.2",
   "rubric": {
     "dimensions": [
-      { "id": "innovation",   "name": "Innovation",          "weight": 0.30, "max_score": 10, "description": "Novelty and creative approach" },
-      { "id": "impact",       "name": "Potential Impact",    "weight": 0.25, "max_score": 10, "description": "Real-world value and reach" },
-      { "id": "execution",    "name": "Technical Execution", "weight": 0.25, "max_score": 10, "description": "Code quality and craft" },
-      { "id": "presentation", "name": "Clarity and Demo",    "weight": 0.20, "max_score": 10, "description": "Communication and demo quality" }
+      { "id": "innovation",   "name": "Innovation",          "weight": 0.30, "max_score": 10, "description": "Originality and a thoughtful approach to the challenge" },
+      { "id": "impact",       "name": "Potential Impact",    "weight": 0.25, "max_score": 10, "description": "Value for people using the project" },
+      { "id": "execution",    "name": "Technical Execution", "weight": 0.25, "max_score": 10, "description": "Quality, completeness, and craft" },
+      { "id": "presentation", "name": "Clarity and Demo",    "weight": 0.20, "max_score": 10, "description": "How clearly the project and its value are communicated" }
     ]
   },
   "judge_archetypes": [

@@ -592,8 +592,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .fr-team .fr-link:hover { text-decoration: underline; }
 .fr-desc { font-size: 12px; color: var(--cp-text-muted); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 .fr-lenses { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.fr-lens { display: grid; grid-template-columns: 86px 1fr 32px; gap: 9px; align-items: center; }
-.fr-lname { font-size: 10px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .04em; }
+.fr-lens { display: grid; grid-template-columns: 124px 1fr 32px; gap: 9px; align-items: center; }
+.fr-lname { font-size: 9.5px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .02em; }
 .fr-lbar { height: 6px; border-radius: 999px; background: var(--cp-surface-soft); overflow: hidden; }
 .fr-lbar > i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-accent-hover)); }
 .fr-lval { font-size: 11px; font-weight: 700; color: var(--cp-text-muted); text-align: right; }
@@ -617,7 +617,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .spark.gold { color: var(--cp-gold); text-shadow: 0 0 10px color-mix(in srgb, var(--cp-gold) 65%, transparent); }
 @keyframes spark-tw { 0%, 100% { opacity: 0; transform: scale(.35) rotate(0deg); } 45% { opacity: .95; transform: scale(1) rotate(35deg); } 72% { opacity: .5; transform: scale(.78) rotate(58deg); } }
 
-/* ---------- PREMIUM PODIUM: god-rays, per-lens insight, method ---------- */
+/* ---------- PREMIUM PODIUM: god-rays, per-dimension insight, method ---------- */
 .podium-wrap > *:not(.podium-rays):not(.sparkles) { position: relative; z-index: 1; }
 .podium-rays { position: absolute; left: 50%; top: 6%; width: min(920px, 94%); height: min(760px, 78%); transform: translateX(-50%); pointer-events: none; opacity: 0; z-index: 0; transition: opacity .9s ease; filter: blur(2px);
   background: conic-gradient(from 0deg at 50% 42%,
@@ -632,8 +632,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .podium-rays.on { opacity: .5; animation: rays-spin 30s linear infinite; }
 @keyframes rays-spin { to { transform: translateX(-50%) rotate(360deg); } }
 .lens-block { margin-top: 14px; display: flex; flex-direction: column; gap: 7px; text-align: left; }
-.lens-row { display: grid; grid-template-columns: 92px 1fr 32px; align-items: center; gap: 8px; }
-.lens-name { font-size: 10.5px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .04em; }
+.lens-row { display: grid; grid-template-columns: 124px 1fr 32px; align-items: center; gap: 8px; }
+.lens-name { font-size: 9.5px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .02em; line-height: 1.25; }
 .lens-bar { height: 7px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; }
 .lens-bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning)); transition: width .85s cubic-bezier(.2,.8,.2,1); }
 .lens-val { font-size: 12px; font-weight: 800; color: var(--cp-text); text-align: right; font-variant-numeric: tabular-nums; }
@@ -642,7 +642,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .award .uplift b { color: var(--cp-text); }
 .growth.method .growth-grid { grid-template-columns: repeat(2, 1fr); }
 .growth.method .gc .gl { color: var(--cp-text); font-weight: 600; }
-@media (max-width: 760px) { .growth.method .growth-grid { grid-template-columns: 1fr; } .lens-row { grid-template-columns: 80px 1fr 30px; } }
+@media (max-width: 760px) { .growth.method .growth-grid { grid-template-columns: 1fr; } .lens-row { grid-template-columns: 124px 1fr 30px; } }
 
 /* ---------- SUBMIT (mobile) ---------- */
 .submit-view { display: none; min-height: 100vh; align-items: flex-start; justify-content: center; padding: 24px 18px 48px; position: relative; z-index: 1; }
@@ -1008,7 +1008,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
         <div class="judge-card">
           <span class="badge"><span class="badge-dot"></span> GitHub Copilot judging panel</span>
           <h3>Reviewing every project…</h3>
-          <div class="sub">One shared rubric — Innovation, Build Quality, Impact — combined by median consensus of a GitHub Copilot CLI panel. Scores stay sealed.</div>
+          <div class="sub">Three review lenses — Innovation, Build quality, Impact — score every project on the same four weighted rubric dimensions. Scores stay sealed.</div>
           <div id="panelLegend"></div>
           <div class="panel-judges" id="panelJudges"></div>
           <canvas id="deliberate" class="deliberate" aria-hidden="true"></canvas>
@@ -1774,25 +1774,65 @@ var QRClean = (function () {
     { proj: "Signal Garden", link: "https://github.com/example/signal-garden", team: "Team Signal Garden", desc: "Turns noisy alerts into one calm, prioritized morning digest." }
   ];
 
-  /* ---- deterministic GitHub Copilot-panel scoring (practice, illustrative) ---- */
+  /* ---- GitHub Copilot-panel scoring (practice, illustrative) ----
+     Deliberately mirrors the engine (builder_showcase.py) so a practice run
+     previews exactly what an Official Panel computes. Two separate axes:
+       RUBRIC_DIMENSIONS — what is scored. Each 0-10, weighted to a total of 10.
+       JUDGE_ARCHETYPES  — the review lenses, i.e. who scores. Every lens scores
+                           every dimension; the panel median is the consensus.
+     Both mirror the shipped default rubric (DEFAULT_EVENT_SPEC in event_spec.py).
+     tests/test_rubric_parity.py fails if this block and that spec disagree. */
   function hash(str) { var h = 2166136261 >>> 0; for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
-  var LENSES = ["Innovation", "Build Quality", "Impact"];
+  var RUBRIC_DIMENSIONS = [
+    { id: "innovation", name: "Innovation", weight: 0.30, max_score: 10, description: "Originality and a thoughtful approach to the challenge" },
+    { id: "impact", name: "Potential Impact", weight: 0.25, max_score: 10, description: "Value for people using the project" },
+    { id: "execution", name: "Technical Execution", weight: 0.25, max_score: 10, description: "Quality, completeness, and craft" },
+    { id: "presentation", name: "Clarity and Demo", weight: 0.20, max_score: 10, description: "How clearly the project and its value are communicated" }
+  ];
+  var JUDGE_ARCHETYPES = [
+    { id: "innovation", name: "Innovation lens", focus: "originality, problem framing, and useful creative choices" },
+    { id: "craft", name: "Build quality lens", focus: "technical execution, completeness, and thoughtful implementation" },
+    { id: "impact", name: "Impact lens", focus: "user value, feasibility, and the strength of the demo story" }
+  ];
+  function dimName(id) {
+    for (var i = 0; i < RUBRIC_DIMENSIONS.length; i++) { if (RUBRIC_DIMENSIONS[i].id === id) return RUBRIC_DIMENSIONS[i].name; }
+    return id;
+  }
+  /* Floats put a value like 8.295 a hair under the half-cent, so toFixed(2) would
+     show 8.29 while anyone adding the four numbers on the card lands on 8.30.
+     Nudge past the representation error so the screen rounds the way the room does. */
+  function roundTo(n, places) {
+    var f = Math.pow(10, places);
+    return Math.round(n * f + (n >= 0 ? 1e-9 : -1e-9)) / f;
+  }
   function scoreEntry(e) {
     var per = {};
-    LENSES.forEach(function (L) {
-      var vals = [0, 1, 2].map(function (j) { return 6.5 + (hash(e.link + "|" + e.proj + "|" + L + "|" + j) % 350) / 100; });
-      vals.sort(function (a, b) { return a - b; });
-      per[L] = vals[1]; /* median of the 3-family panel */
+    RUBRIC_DIMENSIONS.forEach(function (d) {
+      var vals = JUDGE_ARCHETYPES.map(function (a) {
+        return 6.5 + (hash(e.link + "|" + e.proj + "|" + d.id + "|" + a.id) % 350) / 100;
+      });
+      vals.sort(function (x, y) { return x - y; });
+      /* Median across the review lenses, held at the precision the card shows so
+         the four numbers on screen actually add up to the total beside them. */
+      per[d.id] = roundTo(vals[1], 1);
     });
-    var total = LENSES.reduce(function (s, L) { return s + per[L]; }, 0);
-    var topLens = Object.keys(per).sort(function (a, b) { return per[b] - per[a]; })[0];
-    return { per: per, total: total, topLens: topLens };
+    /* weighted total out of 10 — compute_shadow_score in builder_showcase.py */
+    var total = RUBRIC_DIMENSIONS.reduce(function (s, d) {
+      return s + (per[d.id] / d.max_score) * 10 * d.weight;
+    }, 0);
+    var order = RUBRIC_DIMENSIONS.slice().sort(function (a, b) { return per[b.id] - per[a.id]; });
+    return {
+      per: per,
+      total: roundTo(total, 2),
+      topDim: order[0].id,
+      lowDim: order[order.length - 1].id
+    };
   }
   function rankEntries() {
     var scored = state.entries.map(function (e) { return { e: e, sc: scoreEntry(e) }; });
     scored.sort(function (a, b) {
       if (b.sc.total !== a.sc.total) return b.sc.total - a.sc.total;
-      if (b.sc.per.Impact !== a.sc.per.Impact) return b.sc.per.Impact - a.sc.per.Impact;
+      if (b.sc.per.impact !== a.sc.per.impact) return b.sc.per.impact - a.sc.per.impact;
       return hash(a.e.link) - hash(b.e.link);
     });
     return scored;
@@ -2219,27 +2259,28 @@ var QRClean = (function () {
   var PROJECT_REVIEW_MS = 3400;     /* ideal time on screen per project */
   var JUDGE_FLOOR_MS = 1500;        /* never faster than this, however big the field */
   var JUDGE_PASS_TARGET_MS = 26000; /* soft target for the whole judging pass */
-  var LENS_ICONS = { "Innovation": "💡", "Build Quality": "🛠️", "Impact": "🎯" };
-  /* What each lens measures, worded exactly as config/rubric.json states it, so the
-     definition the panel judges against is the definition the room is shown. */
-  var LENS_DEFS = {
-    "Innovation": "originality, problem framing, and useful creative choices",
-    "Build Quality": "technical execution, completeness, and thoughtful implementation",
-    "Impact": "user value, feasibility, and the strength of the demo story"
-  };
+  /* Icons for the two axes. Dimensions are what the room sees scored; archetypes
+     are the review lenses named on the judges strip. */
+  var DIM_ICONS = { innovation: "💡", impact: "🎯", execution: "🛠️", presentation: "🎤" };
+  var ARCHETYPE_ICONS = { innovation: "💡", craft: "🛠️", impact: "🎯" };
+  /* Scores are revealed in public, so the room can read what each dimension
+     measured and how much it counted. Wording and weights come straight from
+     config/rubric.json, so what is shown is what was scored. */
   function lensLegendHTML() {
-    return '<div class="lens-legend">' + LENSES.map(function (L) {
-      return "<div>" + LENS_ICONS[L] + " <b>" + esc(L) + "</b> — " + esc(LENS_DEFS[L]) + "</div>";
+    return '<div class="lens-legend">' + RUBRIC_DIMENSIONS.map(function (d) {
+      return "<div>" + (DIM_ICONS[d.id] || "•") + " <b>" + esc(d.name) + "</b> · " +
+        Math.round(d.weight * 100) + "% — " + esc(d.description) + "</div>";
     }).join("") + "</div>";
   }
   var JUDGE_TIMERS = [];
   function judgeLater(fn, ms) { JUDGE_TIMERS.push(setTimeout(fn, ms)); }
   function clearJudgeTimers() { JUDGE_TIMERS.forEach(clearTimeout); JUDGE_TIMERS = []; }
-  /* The strip names the rubric lens currently being examined. It never carries a
-     value, score, or rank — only which criterion the panel is looking at. */
+  /* The strip names the review lenses on the panel. It never carries a value,
+     score, or rank — only which lens is reading the work. The lenses are the
+     judges; the rubric dimensions they score are shown in the legend below. */
   function renderLensStrip() {
-    $("judgeLenses").innerHTML = LENSES.map(function (L) {
-      return '<span class="jlens">' + (LENS_ICONS[L] || "•") + " " + esc(L) + ' <b class="jl-tick">✓</b></span>';
+    $("judgeLenses").innerHTML = JUDGE_ARCHETYPES.map(function (a) {
+      return '<span class="jlens" title="' + esc(a.focus) + '">' + (ARCHETYPE_ICONS[a.id] || "•") + " " + esc(a.name) + ' <b class="jl-tick">✓</b></span>';
     }).join("");
   }
   function runJudgeSequence() {
@@ -2370,33 +2411,37 @@ var QRClean = (function () {
     { cls: "third", place: "Third place", name: "Builder Bronze", rosette: "🥉" }
   ];
   function whyText(rank, sc) {
-    var lens = sc.topLens, v = sc.per[sc.topLens].toFixed(1);
-    var lead = { 0: "Strongest overall consensus at " + sc.total.toFixed(1) + "/30", 1: "A close, well-rounded second at " + sc.total.toFixed(1) + "/30", 2: "Rounded out the podium at " + sc.total.toFixed(1) + "/30" }[rank];
-    return lead + " — the panel scored it highest on " + lens.toLowerCase() + " (" + v + "/10).";
+    var name = dimName(sc.topDim), v = sc.per[sc.topDim].toFixed(1);
+    var lead = { 0: "Strongest overall consensus at " + sc.total.toFixed(2) + "/10", 1: "A close, well-rounded second at " + sc.total.toFixed(2) + "/10", 2: "Rounded out the podium at " + sc.total.toFixed(2) + "/10" }[rank];
+    return lead + " — the panel scored it highest on " + name.toLowerCase() + " (" + v + "/10).";
   }
-  function lowLens(sc) { return Object.keys(sc.per).sort(function (a, b) { return sc.per[a] - sc.per[b]; })[0]; }
   function levelUp(e, sc) {
-    var low = lowLens(sc), v = sc.per[low].toFixed(1);
-    var movesByLens = {
-      "Innovation": [
+    var low = sc.lowDim, v = sc.per[low].toFixed(1);
+    var movesByDim = {
+      innovation: [
         "push the one bolder idea the demo only hints at and cut the safe filler",
         "show the angle no other project tried — lead the README with it",
         "turn the cleverest ten seconds of the demo into the headline feature"
       ],
-      "Build Quality": [
+      execution: [
         "add tests around the core path and tidy the README’s first screen",
         "handle the top error case on-camera and smooth one rough edge",
         "get CI green and pin setup to a single copy-paste command"
       ],
-      "Impact": [
+      impact: [
         "show the before/after for one real user so the win is undeniable",
         "put a number on the outcome — time saved, errors caught, dollars",
         "name the exact person this helps and open the demo on their pain"
+      ],
+      presentation: [
+        "open on the problem, not the architecture — earn the demo in ten seconds",
+        "cut the setup and start the demo already running so nothing waits",
+        "end on one sentence anyone in the room could repeat afterwards"
       ]
     };
-    var opts = movesByLens[low] || ["sharpen the demo’s single clearest win"];
+    var opts = movesByDim[low] || ["sharpen the demo’s single clearest win"];
     var move = opts[hash((e && e.link || "") + "|" + low) % opts.length];
-    return low + " is its lowest lens at " + v + "/10 — " + move + ".";
+    return dimName(low) + " is its lowest dimension at " + v + "/10 — " + move + ".";
   }
   function lensBar(name, val) {
     var w = Math.max(8, Math.min(100, Math.round(val / 10 * 100)));
@@ -2425,8 +2470,8 @@ var QRClean = (function () {
     $("podium").innerHTML = visual.map(function (r, i) { return r ? awardCard(rankOf[i], r) : ""; }).join("");
     /* "How the panel decided" — the method + supporting data behind the result */
     var methodStats = [
-      ["Rubric", "Innovation · Build Quality · Impact"],
-      ["How scores combined", "Median consensus of a 3-panel GitHub Copilot CLI review"],
+      ["Rubric", "Innovation 30% · Potential Impact 25% · Technical Execution 25% · Clarity and Demo 20%"],
+      ["How scores combined", "Weighted median consensus of a 3-lens GitHub Copilot CLI review"],
       ["Projects reviewed", String(state.entries.length)],
       ["GitHub Copilot panel calls", String(state.calls || 0)]
     ];
@@ -2503,9 +2548,9 @@ var QRClean = (function () {
     var el = $("fullResults"); if (!el) return;
     var rows = ranked.map(function (r, i) {
       var place = i + 1, medal = place === 1 ? "🏆" : place === 2 ? "🥈" : place === 3 ? "🥉" : "#" + place;
-      var lensCells = LENSES.map(function (L) {
-        var v = r.sc.per[L], w = Math.max(8, Math.min(100, Math.round(v / 10 * 100)));
-        return '<div class="fr-lens"><span class="fr-lname">' + esc(L) + '</span><span class="fr-lbar"><i style="width:' + w + '%"></i></span><span class="fr-lval">' + v.toFixed(1) + "</span></div>";
+      var lensCells = RUBRIC_DIMENSIONS.map(function (d) {
+        var v = r.sc.per[d.id], w = Math.max(8, Math.min(100, Math.round(v / d.max_score * 100)));
+        return '<div class="fr-lens"><span class="fr-lname">' + esc(d.name) + '</span><span class="fr-lbar"><i style="width:' + w + '%"></i></span><span class="fr-lval">' + v.toFixed(1) + "</span></div>";
       }).join("");
       var url = safeURL(r.e.link);
       var linkHTML = url ? ' · <a class="fr-link" href="' + esc(url) + '" target="_blank" rel="noopener noreferrer">🔗 ' + esc(shortLink(r.e.link)) + "</a>" : "";
@@ -2515,13 +2560,13 @@ var QRClean = (function () {
         '<div class="fr-main"><div class="fr-proj">' + esc(r.e.proj) + "</div>" +
         '<div class="fr-team">👥 ' + esc(r.e.team || "Project team") + linkHTML + "</div>" + descHTML + "</div>" +
         '<div class="fr-lenses">' + lensCells + "</div>" +
-        '<div class="fr-total">' + r.sc.total.toFixed(1) + "<span>/30</span></div>" +
+        '<div class="fr-total">' + r.sc.total.toFixed(2) + "<span>/10</span></div>" +
         "</div>";
     }).join("");
     el.innerHTML = '<div class="op-t">Full results · every project, ranked by median consensus</div>' +
       '<div class="fr-list">' + rows + "</div>" +
       lensLegendHTML() +
-      '<p class="fr-note">Every accepted project is scored on the same rubric — Innovation, Build Quality &amp; Impact — each combined by the median consensus of a GitHub Copilot CLI panel, then summed to a score out of 30. Practice showcase · illustrative results.</p>';
+      '<p class="fr-note">Every accepted project is scored on the same four rubric dimensions. Three review lenses — Innovation, Build quality and Impact — each read every project, their scores are combined by median consensus, then weighted into one total out of 10. Practice showcase · illustrative results.</p>';
   }
   function renderSparkles(intense) {
     var el = $("sparkles"); if (!el) return;
@@ -2537,7 +2582,7 @@ var QRClean = (function () {
   }
   function awardCard(rank, r) {
     var m = AWARD_META[rank], e = r.e, sc = r.sc;
-    var lensHTML = LENSES.map(function (L) { return lensBar(L, sc.per[L]); }).join("");
+    var lensHTML = RUBRIC_DIMENSIONS.map(function (d) { return lensBar(d.name, sc.per[d.id]); }).join("");
     return '<div class="award ' + m.cls + '" data-rank="' + rank + '">' +
       '<div class="rosette">' + m.rosette + "</div>" +
       '<div class="place">' + m.place + "</div>" +
@@ -2547,7 +2592,7 @@ var QRClean = (function () {
       '<div class="lens-block">' + lensHTML + "</div>" +
       '<div class="why"><b>Why it placed:</b> ' + whyText(rank, sc) + "</div>" +
       '<div class="uplift"><b>Level up:</b> ' + levelUp(e, sc) + "</div>" +
-      '<div class="consensus">🤝 Panel consensus ' + sc.total.toFixed(1) + "/30 · median</div>" +
+      '<div class="consensus">🤝 Panel consensus ' + sc.total.toFixed(2) + "/10 · weighted median</div>" +
       "</div>";
   }
 
