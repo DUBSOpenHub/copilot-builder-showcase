@@ -88,6 +88,14 @@
   repository context plus explicit builder-provided evidence.
 - Preserve historic rubric-only bundle readability.
 - Replay must use stored artifacts only and never call a model.
+- Keep every run isolated. Concurrent showcases — including two tabs in one
+  browser — must never share a room, storage key, or reveal timer, and a screen
+  must stay on the run it is presenting across a refresh.
+- Scope every delayed effect to the run that scheduled it. A restart must cancel
+  the previous run's timers, and no beat from an abandoned run may reveal an
+  award, podium, or result in the new one.
+- A transient relay failure must not end phone submissions for the rest of a
+  showcase. Retry before declaring the room unusable.
 - Do not weaken write-once artifacts, hash seals, run-ID validation, or safe
   archive extraction.
 

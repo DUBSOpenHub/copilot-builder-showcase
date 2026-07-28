@@ -28,8 +28,7 @@ Paste the links, activate the panel, reveal the winners — in under two minutes
 > 1. Open a terminal.
 > 2. On macOS or Linux, paste:
 >    ```bash
->    bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
->      -H "Accept: application/vnd.github.raw+json" | bash'
+>    curl -fsSL https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.sh | bash
 >    ```
 >    On Windows, use the PowerShell command in [Install](#install).
 > 3. Type:
@@ -39,7 +38,9 @@ Paste the links, activate the panel, reveal the winners — in under two minutes
 >    If that command is not on your PATH yet, run `~/.local/bin/showcase` on macOS/Linux or `$HOME\.local\bin\showcase.exe` on Windows.
 > 4. Paste project or demo links, one per line. Press Return on an empty line.
 >
-> *Requires Git and Python 3.11+ for practice installs. The one-line install prefers an authenticated GitHub CLI when available. Official judging uses an authenticated GitHub Copilot CLI.*
+> *Requires Git and Python 3.11+ for practice installs — no GitHub login needed. Official judging uses an authenticated GitHub Copilot CLI.*
+
+**Which one are you?** [🎤 Running a workshop](#-im-running-a-workshop) · [🧪 Just want to see it work](#-i-just-want-to-see-it-work) · [🛠️ Official judging or customizing](#-i-want-official-judging-or-to-customize)
 
 ---
 
@@ -69,8 +70,11 @@ It gives any session the energy and resolution of a judged finale, without recru
 - **Bring the room in.** One operator-confirmed audience cue — a countdown, a champion pose, a suspense freeze — right before the reveal. Nothing is revealed until you confirm.
 - **Land the podium.** Third, second, then the first-place GitHub Copilot Builder Award, with per-lens panel scores revealed only now.
 - **Keep the work.** Recap, private per-project feedback, validation, export, and replay are saved together. Top-three growth cards follow the awards.
+- **Recover without a reload.** A ↺ Restart control on the big screen stops a wedged showcase and starts a clean one — for a bad link, a stalled panel, or the wrong room — with no page reload in front of an audience.
 
 The whole thing runs in one visible Terminal, with a big-screen web view for the room. It never auto-opens a second window.
+
+**Running more than one room at once?** Every showcase gets its own run and its own QR room, so parallel sessions never collide — even two tabs in one browser. Each screen stays on the showcase it is presenting, and a refresh returns to that same run rather than to whichever room started most recently.
 
 ---
 
@@ -162,18 +166,13 @@ This hidden review stays sealed until the awards stage, never changes public sco
 **macOS or Linux**
 
 ```bash
-bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
-  -H "Accept: application/vnd.github.raw+json" | bash'
+curl -fsSL https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.sh | bash
 ```
 
 **Windows PowerShell**
 
 ```powershell
-$installer = Join-Path $env:TEMP "install-copilot-builder-showcase.ps1"
-gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.ps1 `
-  -H "Accept: application/vnd.github.raw+json" > $installer
-if ($LASTEXITCODE -ne 0) { throw "Installer download failed." }
-powershell -ExecutionPolicy Bypass -File $installer
+irm https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.ps1 | iex
 ```
 
 Then run:
@@ -200,7 +199,7 @@ The installer:
 **macOS or Linux**
 
 ```bash
-gh repo clone DUBSOpenHub/copilot-builder-showcase
+git clone https://github.com/DUBSOpenHub/copilot-builder-showcase.git
 cd copilot-builder-showcase
 bash install.sh
 ```
@@ -208,7 +207,7 @@ bash install.sh
 **Windows PowerShell**
 
 ```powershell
-gh repo clone DUBSOpenHub/copilot-builder-showcase
+git clone https://github.com/DUBSOpenHub/copilot-builder-showcase.git
 Set-Location copilot-builder-showcase
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
@@ -428,6 +427,12 @@ The skill checks whether the command is installed, asks permission before instal
 ---
 
 ## FAQ
+
+**Can several rooms run at the same time?**
+Yes. Each showcase gets its own run and its own QR room, so parallel sessions never mix entries — including two tabs in one browser. A screen stays on the run it is presenting, so refreshing mid-showcase returns to that run rather than to whichever one started most recently.
+
+**Something wedged mid-showcase. Do I have to reload?**
+No. Use the ↺ Restart control on the big screen. It stops the current run and opens a clean one — new room, new QR — without a page reload in front of the audience. Phone submissions also survive a rate-limited relay: those calls retry with backoff instead of failing the run.
 
 **Do I need an API key?**
 No separate API key is required. The practice showcase is local and illustrative; an Official GitHub Copilot Panel uses your authenticated GitHub Copilot CLI subscription.

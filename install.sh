@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # GitHub Copilot Builder Showcase installer.
 # One-command install:
-# bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
-#   -H "Accept: application/vnd.github.raw+json" | bash'
+# curl -fsSL https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.sh | bash
 
 set -euo pipefail
 

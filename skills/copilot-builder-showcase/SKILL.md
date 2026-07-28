@@ -59,18 +59,13 @@ If it is missing:
 4. When approved on macOS or Linux, run:
 
    ```bash
-   bash -o pipefail -c 'gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.sh \
-     -H "Accept: application/vnd.github.raw+json" | bash'
+   curl -fsSL https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.sh | bash
    ```
 
    On Windows PowerShell, run:
 
    ```powershell
-   $installer = Join-Path $env:TEMP "install-copilot-builder-showcase.ps1"
-   gh api repos/DUBSOpenHub/copilot-builder-showcase/contents/install.ps1 `
-     -H "Accept: application/vnd.github.raw+json" > $installer
-   if ($LASTEXITCODE -ne 0) { throw "Installer download failed." }
-   powershell -ExecutionPolicy Bypass -File $installer
+   irm https://raw.githubusercontent.com/DUBSOpenHub/copilot-builder-showcase/main/install.ps1 | iex
    ```
 
 5. Use the absolute launcher for the current run even if the shell has not
@@ -79,9 +74,10 @@ If it is missing:
 6. Run the absolute launcher with `doctor`. If it fails, stop and report the
    specific setup issue before accepting projects.
 
-The install command requires an authenticated GitHub CLI. If `gh auth status`
-fails, stop and tell the user to run `gh auth login`; never request or handle a
-token directly.
+The install command needs Git and Python 3.11+, not a GitHub login. The
+repository is public, so the installer downloads over plain HTTPS. It still
+prefers an authenticated GitHub CLI for the clone when one happens to be
+available. Never request or handle a token directly.
 
 If installation is declined, provide the install command and stop. Never change
 shell profiles automatically.
@@ -102,6 +98,29 @@ an unnamed entry as `<repository owner> team`. Generic links are never fetched
 during intake; derive a safe project label and use `Project team` when no team is
 supplied. Never infer GitHub Copilot or frontier use from a link, code, metadata, or a
 judge impression. Missing evidence stays `not provided`.
+
+## Big screen and phone submissions
+
+There are two surfaces. The Terminal runs the showcase; a big-screen web view
+gives the room something to watch. Never auto-open a browser — offer the link
+and let the operator put it on the projector.
+
+- The published big screen is <https://dubsopenhub.github.io/copilot-builder-showcase/>.
+- The room can submit by phone: the big screen shows a QR that opens a short
+  form. Projects land on the board as they arrive, alongside pasted links.
+- Phone submissions need a publicly reachable address. A `file://` or
+  `localhost` page cannot be scanned by someone else's phone, and the big
+  screen says so instead of showing a dead QR.
+- Mention the QR when the organizer expects the room to contribute; pasted
+  links alone are still a complete showcase.
+
+If a showcase wedges — a bad link, a stalled panel, the wrong room — tell the
+operator to use the ↺ Restart control on the big screen. It opens a clean run
+with a new room and QR, with no page reload in front of the audience.
+
+Rooms are isolated per run, so several showcases can run at once without mixing
+entries. Never tell an organizer to wait their turn or to use a separate
+browser.
 
 ## Result status
 
