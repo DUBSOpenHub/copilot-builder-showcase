@@ -446,6 +446,19 @@ No. Generic non-GitHub links are not fetched during intake. GitHub repository li
 **How are winners chosen?**
 The panel scores the declared rubric, official model responses are combined by median consensus, and recognitions follow their declared dimensions and tie policy.
 
+**What do the three lenses mean?**
+Every project is read through the same three, and each is worth up to 10 points:
+
+| Lens | What it measures |
+| --- | --- |
+| 💡 **Innovation** | Originality, problem framing, and useful creative choices. |
+| 🛠️ **Build Quality** | Technical execution, completeness, and thoughtful implementation. |
+| 🎯 **Impact** | User value, feasibility, and the strength of the demo story. |
+
+Impact is the one people ask about most, so it is worth saying plainly: it is not "how big could this company get." It asks whether the project solves a real problem for someone you can name, whether it could plausibly work, and whether the demo made that case. A tiny tool that clearly saves one team an hour a week can out-score a grand idea nobody showed working.
+
+These definitions come from [`config/rubric.json`](config/rubric.json), which is also what the judges are given — so what the room is shown is exactly what was measured. Custom events can declare their own dimensions and weights in an EventSpec.
+
 **What does the hidden Shadow review do?**
 It independently checks review quality and possible failure modes. It can warn the organizer, but it cannot change scores, rankings, or awards.
 

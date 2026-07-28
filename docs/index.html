@@ -600,6 +600,11 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .fr-total { font-size: 21px; font-weight: 800; text-align: right; white-space: nowrap; }
 .fr-total span { font-size: 11px; font-weight: 700; color: var(--cp-text-soft); }
 .fr-note { font-size: 12px; color: var(--cp-text-soft); margin-top: 13px; line-height: 1.5; }
+/* Scores are revealed in public, so the room needs to be able to read what each
+   lens actually measured. The wording is the rubric's own (config/rubric.json). */
+.lens-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; }
+.lens-legend div { font-size: 12px; color: var(--cp-text-soft); line-height: 1.45; }
+.lens-legend b { color: var(--cp-text-muted); font-weight: 700; }
 @media (max-width: 760px) {
   .fr-row { grid-template-columns: 34px 1fr auto; }
   .fr-lenses { grid-column: 1 / -1; }
@@ -1004,6 +1009,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <span class="badge"><span class="badge-dot"></span> GitHub Copilot judging panel</span>
           <h3>Reviewing every project…</h3>
           <div class="sub">One shared rubric — Innovation, Build Quality, Impact — combined by median consensus of a GitHub Copilot CLI panel. Scores stay sealed.</div>
+          <div id="panelLegend"></div>
           <div class="panel-judges" id="panelJudges"></div>
           <canvas id="deliberate" class="deliberate" aria-hidden="true"></canvas>
           <div class="progress"><i id="judgeBar"></i></div>
@@ -2214,6 +2220,18 @@ var QRClean = (function () {
   var JUDGE_FLOOR_MS = 1500;        /* never faster than this, however big the field */
   var JUDGE_PASS_TARGET_MS = 26000; /* soft target for the whole judging pass */
   var LENS_ICONS = { "Innovation": "💡", "Build Quality": "🛠️", "Impact": "🎯" };
+  /* What each lens measures, worded exactly as config/rubric.json states it, so the
+     definition the panel judges against is the definition the room is shown. */
+  var LENS_DEFS = {
+    "Innovation": "originality, problem framing, and useful creative choices",
+    "Build Quality": "technical execution, completeness, and thoughtful implementation",
+    "Impact": "user value, feasibility, and the strength of the demo story"
+  };
+  function lensLegendHTML() {
+    return '<div class="lens-legend">' + LENSES.map(function (L) {
+      return "<div>" + LENS_ICONS[L] + " <b>" + esc(L) + "</b> — " + esc(LENS_DEFS[L]) + "</div>";
+    }).join("") + "</div>";
+  }
   var JUDGE_TIMERS = [];
   function judgeLater(fn, ms) { JUDGE_TIMERS.push(setTimeout(fn, ms)); }
   function clearJudgeTimers() { JUDGE_TIMERS.forEach(clearTimeout); JUDGE_TIMERS = []; }
@@ -2502,6 +2520,7 @@ var QRClean = (function () {
     }).join("");
     el.innerHTML = '<div class="op-t">Full results · every project, ranked by median consensus</div>' +
       '<div class="fr-list">' + rows + "</div>" +
+      lensLegendHTML() +
       '<p class="fr-note">Every accepted project is scored on the same rubric — Innovation, Build Quality &amp; Impact — each combined by the median consensus of a GitHub Copilot CLI panel, then summed to a score out of 30. Practice showcase · illustrative results.</p>';
   }
   function renderSparkles(intense) {
@@ -2658,6 +2677,7 @@ var QRClean = (function () {
     else renderSubmit();
   }
   function boot() {
+    var pl = $("panelLegend"); if (pl) { pl.innerHTML = lensLegendHTML(); }
     var h = (location.hash || "").toLowerCase();
     if (h.indexOf("submit") !== -1) { routeSubmit(); }
     else if (h.indexOf("stage") !== -1 && state.status !== "idle") { enterStage(); }
