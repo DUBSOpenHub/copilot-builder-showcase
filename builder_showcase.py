@@ -7893,11 +7893,15 @@ def cmd_validate(args: argparse.Namespace, _gateway: Optional[Any] = None,
             failures.append(f"INVALID HASH LINE: {line}")
             continue
         stored_hash, rel_path = parts
-        if rel_path in stored_paths:
+        # Bundles sealed by older Windows builds recorded "evidence\HASHES". The SEAL is
+        # computed over the raw HASHES bytes above and is never rewritten here; only the
+        # lookup/comparison spelling is canonicalised, so those bundles stay readable.
+        lookup_path = rel_path.replace("\\", "/")
+        if lookup_path in stored_paths:
             failures.append(f"DUPLICATE HASH PATH: {rel_path}")
             continue
-        stored_paths.add(rel_path)
-        artifact_path = (bundle_path / rel_path).resolve()
+        stored_paths.add(lookup_path)
+        artifact_path = (bundle_path / lookup_path).resolve()
         try:
             artifact_path.relative_to(bundle_path.resolve())
         except ValueError:

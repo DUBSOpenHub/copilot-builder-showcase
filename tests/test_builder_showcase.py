@@ -963,6 +963,54 @@ class TestBundleIO:
         assert (tmp_path / "SEAL").exists()
         assert seal == hashlib.sha256(hashes_content.encode()).hexdigest()
 
+    def _legacy_windows_bundle(self, tmp_path):
+        """Build a bundle sealed the way pre-fix Windows builds wrote it (backslashes)."""
+        (tmp_path / "manifest").mkdir()
+        (tmp_path / "manifest" / "bundle.json").write_text('{"run_id": "test"}')
+        (tmp_path / "evidence").mkdir()
+        (tmp_path / "evidence" / "data.json").write_text('{"a": 1}')
+        cbp.write_hashes_and_seal(tmp_path)
+        lines = []
+        for line in (tmp_path / "HASHES").read_text().splitlines():
+            digest, rel = line.split("  ", 1)
+            lines.append(digest + "  " + rel.replace("/", "\\"))
+        content = "\n".join(lines) + "\n"
+        for name in ("HASHES", "SEAL"):
+            os.chmod(tmp_path / name, 0o600)
+        (tmp_path / "HASHES").write_text(content)
+        (tmp_path / "SEAL").write_text(hashlib.sha256(content.encode()).hexdigest())
+        return argparse.Namespace(bundle=str(tmp_path))
+
+    def test_validate_reads_legacy_windows_seal_paths(self, tmp_path):
+        """Bundles sealed by older Windows builds must stay verifiable (write-once)."""
+        args = self._legacy_windows_bundle(tmp_path)
+        assert cbp.cmd_validate(args) == 0
+
+    def test_legacy_windows_bundle_still_detects_tamper(self, tmp_path):
+        """Canonicalising the separator must not weaken tamper detection."""
+        args = self._legacy_windows_bundle(tmp_path)
+        os.chmod(tmp_path / "evidence" / "data.json", 0o600)
+        (tmp_path / "evidence" / "data.json").write_text('{"a": 666}')
+        assert cbp.cmd_validate(args) == 5
+
+    def test_legacy_windows_bundle_still_detects_extra_artifact(self, tmp_path):
+        args = self._legacy_windows_bundle(tmp_path)
+        (tmp_path / "evidence" / "sneaky.json").write_text("{}")
+        assert cbp.cmd_validate(args) == 5
+
+    def test_ambiguous_duplicate_seal_paths_rejected(self, tmp_path):
+        """The same artifact spelled both ways is ambiguous and must fail."""
+        args = self._legacy_windows_bundle(tmp_path)
+        lines = (tmp_path / "HASHES").read_text().splitlines()
+        digest, rel = lines[0].split("  ", 1)
+        lines.append(digest + "  " + rel.replace("\\", "/"))
+        content = "\n".join(lines) + "\n"
+        for name in ("HASHES", "SEAL"):
+            os.chmod(tmp_path / name, 0o600)
+        (tmp_path / "HASHES").write_text(content)
+        (tmp_path / "SEAL").write_text(hashlib.sha256(content.encode()).hexdigest())
+        assert cbp.cmd_validate(args) == 5
+
     def test_hash_seal_write_once_enforced(self, tmp_path):
         (tmp_path / "manifest").mkdir()
         (tmp_path / "manifest" / "bundle.json").write_text('{"run_id": "test"}')

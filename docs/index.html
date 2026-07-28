@@ -2071,7 +2071,9 @@ var QRClean = (function () {
     cv.classList.remove("on");
   }
   function resetStageUI() {
-    stopHeroTimer(); delibStop(); stopConfetti();
+    stopHeroTimer(); delibStop(); stopConfetti(); clearFxTimers();
+    if (REVEAL.timer) { clearTimeout(REVEAL.timer); REVEAL.timer = null; }
+    REVEAL.step = 0; REVEAL.mode = null;
     $("cueOverlay").classList.remove("on"); $("judging").classList.remove("on"); $("podiumWrap").classList.remove("on"); $("podiumRays").classList.remove("on"); $("confetti").classList.remove("on"); $("revealCue").classList.remove("on");
   }
 
@@ -2182,9 +2184,22 @@ var QRClean = (function () {
      presses "Reveal the winners", then each place is revealed by a button press,
      so the room sets the pace. Reduced motion still shows the podium at once. */
   var FX_TIMER = null;
+  /* Reveal beats must never outlive their run. A restart mid-countdown used to let the
+     old chain finish and announce a winner against the new, still-open run. */
+  var FX_TIMERS = [];
+  function fxTimeout(fn, ms) {
+    var myRun = state.runId;
+    var id = setTimeout(function () {
+      if (state.runId !== myRun) return;
+      fn();
+    }, ms);
+    FX_TIMERS.push(id);
+    return id;
+  }
+  function clearFxTimers() { FX_TIMERS.forEach(clearTimeout); FX_TIMERS = []; clearTimeout(FX_TIMER); FX_TIMER = null; }
   function runCountdown(onDone) {
     if (reduceMotion) { onDone(); return; }
-    clearTimeout(FX_TIMER);
+    clearFxTimers();
     var ov = $("cueOverlay"), big = $("cueBig");
     ov.classList.add("on");
     var seq = [
@@ -2202,7 +2217,7 @@ var QRClean = (function () {
       cueBurst(i);
       if (i < 3) playTick();
       i++;
-      setTimeout(tick, i >= seq.length ? 760 : 900);
+      fxTimeout(tick, i >= seq.length ? 760 : 900);
     })();
   }
   function startReveal() { if (state.status !== "judging") return; reveal(); }
@@ -2379,9 +2394,9 @@ var QRClean = (function () {
     victoryFanfare();
     $("revealBar").classList.remove("on");
     pushFeed("🏆 The GitHub Copilot Builder Award goes to “" + (ranked[0] ? ranked[0].e.proj : "the winner") + "”.");
-    setTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : 400);
-    setTimeout(function () { $("fullResults").classList.add("show"); }, reduceMotion ? 0 : 700);
-    setTimeout(function () { $("podiumActions").classList.add("on"); }, reduceMotion ? 0 : 950);
+    fxTimeout(function () { $("growth").classList.add("show"); }, reduceMotion ? 0 : 400);
+    fxTimeout(function () { $("fullResults").classList.add("show"); }, reduceMotion ? 0 : 700);
+    fxTimeout(function () { $("podiumActions").classList.add("on"); }, reduceMotion ? 0 : 950);
   }
   function shortLink(u) { try { var p = new URL(u, location.href); return (p.hostname + p.pathname).replace(/\/$/, "").replace(/^www\./, ""); } catch (e) { return String(u || ""); } }
   function renderFullResults(ranked) {
