@@ -2605,12 +2605,17 @@ var QRClean = (function () {
   }
   function renderSubmitInto(container, ctx, opts) {
     opts = opts || {};
-    if (state.status !== "open") { ctx.done = false; ctx.entry = null; container.innerHTML = closedMarkup(); return; }
+    /* Anyone who already got in keeps their confirmation even after the room closes.
+       Replacing it with "submissions are closed" reads as "you missed the cutoff" to the
+       one person who did not: their project is in, and they should be able to see that.
+       Checked before the closed test on purpose. "Add another" clears the confirmation
+       and falls through to the closed notice, which is the honest answer by then. */
     if (ctx.done && ctx.entry) {
       container.innerHTML = successMarkup(ctx.entry);
       var ag = container.querySelector(".js-again"); if (ag) ag.addEventListener("click", function () { ctx.done = false; ctx.entry = null; renderSubmitInto(container, ctx, opts); });
       return;
     }
+    if (state.status !== "open") { ctx.done = false; ctx.entry = null; container.innerHTML = closedMarkup(); return; }
     container.innerHTML = (opts.heading || "") + formFieldsMarkup();
     var form = container.querySelector("form"), fLink = container.querySelector(".js-flink"), inLink = container.querySelector(".js-link");
     form.addEventListener("submit", function (ev) {
