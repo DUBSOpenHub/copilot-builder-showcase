@@ -1283,12 +1283,44 @@ var QRClean = (function () {
   function accentLight() { var v = (getComputedStyle(root).getPropertyValue("--primary") || "265 85% 66%").trim().split(/\s+/); if (v.length >= 3) { var l = parseFloat(v[2]); return "hsl(" + v[0] + " " + v[1] + " " + Math.min(74, (isNaN(l) ? 50 : l) + 16) + "%)"; } return accentColor(); }
 
   /* ---- shared state ---- */
-  var STORE_KEY = "cbs_showcase_v1";
+  var STORE_KEY = "cbs_showcase_v1";   /* the most recent run — what a fresh tab or #submit discovers */
+  var RUN_PREFIX = "cbs_run_v1:";      /* one entry per run, so concurrent tabs never overwrite each other */
+  var RUNS_INDEX = "cbs_runs_v1";
+  var TAB_RUN_KEY = "cbs_tab_run_v1";  /* sessionStorage (per tab): the run THIS tab is presenting */
+  var RUNS_KEPT = 8;
   var CH = null; try { CH = ("BroadcastChannel" in window) ? new BroadcastChannel("cbs_showcase") : null; } catch (e) { CH = null; }
   var mem = null;
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  function lsDel(k) { try { localStorage.removeItem(k); } catch (e) {} }
+  function ssGet(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }
+  function ssSet(k, v) { try { if (v === null) sessionStorage.removeItem(k); else sessionStorage.setItem(k, v); } catch (e) {} }
+  function parseJSON(s) { try { return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+  function readRunIndex() { var a = parseJSON(lsGet(RUNS_INDEX)); return (a && typeof a.length === "number") ? a : []; }
+  /* Keep the last few runs and drop the rest, so a long workshop cannot fill storage. */
+  function rememberRun(runId) {
+    if (!runId) return;
+    var list = readRunIndex().filter(function (r) { return r !== runId; });
+    list.unshift(runId);
+    while (list.length > RUNS_KEPT) { lsDel(RUN_PREFIX + list.pop()); }
+    lsSet(RUNS_INDEX, JSON.stringify(list));
+  }
   function freshState() { return { status: "idle", mode: "live", runId: "", startedAt: 0, calls: 0, entries: [], room: "", podium: null, seeded: 0 }; }
-  function readState() { try { var s = localStorage.getItem(STORE_KEY); if (s) return JSON.parse(s); } catch (e) {} return mem; }
-  function writeState(st) { mem = st; try { localStorage.setItem(STORE_KEY, JSON.stringify(st)); } catch (e) {} }
+  function readState() {
+    /* A tab stays on the run it is presenting. Sharing one key meant two showcases in
+       one browser fought over it, and refreshing the first would resume the second and
+       lose the first run's submissions. */
+    var pinned = ssGet(TAB_RUN_KEY);
+    if (pinned) { var own = parseJSON(lsGet(RUN_PREFIX + pinned)); if (own) return own; }
+    return parseJSON(lsGet(STORE_KEY)) || mem;
+  }
+  function writeState(st) {
+    mem = st;
+    var body = JSON.stringify(st);
+    if (st && st.runId) { lsSet(RUN_PREFIX + st.runId, body); ssSet(TAB_RUN_KEY, st.runId); rememberRun(st.runId); }
+    else { ssSet(TAB_RUN_KEY, null); }
+    lsSet(STORE_KEY, body);
+  }
   var state = readState() || freshState();
   /* A demo is a rehearsal, not a record. Never restore one across a page load, so a
      refresh always lands on a clean start. A live showcase DOES resume — a real event
@@ -1297,7 +1329,10 @@ var QRClean = (function () {
      on the same browser as the host it shares this storage. Resetting there would wipe
      the run the presenter is currently showing. It must join the run, never restart it. */
   var IS_SUBMIT_VIEW = (location.hash || "").toLowerCase().indexOf("submit") !== -1;
-  if (state.mode === "demo" && !IS_SUBMIT_VIEW) { state = freshState(); writeState(state); }
+  if (state.mode === "demo" && !IS_SUBMIT_VIEW) {
+    if (state.runId) lsDel(RUN_PREFIX + state.runId);
+    state = freshState(); writeState(state);
+  }
   function save(opts) { writeState(state); try { if (CH) CH.postMessage({ t: "sync", s: state, from: TAB }); } catch (e) {} if (!(opts && opts.silent)) {} }
   var TAB = Math.random().toString(36).slice(2);
 
@@ -1393,7 +1428,10 @@ var QRClean = (function () {
     }
   }
   if (CH) CH.onmessage = function (ev) { if (ev && ev.data && ev.data.t === "sync" && ev.data.from !== TAB && ev.data.s) onRemote(ev.data.s); };
-  window.addEventListener("storage", function (ev) { if (ev.key === STORE_KEY) { var s = readState(); if (s) onRemote(s); } });
+  window.addEventListener("storage", function (ev) {
+    if (!ev.key) return;
+    if (ev.key === STORE_KEY || ev.key.indexOf(RUN_PREFIX) === 0) { var s = readState(); if (s) onRemote(s); }
+  });
 
   /* ---- URLs ---- */
   function isFileOrigin() { return location.protocol === "file:"; }
@@ -1601,8 +1639,24 @@ var QRClean = (function () {
     return "";
   }
   /* read-modify-write with ETag; retries on 412 (someone else wrote first) */
+  /* jsonblob rate-limits bursts with HTTP 429. A transient limit must not take phone
+     submissions down for the rest of the showcase, so retry with backoff and only give
+     up once the retries are spent. Rapid restarts during a rehearsal are the usual
+     trigger, and each one creates a fresh room. */
+  function relayFetch(url, opts, tries) {
+    tries = (tries === undefined) ? 3 : tries;
+    return fetch(url, opts).then(function (r) {
+      if (r && (r.status === 429 || r.status >= 500) && tries > 0) {
+        var wait = 800 * Math.pow(2, 3 - tries) + Math.floor(Math.random() * 400);
+        return new Promise(function (go) { setTimeout(go, wait); }).then(function () {
+          return relayFetch(url, opts, tries - 1);
+        });
+      }
+      return r;
+    });
+  }
   function relayRMW(room, mutate, tries) {
-    return fetch(relayItemURL(room)).then(function (r) {
+    return relayFetch(relayItemURL(room)).then(function (r) {
       if (!r || !r.ok) throw new Error("get " + (r && r.status));
       var etag = ""; try { etag = (r.headers && r.headers.get("ETag")) || ""; } catch (e) {}
       return r.json().then(function (doc) { return { doc: doc || {}, etag: etag }; });
@@ -1611,7 +1665,7 @@ var QRClean = (function () {
       if (next === null) return null;
       var headers = { "Content-Type": "application/json" };
       if (cur.etag) headers["If-Match"] = cur.etag;
-      return fetch(relayItemURL(room), { method: "PUT", headers: headers, body: JSON.stringify(next) }).then(function (pr) {
+      return relayFetch(relayItemURL(room), { method: "PUT", headers: headers, body: JSON.stringify(next) }).then(function (pr) {
         if (pr && pr.status === 412 && tries > 1) return relayRMW(room, mutate, tries - 1);
         if (!pr || !pr.ok) throw new Error("put " + (pr && pr.status));
         return pr;
@@ -1634,7 +1688,7 @@ var QRClean = (function () {
     RELAY.creating = true; state.room = ""; RELAY.failed = false; save();
     if (view === "stage") drawStageQR();
     var doc = { v: 1, status: "open", runId: state.runId, mode: state.mode, startedAt: state.startedAt, at: Date.now(), entries: {} };
-    fetch(RELAY.base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc) }).then(function (r) {
+    relayFetch(RELAY.base, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(doc) }).then(function (r) {
       if (!r || !r.ok) throw new Error("create " + (r && r.status));
       var id = relayReadId(r);
       if (!id) throw new Error("noid");
@@ -1665,7 +1719,7 @@ var QRClean = (function () {
   }
   function relayPollOnce(room) {
     if (state.room !== room) return Promise.resolve();
-    return fetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) {
+    return relayFetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) {
       if (!doc || state.room !== room) return;
       var ents = doc.entries || {};
       Object.keys(ents).forEach(function (rid) { mergeRemoteEntry(rid, ents[rid], false); });
@@ -1673,7 +1727,7 @@ var QRClean = (function () {
   }
   /* phone: read status / append an entry */
   function relayGetMeta(room) {
-    return fetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) { return doc ? { status: doc.status || "idle" } : null; });
+    return relayFetch(relayItemURL(room)).then(function (r) { return (r && r.ok) ? r.json() : null; }).then(function (doc) { return doc ? { status: doc.status || "idle" } : null; });
   }
   function relayPushEntry(room, entry) {
     var rid = "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -1782,6 +1836,10 @@ var QRClean = (function () {
       pushFeed(m === "demo"
         ? "Demo showcase — illustrative sample projects will roll in."
         : "Showcase is open — paste your project links or let the room scan in.");
+    } else {
+      /* Resuming: pin this tab to the run it just adopted, so a later refresh comes
+         back here even if another tab has started a different showcase since. */
+      writeState(state);
     }
     enterStage();
     if (state.mode === "demo" && state.status === "open" && state.entries.length === 0 && !seedRunning) scheduleSeed();
