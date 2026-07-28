@@ -206,10 +206,14 @@ button { font-family: inherit; cursor: pointer; }
 .gh-mark svg { fill: currentColor; width: 100%; height: 100%; }
 
 /* ---------- repo corner badge (source backlink, upper-right) ---------- */
+/* Icon-only source link. Landing pages put a bare GitHub mark here — Tailwind,
+   Bun, Vite and Astro all do, and shadcn only adds a star count. Spelling out
+   "View the repo" over the full owner/repo slug made a 327px two-line slab out
+   of the page's most minor action. */
 .repo-corner {
   position: fixed; top: 15px; right: 18px; z-index: 70;
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 8px 13px 8px 11px; border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 11px;
   background: var(--cp-panel-strong); border: 1px solid var(--cp-border);
   color: var(--cp-text); text-decoration: none;
   box-shadow: 0 0 2px rgba(0,0,0,.12), 0 10px 24px -12px rgba(0,0,0,.5);
@@ -220,13 +224,9 @@ button { font-family: inherit; cursor: pointer; }
 .repo-corner:focus-visible { border-color: var(--cp-accent); }
 .repo-corner .gh-mark { width: 21px; height: 21px; color: var(--cp-text); flex: none; }
 .repo-corner:hover .gh-mark { color: var(--cp-accent); }
-.repo-corner .rc-text { display: flex; flex-direction: column; line-height: 1.16; }
-.repo-corner .rc-top { font-size: 10px; font-weight: 800; letter-spacing: .13em; text-transform: uppercase; color: var(--cp-text-soft); }
-.repo-corner:hover .rc-top { color: var(--cp-accent); }
-.repo-corner .rc-repo { font-size: 12.5px; font-weight: 700; color: inherit; font-family: Consolas, "Courier New", Courier, monospace; }
 @media (max-width: 780px) {
-  .repo-corner { top: 11px; right: 11px; padding: 8px; gap: 0; border-radius: 10px; }
-  .repo-corner .rc-text { display: none; }
+  .repo-corner { top: 11px; right: 11px; width: 36px; height: 36px; border-radius: 10px; }
+  .repo-corner .gh-mark { width: 19px; height: 19px; }
 }
 @media (prefers-reduced-motion: reduce) { .repo-corner { transition: none; } .repo-corner:hover { transform: none; } }
 
@@ -793,9 +793,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 
 <!-- ============ MAIN APP / LANDING ============ -->
 <div id="app">
-  <a class="repo-corner" href="https://github.com/DUBSOpenHub/copilot-builder-showcase" target="_blank" rel="noopener" aria-label="View this project's source on GitHub: DUBSOpenHub/copilot-builder-showcase">
+  <a class="repo-corner" href="https://github.com/DUBSOpenHub/copilot-builder-showcase" target="_blank" rel="noopener" title="View the source on GitHub" aria-label="View this project's source on GitHub: DUBSOpenHub/copilot-builder-showcase">
     <span class="gh-mark"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></span>
-    <span class="rc-text"><span class="rc-top">View the repo</span><span class="rc-repo">DUBSOpenHub/copilot-builder-showcase</span></span>
   </a>
   <main class="wrap">
     <!-- HERO -->
