@@ -27,7 +27,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "docs" / "index.html"
-OUT = ROOT / "docs" / "images" / "social-card.png"
+OUT = ROOT / "docs" / "images" / "social-card-v2.png"
 
 WIDTH, HEIGHT = 1200, 630
 
@@ -61,55 +61,24 @@ body {{
   background: radial-gradient(closest-side, hsl(var(--primary) / .30), transparent 70%);
   filter: blur(20px);
 }}
-.glow-warm {{
-  position: absolute; bottom: -300px; left: 50%; transform: translateX(-50%);
-  width: 900px; height: 520px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(240,180,41,.16), transparent 70%);
-}}
 .inner {{ position: relative; }}
-.pill {{
-  display: inline-flex; align-items: center; gap: 10px;
-  font-size: 20px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
-  color: var(--cp-accent); background: var(--cp-accent-soft);
-  border: 1px solid hsl(var(--primary) / .45); border-radius: 999px; padding: 10px 22px;
-}}
 h1 {{
-  font-size: 66px; line-height: 1.06; font-weight: 800; letter-spacing: -.022em;
-  margin-top: 26px; max-width: 1010px;
+  font-size: 82px; line-height: 1.04; font-weight: 800; letter-spacing: -.024em;
+  max-width: 1030px;
 }}
 h1 .accent {{ color: var(--cp-accent); }}
 p {{
-  font-size: 27px; line-height: 1.42; color: var(--cp-text-muted);
-  margin-top: 20px; max-width: 990px;
+  font-size: 32px; line-height: 1.4; font-weight: 500; color: var(--cp-text);
+  margin-top: 30px; max-width: 1000px;
 }}
-p b {{ color: var(--cp-text); font-weight: 700; }}
-.podium {{ display: flex; gap: 14px; margin-top: 36px; }}
-.chip {{
-  display: inline-flex; align-items: center; gap: 11px;
-  font-size: 22px; font-weight: 700; color: var(--cp-text);
-  background: var(--cp-surface); border: 1px solid var(--cp-border);
-  border-radius: 999px; padding: 13px 24px;
-}}
-.chip.win {{ border-color: rgba(240,180,41,.55); background: rgba(240,180,41,.10); }}
-.chip em {{ font-style: normal; color: var(--cp-text-muted); font-weight: 600; }}
-.url {{
-  position: absolute; right: 72px; bottom: 40px;
-  font-size: 21px; font-weight: 700; color: var(--cp-text-muted);
-}}
+p b {{ color: var(--cp-accent); font-weight: 700; }}
 </style></head>
 <body>
-  <div class="glow"></div><div class="glow-warm"></div>
+  <div class="glow"></div>
   <div class="inner">
-    <span class="pill">GitHub Copilot Builder Showcase</span>
     <h1>Turn any workshop into a <span class="accent">live showcase</span>.</h1>
     <p>Drop the links, let a <b>GitHub Copilot</b> panel judge every project, and spotlight the winners &mdash; in under two minutes.</p>
-    <div class="podium">
-      <span class="chip win">&#127942; GitHub Copilot Builder Award</span>
-      <span class="chip">&#129352; <em>Builder Silver</em></span>
-      <span class="chip">&#129353; <em>Builder Bronze</em></span>
-    </div>
   </div>
-  <span class="url">dubsopenhub.github.io/copilot-builder-showcase</span>
 </body></html>"""
 
 
