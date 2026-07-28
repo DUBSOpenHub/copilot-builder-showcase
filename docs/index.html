@@ -601,7 +601,8 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .fr-total span { font-size: 11px; font-weight: 700; color: var(--cp-text-soft); }
 .fr-note { font-size: 12px; color: var(--cp-text-soft); margin-top: 13px; line-height: 1.5; }
 /* Scores are revealed in public, so the room needs to be able to read what each
-   lens actually measured. The wording is the rubric's own (config/rubric.json). */
+   dimension actually measured. The wording is the shipped rubric's own
+   (DEFAULT_EVENT_SPEC in event_spec.py). */
 .lens-legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 14px; }
 .lens-legend div { font-size: 12px; color: var(--cp-text-soft); line-height: 1.45; }
 .lens-legend b { color: var(--cp-text-muted); font-weight: 700; }
@@ -729,8 +730,9 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 /* reaction pills (named panelists) */
 .rx-row { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; min-height: 30px; }
 .rx-pill { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; font-weight: 600; color: var(--cp-text); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 12px; animation: spot-in .4s ease both; }
-/* Rubric sweep shown while each project is reviewed. Lenses are the three named
-   criteria being examined — never a score, value, or rank (audience-safe). */
+/* Judges strip shown while each project is reviewed. These are the three review
+   lenses — who is reading the work, not what is scored — and the pills never
+   carry a score, value, or rank (audience-safe). */
 .judge-lenses { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 13px 0 4px; min-height: 30px; }
 .jlens { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 700; letter-spacing: .02em; color: var(--cp-text-soft); background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 5px 13px; opacity: .5; transition: opacity .3s ease, color .3s ease, border-color .3s ease, box-shadow .3s ease, transform .3s cubic-bezier(.2,.8,.2,1); }
 .jlens .jl-tick { font-size: 11px; opacity: 0; transition: opacity .3s ease; }
@@ -2264,8 +2266,9 @@ var QRClean = (function () {
   var DIM_ICONS = { innovation: "💡", impact: "🎯", execution: "🛠️", presentation: "🎤" };
   var ARCHETYPE_ICONS = { innovation: "💡", craft: "🛠️", impact: "🎯" };
   /* Scores are revealed in public, so the room can read what each dimension
-     measured and how much it counted. Wording and weights come straight from
-     config/rubric.json, so what is shown is what was scored. */
+     measured and how much it counted. Wording and weights come straight from the
+     shipped rubric (DEFAULT_EVENT_SPEC in event_spec.py), so what is shown is
+     what was scored. */
   function lensLegendHTML() {
     return '<div class="lens-legend">' + RUBRIC_DIMENSIONS.map(function (d) {
       return "<div>" + (DIM_ICONS[d.id] || "•") + " <b>" + esc(d.name) + "</b> · " +

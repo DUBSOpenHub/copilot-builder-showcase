@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "copilot-builder-showcase"
-version = "3.3.0"
+version = "3.4.0"
 description = "Live GitHub Copilot judging showcases for builder workshops and project events."
 readme = "README.md"
 requires-python = ">=3.11"

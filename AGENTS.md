@@ -100,8 +100,10 @@
   its own copy of the rubric because Pages cannot read `event_spec.py` at
   runtime, so keep the two axes distinct — four weighted dimensions are what is
   scored, three review lenses are who scores — and keep the weighted total out
-  of 10. `tests/test_rubric_parity.py` fails on any drift; update the embedded
-  copy and `config/rubric.json` together whenever the shipped rubric changes.
+  of 10. `tests/test_rubric_parity.py` fails on any drift. The shipped rubric
+  lives in `event_spec.py` (`DEFAULT_EVENT_SPEC`) — `config/rubric.json` is only
+  the `--config` example — so change it there first, then update the embedded
+  copy and the sample together.
 - Do not weaken write-once artifacts, hash seals, run-ID validation, or safe
   archive extraction.
 
