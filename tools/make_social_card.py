@@ -80,8 +80,9 @@ h1 {{
 h1 .accent {{ color: var(--cp-accent); }}
 p {{
   font-size: 27px; line-height: 1.42; color: var(--cp-text-muted);
-  margin-top: 20px; max-width: 940px;
+  margin-top: 20px; max-width: 990px;
 }}
+p b {{ color: var(--cp-text); font-weight: 700; }}
 .podium {{ display: flex; gap: 14px; margin-top: 36px; }}
 .chip {{
   display: inline-flex; align-items: center; gap: 11px;
@@ -101,7 +102,7 @@ p {{
   <div class="inner">
     <span class="pill">GitHub Copilot Builder Showcase</span>
     <h1>Turn any workshop into a <span class="accent">live showcase</span>.</h1>
-    <p>Drop the links, activate the judging panel, and spotlight the winners &mdash; in under two minutes.</p>
+    <p>Drop the links, let a <b>GitHub Copilot</b> panel judge every project, and spotlight the winners &mdash; in under two minutes.</p>
     <div class="podium">
       <span class="chip win">&#127942; GitHub Copilot Builder Award</span>
       <span class="chip">&#129352; <em>Builder Silver</em></span>
