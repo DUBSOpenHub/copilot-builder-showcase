@@ -69,7 +69,7 @@ if os.name == "nt":
 # Layer 0 — Constants and defaults
 # ---------------------------------------------------------------------------
 
-VERSION = "3.4.0"
+VERSION = "3.4.1"
 AWARD_SLATE = copy.deepcopy(DEFAULT_EVENT_SPEC["awards"])
 AWARD_NAME = next(
     award["name"] for award in AWARD_SLATE if award["id"] == "grand-prize"
