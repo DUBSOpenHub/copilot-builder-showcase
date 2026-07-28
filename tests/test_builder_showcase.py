@@ -2030,6 +2030,34 @@ class TestCopilotCLIGateway:
         assert model_kwargs["encoding"] == "utf-8"
         assert model_kwargs["env"]["COPILOT_ALLOW_ALL"] == "false"
 
+    def test_panel_call_never_passes_log_level(self, tmp_path):
+        """--log-level kills the CLI, so the panel call must not send it.
+
+        GitHub Copilot CLI 1.0.76 exits 1 with empty stdout *and* empty stderr
+        for every explicit --log-level value except "default", dying before it
+        writes a log file. Passing "error" here silently broke every official
+        panel call; the only symptom was a doctor warning, and practice runs
+        kept working, so it looked like a login problem rather than a flag.
+        """
+        calls = []
+
+        def runner(command, **kwargs):
+            calls.append(command)
+            model_id = command[command.index("--model") + 1]
+            output = (
+                '{"status":"ready"}' if model_id == "auto" else '{"ok":true}'
+            )
+            return subprocess.CompletedProcess(command, 0, stdout=output, stderr="")
+
+        gateway = cbp.CopilotCLIGateway("/opt/homebrew/bin/copilot", runner=runner)
+        gateway.call_model("Return JSON.", "gpt-5.6-terra")
+
+        assert calls, "the gateway made no call"
+        for command in calls:
+            assert "--log-level" not in command, (
+                "--log-level makes the Copilot CLI exit 1 with no output at all"
+            )
+
     @pytest.mark.skipif(
         os.name == "nt",
         reason="POSIX lookup path; Windows is covered by test_windows_uses_native_executable_from_trusted_path",

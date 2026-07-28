@@ -1996,6 +1996,10 @@ class CopilotCLIGateway:
         timeout_seconds: int,
         reasoning_effort: Optional[str] = "high",
     ) -> str:
+        # Deliberately no --log-level: passing it any explicit value other than
+        # "default" makes GitHub Copilot CLI 1.0.76 exit 1 with empty stdout and
+        # empty stderr, before it even writes a log file. That silently broke
+        # every official panel call and surfaced only as a doctor warning.
         command = [
             self.copilot_path,
             "-p",
@@ -2015,8 +2019,6 @@ class CopilotCLIGateway:
             "off",
             "--output-format",
             "json",
-            "--log-level",
-            "error",
         ]
         if reasoning_effort:
             command[6:6] = ["--effort", reasoning_effort]
