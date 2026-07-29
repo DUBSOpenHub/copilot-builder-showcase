@@ -2404,7 +2404,9 @@ class TestCommandFlows:
         assert manifest["official_live_panel_connected"] is False
         assert manifest["workshop_choices"]["display_surface"] == "single-terminal"
         assert manifest["workshop_choices"]["optional_monitor_auto_launched"] is False
-        assert len(cbp._load_submissions(tmp_path / "practice-show")) == 3
+        assert len(cbp._load_submissions(tmp_path / "practice-show")) == (
+            cbp.DEMO_ROTATION_SIZE
+        )
 
     def test_official_show_blocks_without_connected_panel(self, tmp_path, capsys):
         args = build_args(
@@ -4197,3 +4199,80 @@ if __name__ == "__main__":
     fixture_path = Path(__file__).parent / "fixtures"
     generate_sample_fixture(fixture_path)
     print("Fixture generated. Run tests with: python -m pytest tests/ -v")
+
+
+class TestDemoProjectPool:
+    """
+    The bundled demo is a pool of real public projects shown one rotating
+    slate at a time. Two practice runs back to back must not be the same show,
+    and the pool must stay inside the practice time budget.
+    """
+
+    def _env(self, tmp_path: Path) -> Dict:
+        return {"CBS_RUNS_DIR": str(tmp_path)}
+
+    def test_pool_loads_with_the_fields_a_spotlight_needs(self):
+        assert len(cbp.DEMO_SUBMISSIONS) > cbp.DEMO_ROTATION_SIZE
+        for entry in cbp.DEMO_SUBMISSIONS:
+            assert entry["url"].startswith("https://github.com/")
+            assert entry["builder_name"]
+            assert entry["builder_notes"]
+            assert cbp.DEMO_REPO_METADATA[entry["url"]]["name_with_owner"]
+
+    def test_pool_urls_are_unique(self):
+        urls = [entry["url"] for entry in cbp.DEMO_SUBMISSIONS]
+        assert len(urls) == len(set(urls))
+
+    def test_demo_evidence_is_never_invented(self):
+        """
+        Evidence may only come from what the public repository actually says,
+        so a blank field has to stay blank rather than become a claim.
+        """
+        for entry in cbp.DEMO_SUBMISSIONS:
+            meta = cbp.DEMO_REPO_METADATA[entry["url"]]
+            said = f"{meta['description']} {' '.join(meta['topics'])}".lower()
+            if entry["copilot_evidence"]:
+                assert "copilot" in said, f"{entry['url']} claims Copilot use unprompted"
+            if entry["frontier_evidence"]:
+                assert any(
+                    word in said for word in ("multi-model", "multi-agent", "swarm")
+                ), f"{entry['url']} claims frontier use unprompted"
+
+    def test_each_slate_is_one_rotation_of_distinct_projects(self, tmp_path: Path):
+        with patch.dict(os.environ, self._env(tmp_path)):
+            slate = cbp.demo_slate("run-1")
+        assert len(slate) == cbp.DEMO_ROTATION_SIZE
+        assert len({entry["url"] for entry in slate}) == cbp.DEMO_ROTATION_SIZE
+
+    def test_back_to_back_demos_show_different_projects(self, tmp_path: Path):
+        with patch.dict(os.environ, self._env(tmp_path)):
+            first = cbp.demo_slate("run-1")
+            second = cbp.demo_slate("run-2")
+        assert [e["url"] for e in first] != [e["url"] for e in second]
+
+    def test_rotation_covers_the_whole_pool_then_wraps(self, tmp_path: Path):
+        slates = -(-len(cbp.DEMO_SUBMISSIONS) // cbp.DEMO_ROTATION_SIZE)
+        seen = set()
+        with patch.dict(os.environ, self._env(tmp_path)):
+            first = [e["url"] for e in cbp.demo_slate("run-0")]
+            seen.update(first)
+            for index in range(1, slates):
+                seen.update(e["url"] for e in cbp.demo_slate(f"run-{index}"))
+            wrapped = [e["url"] for e in cbp.demo_slate(f"run-{slates}")]
+        assert seen == {entry["url"] for entry in cbp.DEMO_SUBMISSIONS}
+        assert wrapped == first
+
+    def test_demo_all_uses_every_project(self, tmp_path: Path):
+        with patch.dict(os.environ, self._env(tmp_path)):
+            full = cbp.demo_slate("run-1", full=True)
+        assert len(full) == len(cbp.DEMO_SUBMISSIONS)
+
+    def test_slate_still_resolves_when_the_cursor_cannot_be_written(self, tmp_path: Path):
+        with patch.dict(os.environ, self._env(tmp_path)):
+            with patch.object(cbp, "_next_demo_slate_index", return_value=None):
+                slate = cbp.demo_slate("run-1")
+        assert len(slate) == cbp.DEMO_ROTATION_SIZE
+
+    def test_cli_exposes_the_full_sweep_flag(self):
+        args = cbp.build_parser().parse_args(["workshop", "--demo", "--demo-all"])
+        assert args.demo_all is True

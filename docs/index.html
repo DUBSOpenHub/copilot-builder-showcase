@@ -4,24 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
-<title>Turn any workshop into a Builder Showcase with GitHub Copilot</title>
-<meta name="description" content="Turn any workshop into a Builder Showcase with GitHub Copilot. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
+<title>End every workshop with a GitHub Copilot Builder Showcase</title>
+<meta name="description" content="End every workshop with a GitHub Copilot Builder Showcase. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <link rel="canonical" href="https://dubsopenhub.github.io/copilot-builder-showcase/" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="GitHub Copilot Builder Showcase" />
 <meta property="og:url" content="https://dubsopenhub.github.io/copilot-builder-showcase/" />
-<meta property="og:title" content="Turn any workshop into a Builder Showcase with GitHub Copilot" />
+<meta property="og:title" content="End every workshop with a GitHub Copilot Builder Showcase" />
 <meta property="og:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta property="og:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/social-card-v2.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a Builder Showcase with GitHub Copilot.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
+<meta property="og:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;End every workshop with a GitHub Copilot Builder Showcase&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Turn any workshop into a Builder Showcase with GitHub Copilot" />
+<meta name="twitter:title" content="End every workshop with a GitHub Copilot Builder Showcase" />
 <meta name="twitter:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta name="twitter:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/social-card-v2.png" />
-<meta name="twitter:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a Builder Showcase with GitHub Copilot.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
+<meta name="twitter:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;End every workshop with a GitHub Copilot Builder Showcase&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
 <script>
   (function () {
     try {
@@ -269,9 +269,11 @@ button { font-family: inherit; cursor: pointer; }
    attribution. Every line breaks on a phrase boundary, so no line reads as a
    finished thought that the next one has to undo. The lead-in steps down in
    size so the three lines read as one block instead of leaving a short orphan. */
+/* Two-part lock-up: a smaller lead-in, then the accented product name on its
+   own lines. The name breaks on an explicit boundary so it never splits at
+   whatever width the viewport happens to be. */
 .hero h1 .lead-in { display: block; font-size: 0.63em; line-height: 1.12; margin-bottom: 0.12em; text-wrap: balance; }
 .hero h1 .brand { display: block; }
-.hero h1 .trail { margin-bottom: 0; margin-top: 0.1em; }
 .hero .lede { font-size: clamp(17px, 2.1vw, 21px); color: var(--cp-text-muted); margin-top: 20px; max-width: 46ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; align-items: center; }
 .command-chip {
@@ -809,7 +811,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1><span class="lead-in">Turn any workshop into a</span><span class="accent brand">Builder Showcase</span><span class="lead-in trail">with GitHub Copilot.</span></h1>
+          <h1><span class="lead-in">End every workshop with a</span><span class="accent brand">GitHub Copilot<br />Builder Showcase</span></h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
@@ -1769,13 +1771,164 @@ var QRClean = (function () {
 
   /* ---- demo projects ---- */
   var DEMO = [
-    { proj: "Aurora Recall", link: "https://demo.example.dev/aurora", team: "Team Aurora", desc: "A retrieval agent that resurfaces the follow-ups you forgot to send." },
-    { proj: "Commit Coach", link: "https://github.com/example/commit-coach", team: "Team Commit Coach", desc: "PR review that teaches the fix instead of just flagging it." },
-    { proj: "Reef Guardian", link: "https://demo.example.dev/reef", team: "Reef Guardian", desc: "Early coral-bleaching warnings from low-cost sonar buoys." },
-    { proj: "PixelForge", link: "https://pixelforge.example.app", team: "Team PixelForge", desc: "A browser-native sprite studio with AI in-betweening." },
-    { proj: "LatencyLab", link: "https://latencylab.example.io", team: "LatencyLab", desc: "An edge cache that pre-fetches the next request before you ask." },
-    { proj: "Signal Garden", link: "https://github.com/example/signal-garden", team: "Team Signal Garden", desc: "Turns noisy alerts into one calm, prioritized morning digest." }
+    { proj: "cpt", link: "https://github.com/burkeholland/cpt", team: "@burkeholland", desc: "Terminal copilot — translates natural language into shell commands using GitHub Copilot" },
+    { proj: "resize-me", link: "https://github.com/burkeholland/resize-me", team: "@burkeholland", desc: "Pixel-exact window resizing utility for Windows" },
+    { proj: "ghost-ops", link: "https://github.com/DUBSOpenHub/ghost-ops", team: "@DUBSOpenHub", desc: "👻 Ghost Ops — autonomous agent operations daemon. Watches repos, triages issues, evolves ag…" },
+    { proj: "copilot-hooks-ts", link: "https://github.com/austenstone/copilot-hooks-ts", team: "@austenstone", desc: "Type-safe GitHub Copilot hooks. Parse the stdin payload, build the decision, read the trans…" },
+    { proj: "continuous-ai-resolver", link: "https://github.com/ashleywolf/continuous-ai-resolver", team: "@ashleywolf", desc: "Automatically resolve stale or already fixed GitHub issues and PRs powered by AI." },
+    { proj: "daylight", link: "https://github.com/dvelton/daylight", team: "@dvelton", desc: "A schema-driven web app that turns any GitHub repo into a workspace for non-developers: tab…" },
+    { proj: "first-knock", link: "https://github.com/dvelton/first-knock", team: "@dvelton", desc: "Contributor context cards for new PRs. Helps maintainers review contributions from new cont…" },
+    { proj: "copilot-skill-builder", link: "https://github.com/DUBSOpenHub/copilot-skill-builder", team: "@DUBSOpenHub", desc: "🧰 Copilot Skill Builder — Turn any prompt into a ready-to-review GitHub Copilot CLI skill." },
+    { proj: "gh-flair", link: "https://github.com/dvelton/gh-flair", team: "@dvelton", desc: "Your repos' highlight reel. A gh CLI extension for open source maintainer joy." },
+    { proj: "governance-edge", link: "https://github.com/dvelton/governance-edge", team: "@dvelton", desc: "A proof-of-concept Copilot CLI skill that embeds AI governance principles at the edge, into…" },
+    { proj: "living-instructions", link: "https://github.com/dvelton/living-instructions", team: "@dvelton", desc: "helps keep AI custom instructions in sync with living knowledge sources" },
+    { proj: "promptapp-runner", link: "https://github.com/dvelton/promptapp-runner", team: "@dvelton", desc: "An entire app, compressed into a URL. AI micro-app runner on GitHub Pages." },
+    { proj: "gh-sportsball", link: "https://github.com/maxbeizer/gh-sportsball", team: "@maxbeizer", desc: "Watch live games in your terminal. Scores, play-by-play, standings, news." },
+    { proj: "flatapi", link: "https://github.com/dvelton/flatapi", team: "@dvelton", desc: "Turn data files in your repo into a queryable static API" },
+    { proj: "gh-rdm", link: "https://github.com/maxbeizer/gh-rdm", team: "@maxbeizer", desc: "Remote Development Manager - gh CLI extension for clipboard and open forwarding over SSH" },
+    { proj: "gh-fishbowl", link: "https://github.com/maxbeizer/gh-fishbowl", team: "@maxbeizer", desc: "A screen saver that goes bloop 🫧" },
+    { proj: "ai-toil-tracker", link: "https://github.com/DUBSOpenHub/ai-toil-tracker", team: "@DUBSOpenHub", desc: "The AI Toil Tracker enables any team to capture, prioritize, and automate toil using agents…" },
+    { proj: "graphsay", link: "https://github.com/leereilly/graphsay", team: "@leereilly", desc: "Generate animated GitHub-style contribution graph messages as SVG, GIF, WebP, or MP4." },
+    { proj: "list-ninja", link: "https://github.com/dvelton/list-ninja", team: "@dvelton", desc: "Generate SharePoint List integration kits for AI coding tools. Single HTML file, no depende…" },
+    { proj: "hotseat-mediator", link: "https://github.com/dvelton/hotseat-mediator", team: "@dvelton", desc: "A simple program for resolving complex legal disputes" },
+    { proj: "gh-npm-oidc-migrate", link: "https://github.com/gclhub/gh-npm-oidc-migrate", team: "@gclhub", desc: "A GitHub CLI extension that analyzes and migrates npm publishing GitHub Actions workflows f…" },
+    { proj: "yellow-light", link: "https://github.com/dvelton/yellow-light", team: "@dvelton", desc: "One-button arcade game about the yellow light dilemma. Brake or gun it?" },
+    { proj: "repo-resurrector", link: "https://github.com/dvelton/repo-resurrector", team: "@dvelton", desc: "Breathe new life into stale projects" },
+    { proj: "stipulate", link: "https://github.com/dvelton/stipulate", team: "@dvelton", desc: "Find legal common ground between two parties without disclosing the rest (Private Set Inter…" },
+    { proj: "terminal-stampede", link: "https://github.com/DUBSOpenHub/terminal-stampede", team: "@DUBSOpenHub", desc: "A parallel agent runtime for your terminal. Run up to 20 AI coding agents simultaneously in…" },
+    { proj: "air-draw", link: "https://github.com/dvelton/air-draw", team: "@dvelton", desc: "Draw with light by moving your phone through the air" },
+    { proj: "sift", link: "https://github.com/dvelton/sift", team: "@dvelton", desc: "Superfast fingerprinting and overlap detection for any text corpus" },
+    { proj: "gh-ask", link: "https://github.com/BagToad/gh-ask", team: "@BagToad", desc: "Agent / CLI to human communication over GitHub Issues." },
+    { proj: "temsinal", link: "https://github.com/caarlos0/temsinal", team: "@caarlos0", desc: "Cellphone Towers in Brazil" },
+    { proj: "agentproof", link: "https://github.com/dvelton/agentproof", team: "@dvelton", desc: "Zero-knowledge verification of AI agent policy compliance" },
+    { proj: "gh-agent-persona", link: "https://github.com/dvelton/gh-agent-persona", team: "@dvelton", desc: "AI agent personas, backed by GitHub Apps" },
+    { proj: "instrucgen", link: "https://github.com/dvelton/instrucgen", team: "@dvelton", desc: "Enter a GitHub handle, get a comprehensive AI custom instructions prompt based on their pub…" },
+    { proj: "Digital-Advisory-Board", link: "https://github.com/dvelton/Digital-Advisory-Board", team: "@dvelton", desc: "Customizable digital board of advisors with 60+ personas to choose from" },
+    { proj: "agentic-prompt-generator", link: "https://github.com/ashleywolf/agentic-prompt-generator", team: "@ashleywolf", desc: "Pattern library for GitHub Agentic Workflows — self-updating, backed by production data fro…" },
+    { proj: "gh-onion", link: "https://github.com/maxbeizer/gh-onion", team: "@maxbeizer", desc: "America's finest news source in your terminal" },
+    { proj: "max", link: "https://github.com/burkeholland/max", team: "@burkeholland", desc: "Personal AI daemon built on the GitHub Copilot SDK — control via Telegram or terminal" },
+    { proj: "copilot-cli-mastery", link: "https://github.com/DUBSOpenHub/copilot-cli-mastery", team: "@DUBSOpenHub", desc: "🎓 Interactive training system for GitHub Copilot CLI — From Zero to CLI Wizard" },
+    { proj: "gh-dungeons", link: "https://github.com/leereilly/gh-dungeons", team: "@leereilly", desc: "A GitHub CLI extension roguelike dungeon crawler that turns your codebase into a playable g…" },
+    { proj: "micro-machines", link: "https://github.com/leereilly/micro-machines", team: "@leereilly", desc: "Entry for Gamedev.js Jam 2025" },
+    { proj: "gh-inbox", link: "https://github.com/maxbeizer/gh-inbox", team: "@maxbeizer", desc: "📬 A rich TUI for managing GitHub notifications" },
+    { proj: "ai-pixel", link: "https://github.com/dvelton/ai-pixel", team: "@dvelton", desc: "One pixel. Three weights. Real inference. AI model that fits in a single pixel." },
+    { proj: "copilot-first-light", link: "https://github.com/DUBSOpenHub/copilot-first-light", team: "@DUBSOpenHub", desc: "✨ Build your first AI agent with the GitHub Copilot CLI in 5 minutes. No coding. No experie…" },
+    { proj: "headcount-zero", link: "https://github.com/DUBSOpenHub/headcount-zero", team: "@DUBSOpenHub", desc: "15 AI agents as a full Series A/B executive team. One prompt, full company output. Say 'sta…" },
+    { proj: "trace-collaborate", link: "https://github.com/dvelton/trace-collaborate", team: "@dvelton", desc: "Multi-stakeholder AI drafting with provenance; extends Trace for collaborative Word documen…" },
+    { proj: "copilot-session-manager", link: "https://github.com/gfarb/copilot-session-manager", team: "@gfarb", desc: "Browse, search, resume, and clean up your GitHub Copilot CLI sessions from a terminal UI." },
+    { proj: "vista", link: "https://github.com/toby/vista", team: "@toby", desc: "A web based clone of 90s classic VistaPro landscape generator ⛰️" },
+    { proj: "dark-factory", link: "https://github.com/DUBSOpenHub/dark-factory", team: "@DUBSOpenHub", desc: "🏭 Agentic dark factory for AI building with sealed-envelope testing" },
+    { proj: "copilot-cli-quickstart", link: "https://github.com/DUBSOpenHub/copilot-cli-quickstart", team: "@DUBSOpenHub", desc: "🚀 Interactive Copilot CLI tutor skill — learn by doing. This is a Copilot CLI quickstart sk…" },
+    { proj: "copilot-pr-footer", link: "https://github.com/kamil-gwozdz/copilot-pr-footer", team: "@kamil-gwozdz", desc: "GitHub Copilot CLI status-line footer: lists the PRs/issues/gists your session created or u…" },
+    { proj: "rendezvous", link: "https://github.com/dvelton/rendezvous", team: "@dvelton", desc: "Have your LLM talk to my LLM" },
+    { proj: "gh-repo-peek", link: "https://github.com/maxbeizer/gh-repo-peek", team: "@maxbeizer", desc: "Quick repo stats at a glance — a GitHub CLI extension" },
+    { proj: "gh-planning", link: "https://github.com/maxbeizer/gh-planning", team: "@maxbeizer", desc: "Planning with projects and issues in the CLI" },
+    { proj: "rubiks-rubrics", link: "https://github.com/leereilly/rubiks-rubrics", team: "@leereilly", desc: "Rubik's Rubrics is a self-contained 3D Rubik's Cube visualizer and solver that scans your r…" },
+    { proj: "gh-commit-crawl", link: "https://github.com/leereilly/gh-commit-crawl", team: "@leereilly", desc: "A GitHub CLI extension to generate a Build-themed GitHub contribution graph. But you'll hav…" },
+    { proj: "gh-rendered", link: "https://github.com/maxbeizer/gh-rendered", team: "@maxbeizer", desc: "Making Markdown PRs easier to read" },
+    { proj: "last-mile", link: "https://github.com/dvelton/last-mile", team: "@dvelton", desc: "A feedback loop that makes your AI tools write more like you over time" },
+    { proj: "gh-repo-health-report", link: "https://github.com/gclhub/gh-repo-health-report", team: "@gclhub", desc: "A GitHub CLI extension that audits the health of GitHub repositories — checking for README…" },
+    { proj: "agent-xray", link: "https://github.com/DUBSOpenHub/agent-xray", team: "@DUBSOpenHub", desc: "🔬 Scan Visor for AI agents. One command scans your fleet, scores 6 vital dimensions, and sh…" },
+    { proj: "faxmachine", link: "https://github.com/dvelton/faxmachine", team: "@dvelton", desc: "GitHub-powered virtual fax machine. Fork it. Fax your friends." },
+    { proj: "doublecheck", link: "https://github.com/dvelton/doublecheck", team: "@dvelton", desc: "Three-layer verification pipeline for AI-generated output. Extracts claims, finds sources…" },
+    { proj: "devmeter", link: "https://github.com/dvelton/devmeter", team: "@dvelton", desc: "personalized Copilot CLI usage dashboard" },
+    { proj: "grid-medic", link: "https://github.com/DUBSOpenHub/grid-medic", team: "@DUBSOpenHub", desc: "🚑 Self-healing meta-agent that monitors, repairs, and continuously improves your AI agent f…" },
+    { proj: "copilot-skills", link: "https://github.com/DUBSOpenHub/copilot-skills", team: "@DUBSOpenHub", desc: "Copilot CLI skills collection — voice-friendly AI workflows for your terminal" },
+    { proj: "Internet-of-Models", link: "https://github.com/dvelton/Internet-of-Models", team: "@dvelton", desc: "Thought experiment about an Internet of Models (IoM)." },
+    { proj: "copilot-week-in-review", link: "https://github.com/DUBSOpenHub/copilot-week-in-review", team: "@DUBSOpenHub", desc: "A GitHub Copilot agent that turns messy weekly notes or GitHub activity into a polished, is…" },
+    { proj: "itty-bitty-tools", link: "https://github.com/dvelton/itty-bitty-tools", team: "@dvelton", desc: "99 itty bitty tools. Contribute your own." },
+    { proj: "github-life", link: "https://github.com/martinwoodward/github-life", team: "@martinwoodward", desc: "A GitHub themed, Conway's game of life simulator." },
+    { proj: "videotheremin", link: "https://github.com/Jeffrey-Luszcz/videotheremin", team: "@Jeffrey-Luszcz", desc: "A web cam music instrument in the style of a theremin" },
+    { proj: "beautiful-code", link: "https://github.com/dvelton/beautiful-code", team: "@dvelton", desc: "a gallery of others' elegant code snippets to appreciate" },
+    { proj: "human-mcp", link: "https://github.com/dvelton/human-mcp", team: "@dvelton", desc: "A person-centric rather than a service-centric MCP server. Thought experiment with syntheti…" },
+    { proj: "lawgraph", link: "https://github.com/dvelton/lawgraph", team: "@dvelton", desc: "experimenting with a JSON-based protocol for representing the logical structure of legislat…" },
+    { proj: "instreval", link: "https://github.com/dvelton/instreval", team: "@dvelton", desc: "A/B test and audit your AI custom instructions" },
+    { proj: "gh-games", link: "https://github.com/maxbeizer/gh-games", team: "@maxbeizer", desc: "🎮 Terminal games as a GitHub CLI extension" },
+    { proj: "radarview", link: "https://github.com/martinwoodward/radarview", team: "@martinwoodward", desc: "Animated green-phosphor CRT radar scope for live aircraft from a local ADS-B (PiAware/SkyAw…" },
+    { proj: "ask-bigger", link: "https://github.com/dvelton/ask-bigger", team: "@dvelton", desc: "See the gap between what you typically ask AI tools to do and what's actually possible." },
+    { proj: "terminal-profile-studio", link: "https://github.com/dvelton/terminal-profile-studio", team: "@dvelton", desc: "We're all living in the terminal now, might as well do some interior design" },
+    { proj: "m365-easy-button", link: "https://github.com/DUBSOpenHub/m365-easy-button", team: "@DUBSOpenHub", desc: "🟢 M365 Easy Button — Copilot CLI skill that translates Google Workspace to Microsoft 365" },
+    { proj: "upstream", link: "https://github.com/dvelton/upstream", team: "@dvelton", desc: "an AI tool whose purpose is its own obsolescence" },
+    { proj: "swarm-command", link: "https://github.com/DUBSOpenHub/swarm-command", team: "@DUBSOpenHub", desc: "🐝 Swarm Command — Multi-model consensus swarm orchestrator for Copilot CLI. Instantly launc…" },
+    { proj: "trace", link: "https://github.com/dvelton/trace", team: "@dvelton", desc: "A format for publishing AI-assisted writing with the prompts that produced it" },
+    { proj: "BestPal", link: "https://github.com/BagToad/BestPal", team: "@BagToad", desc: "Discord bot for r/GamerPals" },
+    { proj: "defender", link: "https://github.com/gclhub/defender", team: "@gclhub", desc: "A fully playable, browser-based replica of the classic 1981 arcade game Defender by William…" },
+    { proj: "last-mile-dev", link: "https://github.com/dvelton/last-mile-dev", team: "@dvelton", desc: "diff-based memory for AI coding tools" },
+    { proj: "cmux-copilot-artifacts", link: "https://github.com/kamil-gwozdz/cmux-copilot-artifacts", team: "@kamil-gwozdz", desc: "Copilot CLI hooks for cmux: open the PRs/issues/gists your session creates/updates as brows…" },
+    { proj: "Agent-Management-System", link: "https://github.com/dvelton/Agent-Management-System", team: "@dvelton", desc: "A thought experiment about applying human organizational management structures to agentic A…" },
+    { proj: "slopdimmer", link: "https://github.com/dvelton/slopdimmer", team: "@dvelton", desc: "Chrome extension that dims low-information filler text. Runs locally." },
+    { proj: "prowl", link: "https://github.com/caarlos0/prowl", team: "@caarlos0", desc: "🦉 A tiny terminal radar for your GitHub pull requests." },
+    { proj: "hockey-shot-tracker", link: "https://github.com/dvelton/hockey-shot-tracker", team: "@dvelton", desc: "Hockey shot tracking app for coaches and parents" },
+    { proj: "redline-risk", link: "https://github.com/dvelton/redline-risk", team: "@dvelton", desc: "Copilot CLI plugin that color-codes tracked changes in contracts by their directional impac…" },
+    { proj: "grass", link: "https://github.com/toby/grass", team: "@toby", desc: "Keep your gists synced locally 🌱" },
+    { proj: "dm-chess", link: "https://github.com/dvelton/dm-chess", team: "@dvelton", desc: "Chess via DM. Pure ASCII, no third-party app connections." },
+    { proj: "eyeball", link: "https://github.com/dvelton/eyeball", team: "@dvelton", desc: "Copilot CLI plugin to verify AI document analysis with screenshots from the actual source m…" },
+    { proj: "newos", link: "https://github.com/MathiasSchindler/newos", team: "@MathiasSchindler", desc: "GPT capability test" },
+    { proj: "tandem", link: "https://github.com/dvelton/tandem", team: "@dvelton", desc: "Tru(er) pair programming between AI models" },
+    { proj: "socrates", link: "https://github.com/dvelton/socrates", team: "@dvelton", desc: "No answers. Only questions. A chat implementation of the Socratic Method." },
+    { proj: "weekly-ai-news-digest", link: "https://github.com/elbruno/weekly-ai-news-digest", team: "@elbruno", desc: "🤖 Agentic weekly AI & tech news digest — auto-generated every Monday via GitHub Actions + G…" },
+    { proj: "counselos", link: "https://github.com/dvelton/counselos", team: "@dvelton", desc: "CounselOS is Mission Control for In-House Legal Teams" },
+    { proj: "grin-sweeper", link: "https://github.com/ashleywolf/grin-sweeper", team: "@ashleywolf", desc: "😁 Minesweeper controlled by your smile. Wider grin = bigger reveal. Shame trophy screenshot…" },
+    { proj: "picocalc-tools", link: "https://github.com/MathiasSchindler/picocalc-tools", team: "@MathiasSchindler", desc: "experiments in developing/porting software for the PicoCalc" },
+    { proj: "who-codes", link: "https://github.com/dvelton/who-codes", team: "@dvelton", desc: "Find out which people in your LinkedIn network code" },
+    { proj: "legal-move-tokenization", link: "https://github.com/dvelton/legal-move-tokenization", team: "@dvelton", desc: "A taxonomy of 47 strategic moves in legal briefing, validated across 22 SCOTUS cases. Four…" },
+    { proj: "local-app-factory", link: "https://github.com/dvelton/local-app-factory", team: "@dvelton", desc: "Package any local web app for reliable relaunch with one command" },
+    { proj: "sensor-dashboard", link: "https://github.com/dvelton/sensor-dashboard", team: "@dvelton", desc: "Real-time phone sensor telemetry dashboard with live visualizations" },
+    { proj: "ezconfig", link: "https://github.com/dvelton/ezconfig", team: "@dvelton", desc: "125+ deployment vehicles for vibe coders" },
+    { proj: "copilot-cli-agent-pulse", link: "https://github.com/DUBSOpenHub/copilot-cli-agent-pulse", team: "@DUBSOpenHub", desc: "⚡ Copilot CLI Agent Pulse — Real-time agent tracking dashboard for the GitHub Copilot CLI." },
+    { proj: "angrydad", link: "https://github.com/boazreicher/angrydad", team: "@boazreicher", desc: "Angry Dad - A fun HTML game where you try to make Dad explode!" },
+    { proj: "differential-codebase-privacy", link: "https://github.com/dvelton/differential-codebase-privacy", team: "@dvelton", desc: "A proof-of-concept and thought experiment about applying a differential privacy layer to se…" },
+    { proj: "sleep-trail", link: "https://github.com/kwacky1/sleep-trail", team: "@kwacky1", desc: "🌙 An 8-week interactive sleep improvement game for Copilot CLI, inspired by Oregon Trail" },
+    { proj: "cabinet-of-nostalgia", link: "https://github.com/dvelton/cabinet-of-nostalgia", team: "@dvelton", desc: "15 interactive simulators of vintage technologies (Enigma, Altair 8800, Apollo DSKY, Moog…" },
+    { proj: "dcp", link: "https://github.com/dvelton/dcp", team: "@dvelton", desc: "Document Context Protocol (DCP)" },
+    { proj: "song-bird", link: "https://github.com/chrisreddington/song-bird", team: "@chrisreddington", desc: "A pitch controlled version of \"flappy bird\". Start your game with a \"base\" pitch to normali…" },
+    { proj: "design-auditor", link: "https://github.com/DUBSOpenHub/design-auditor", team: "@DUBSOpenHub", desc: "🔍 Paste a URL, get ranked fixes to improve conversions. Like Grammarly for landing pages." },
+    { proj: "flight-school", link: "https://github.com/chrisreddington/flight-school", team: "@chrisreddington", desc: "AI-powered coding practice platform built with the GitHub Copilot SDK. Personalized challen…" },
+    { proj: "dogtris", link: "https://github.com/toby/dogtris", team: "@toby", desc: "Tetris for dogs 🐕" },
+    { proj: "openclaw", link: "https://github.com/dvelton/openclaw", team: "@dvelton", desc: "OpenC(law) — Legal AI agent framework. Experimental proof-of-concept built on OpenClaw." },
+    { proj: "quantum-circuit-playground", link: "https://github.com/dvelton/quantum-circuit-playground", team: "@dvelton", desc: "Quantum Circuit Playground" },
+    { proj: "groundhog-day", link: "https://github.com/DUBSOpenHub/groundhog-day", team: "@DUBSOpenHub", desc: "🐿️ Autonomous backup agent for Copilot CLI skills. Your laptop will crash. Your skills won'…" },
+    { proj: "contribution-graph-art", link: "https://github.com/leereilly/contribution-graph-art", team: "@leereilly", desc: "Generate an animated SVG of your GitHub contribution graph with falling Tetris pieces or a…" },
+    { proj: "hive1k", link: "https://github.com/DUBSOpenHub/hive1k", team: "@DUBSOpenHub", desc: "🐝 Hive1K — one thousand agents, one hive mind. Recursive multi-model swarm orchestration fo…" },
+    { proj: "gaming-box", link: "https://github.com/kwacky1/gaming-box", team: "@kwacky1", desc: "🎮 Update a pinned gist to show your recently played games across Steam and Xbox" },
+    { proj: "shelf-life", link: "https://github.com/dvelton/shelf-life", team: "@dvelton", desc: "Drop a Goodreads CSV, get a beautiful portrait of your reading life." },
+    { proj: "gh-oss", link: "https://github.com/maxbeizer/gh-oss", team: "@maxbeizer", desc: "Find open source issues to work on — right from your terminal" },
+    { proj: "gh-contrib", link: "https://github.com/maxbeizer/gh-contrib", team: "@maxbeizer", desc: "A CLI extension for understanding your contributions on GitHub" },
+    { proj: "gh-dj-pad", link: "https://github.com/dvelton/gh-dj-pad", team: "@dvelton", desc: "CLI DJ sound pad - turn system sounds into music" },
+    { proj: "gh-skyline", link: "https://github.com/chrisreddington/gh-skyline", team: "@chrisreddington", desc: "A GitHub CLI extension to generate a 3D model of your GitHub contribution history" },
+    { proj: "gh-slim-vtt", link: "https://github.com/maxbeizer/gh-slim-vtt", team: "@maxbeizer", desc: "A tiny GH CLI extension for slimming down vtt files" },
+    { proj: "xref", link: "https://github.com/dvelton/xref", team: "@dvelton", desc: "Copilot CLI plugin that resolves cross-references and defined terms in legal documents with…" },
+    { proj: "gh-yule-log", link: "https://github.com/leereilly/gh-yule-log", team: "@leereilly", desc: "A Yule log extension for GitHub CLI. ̶Y̶u̶l̶e̶ You'll love it! 🪵 🔥" },
+    { proj: "haharvst", link: "https://github.com/martinwoodward/haharvst", team: "@martinwoodward", desc: "Home Assistant (HACS) integration for the Harvst greenhouse irrigation control panel" },
+    { proj: "ecomode-for-code", link: "https://github.com/dvelton/ecomode-for-code", team: "@dvelton", desc: "Putting code in eco mode." },
+    { proj: "markdown-plus.nvim", link: "https://github.com/YousefHadder/markdown-plus.nvim", team: "@YousefHadder", desc: "The full Markdown editing experience in neovim" },
+    { proj: "gh-msft", link: "https://github.com/maxbeizer/gh-msft", team: "@maxbeizer", desc: "Read and triage your Microsoft 365 mail and calendar from the terminal, via WorkIQ." },
+    { proj: "agent-arcade", link: "https://github.com/DanWahlin/agent-arcade", team: "@DanWahlin", desc: "A retro platformer that runs as a transparent overlay on your desktop. Play while waiting f…" },
+    { proj: "gh-check-github-ip-ranges", link: "https://github.com/gclhub/gh-check-github-ip-ranges", team: "@gclhub", desc: "This CLI extension enables users to determine if an IP address falls within the GitHub rang…" },
+    { proj: "ai-credits-usage", link: "https://github.com/austenstone/ai-credits-usage", team: "@austenstone", desc: "Automated GitHub AI Credits (AIU) usage reports — job summaries, JSON, CSV. Like copilot-us…" },
+    { proj: "havoc-hackathon", link: "https://github.com/DUBSOpenHub/havoc-hackathon", team: "@DUBSOpenHub", desc: "Pit AI models against each other. Score them sealed. Crown a winner. All built using the Gi…" },
+    { proj: "My-AI-Readme", link: "https://github.com/DUBSOpenHub/My-AI-Readme", team: "@DUBSOpenHub", desc: "My AI Readme - How to work with me, powered by GitHub Copilot CLI" },
+    { proj: "copilot-app-first-steps", link: "https://github.com/DUBSOpenHub/copilot-app-first-steps", team: "@DUBSOpenHub", desc: "Beginner-friendly interactive tutor for the GitHub Copilot app" },
+    { proj: "gh-launchpad", link: "https://github.com/dvelton/gh-launchpad", team: "@dvelton", desc: "A gh CLI extension and local dashboard UI for managing workflow_dispatch GitHub Actions acr…" },
+    { proj: "3dpingpong", link: "https://github.com/leereilly/3dpingpong", team: "@leereilly", desc: "A 3D pong game themed after the GitHub contribution graph, with webcam eyebrow-tracking con…" }
   ];
+  var DEMO_SLATE_SIZE = 20;
+
+  /* One rotating slate per run: the pool is large enough that back-to-back
+     demos would otherwise repeat the same handful of projects. The cursor
+     survives a reload so a refresh does not replay the slate just shown. */
+  function demoSlate() {
+    var slates = Math.ceil(DEMO.length / DEMO_SLATE_SIZE);
+    var next = 0;
+    try {
+      next = ((parseInt(localStorage.getItem("cbs_demo_slate"), 10) || 0) + 1) % slates;
+      localStorage.setItem("cbs_demo_slate", String(next));
+    } catch (e) { next = hash("" + Date.now()) % slates; }
+    var start = next * DEMO_SLATE_SIZE;
+    var slate = DEMO.slice(start, start + DEMO_SLATE_SIZE);
+    if (slate.length < DEMO_SLATE_SIZE) slate = slate.concat(DEMO.slice(0, DEMO_SLATE_SIZE - slate.length));
+    return slate;
+  }
 
   /* ---- GitHub Copilot-panel scoring (practice, illustrative) ----
      Deliberately mirrors the engine (builder_showcase.py) so a practice run
@@ -2091,15 +2244,16 @@ var QRClean = (function () {
   function scheduleSeed() {
     if (state.mode !== "demo") { seedRunning = false; return; }
     var myRun = state.runId;
-    var pool = DEMO.slice(0).sort(function () { return hash("" + Date.now() + Math.random()) % 2 ? 1 : -1; });
-    var picks = pool.slice(0, 3), i = 0;
+    var picks = demoSlate(), i = 0;
     seedRunning = true;
     function drip() {
       if (state.mode !== "demo" || state.runId !== myRun || state.status !== "open") { seedRunning = false; return; }
       if (i >= picks.length) { seedRunning = false; scheduleAutoPanel(myRun); return; }
       var p = picks[i++];
       addEntry({ proj: p.proj, link: p.link, team: p.team, desc: p.desc, source: "seed" }, { quiet: i > 1 });
-      setTimeout(drip, 1400 + (hash(p.proj) % 900));
+      /* The first few land at reading pace so the room sees entries arrive;
+         the rest fill in quickly so a full board does not cost half the demo. */
+      setTimeout(drip, i <= 3 ? 1400 + (hash(p.proj) % 900) : 170);
     }
     setTimeout(drip, 1500); /* let the empty state + QR breathe before entries land */
     setTimeout(function () { if (state.mode === "demo" && state.runId === myRun && state.status === "open") pushFeed("Demo tip: scan the QR to add a real project alongside the samples."); }, 1200);

@@ -46,6 +46,13 @@ def _local_path(url: str) -> Path:
     return ROOT / "docs" / url[len(SITE_ROOT):]
 
 
+def _demo_project_names() -> list[str]:
+    """Read the big-screen demo project names so this check cannot go stale."""
+    source = PAGE.read_text(encoding="utf-8")
+    block = re.search(r"var DEMO = \[(.*?)\];", source, re.DOTALL)
+    return re.findall(r'proj:\s*"([^"]+)"', block.group(1)) if block else []
+
+
 def test_share_image_exists(meta: dict[str, str]) -> None:
     for key in ("og:image", "twitter:image"):
         assert key in meta, f"{key} is missing"
@@ -76,10 +83,8 @@ def test_share_image_is_shaped_for_a_social_card(meta: dict[str, str]) -> None:
 
 def test_share_alt_text_does_not_name_a_demo_project(meta: dict[str, str]) -> None:
     """The practice podium is randomized per run, so naming a winner goes stale."""
-    demo_projects = [
-        "Aurora Recall", "Commit Coach", "Reef Guardian",
-        "PixelForge", "LatencyLab", "Signal Garden",
-    ]
+    demo_projects = _demo_project_names()
+    assert demo_projects, "could not read the big-screen DEMO project list"
     for key in ("og:image:alt", "twitter:image:alt"):
         for project in demo_projects:
             assert project not in meta[key], (

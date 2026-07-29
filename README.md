@@ -2,7 +2,7 @@
 
 # 🏆 GitHub Copilot Builder Showcase
 
-**Turn any workshop into a Builder Showcase with GitHub Copilot.**
+**End every workshop with a GitHub Copilot Builder Showcase.**
 
 Paste the links, activate the panel, reveal the winners — in under two minutes.
 
@@ -143,22 +143,6 @@ This hidden review stays sealed until the awards stage, never changes public sco
 
 ---
 
-## Works today · On the roadmap · Opinions we hold
-
-| ✅ Works today | 🚧 On the roadmap | 💭 Opinions we hold |
-|---|---|---|
-| One-command install on macOS, Linux, and Windows | Turnkey hosted backend for QR live-submit | "GitHub Copilot-judged," never hand-wavy "AI-judged" |
-| Offline practice showcase with a bundled demo | More built-in EventSpec templates | No scores or ranks before the reveal — ever |
-| Official GitHub Copilot panel via authenticated GitHub Copilot CLI | Deeper accessibility narration | One operator-confirmed cue before the podium |
-| Paste links **or** scan a QR to submit *(optional backend)* | Richer big-screen theming | One visible Terminal; never a surprise second window |
-| Sealed median-consensus scoring | | Evidence over inference for GitHub Copilot/frontier claims |
-| Bronze / Silver / GitHub Copilot Builder Award podium | | Every accepted project gets a spotlight |
-| Private feedback + top-three growth cards | | |
-| Replay & validate from tamper-evident bundles | | |
-| Reduced-motion reveal pacing | | |
-
----
-
 ## Install
 
 ### Instant install
@@ -238,7 +222,9 @@ Every event after that is just `showcase` again.
 showcase --demo
 ```
 
-The bundled three-project demo runs offline in under two minutes, follows the same intake-to-reveal flow, and is always labeled `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS`. No GitHub Copilot calls, no network metadata.
+The bundled demo runs offline in under two minutes, follows the same intake-to-reveal flow, and is always labeled `PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS`. No GitHub Copilot calls, no network metadata.
+
+It ships a pool of 140 real, public GitHub projects and shows a rotating slate of 20 per run, so back-to-back demos are never the same show and the pool is covered in seven runs. Add `--demo-all` to sweep every project in one pass — it still fits the time budget, but 140 spotlights is a long watch for a room.
 
 ### 🛠️ "I want official judging or to customize."
 
@@ -321,7 +307,8 @@ The primary live showcase uses only the Python standard library. Textual is opti
 |---|---|
 | `showcase` | Paste links and start the complete live showcase. |
 | `showcase <links...>` | Start immediately with supplied projects. |
-| `showcase --demo` | Run the bundled two-minute practice showcase. |
+| `showcase --demo` | Run the bundled two-minute practice showcase on a rotating slate of 20 projects. |
+| `showcase --demo --demo-all` | Run the practice showcase across every bundled project instead of one slate. |
 | `showcase --reduced-motion` | Prefer low-motion reveal pacing (or set `CBS_REDUCED_MOTION=1`; legacy `HJ_REDUCED_MOTION` still honored). |
 | `showcase --official <links...>` | Require a connected official GitHub Copilot panel. |
 | `showcase replay <run-id>` | Replay a prior showcase without judge calls. |

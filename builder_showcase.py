@@ -50,7 +50,7 @@ import unicodedata
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable, Dict, List, Optional, Sequence
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 import urllib.request
 from urllib.parse import unquote, urlsplit, urlunsplit
 
@@ -96,100 +96,90 @@ MAX_REPLAY_ARCHIVE_MEMBER_BYTES = 512 * 1024 * 1024  # 512 MiB per file
 SHOWTIME_PAUSE_BUDGET_SECONDS = 18.0
 DEMO_TIME_BUDGET_SECONDS = 120.0
 
-DEMO_SUBMISSIONS = [
-    {
-        "url": "https://github.com/demo-day/pulseboard",
-        "builder_name": "Team Aurora",
-        "copilot_evidence": (
-            "Used GitHub Copilot to turn interview notes into the first event-status workflow "
-            "and its acceptance tests."
-        ),
-        "frontier_evidence": (
-            "Prototyped a human-reviewed agent that summarizes live event changes."
-        ),
-        "problem_statement": (
-            "Event teams lose time reconciling project status across scattered updates."
-        ),
-        "intended_user": "workshop organizers and demo-day producers",
-        "demo_url": "https://demo.example/pulseboard",
-        "builder_notes": "A single live board turns updates into a clear showcase flow.",
-    },
-    {
-        "url": "https://github.com/demo-day/fieldnote",
-        "builder_name": "Team Northstar",
-        "copilot_evidence": (
-            "Used GitHub Copilot to scaffold the mobile capture flow and draft edge-case tests."
-        ),
-        "frontier_evidence": (
-            "Tested a multimodal workflow that converts field photos and notes into "
-            "review-ready summaries."
-        ),
-        "problem_statement": (
-            "Field teams spend too much time rebuilding context after customer visits."
-        ),
-        "intended_user": "customer success and field engineering teams",
-        "demo_url": "https://demo.example/fieldnote",
-        "builder_notes": "Capture once, review quickly, and keep a human in control.",
-    },
-    {
-        "url": "https://github.com/demo-day/skillbridge",
-        "builder_name": "Team Lift",
-        "copilot_evidence": (
-            "Used GitHub Copilot to draft the matching service and refine onboarding copy."
-        ),
-        "frontier_evidence": (
-            "Built a bounded recommendation experiment with explicit mentor approval."
-        ),
-        "problem_statement": (
-            "New contributors struggle to find a first project that matches their skills."
-        ),
-        "intended_user": "open source newcomers and volunteer maintainers",
-        "demo_url": "https://demo.example/skillbridge",
-        "builder_notes": "The demo matches one contributor to one achievable next step.",
-    },
-]
+# The bundled demo ships a pool of real, public GitHub projects and shows a
+# rotating slate of them, so two practice runs in a row are not the same show.
+# The whole pool still fits the time budget; the limit is the room's attention,
+# not the engine, so `--demo-all` stays available for a full sweep.
+DEMO_PROJECTS_PATH = Path(__file__).resolve().parent / "demo_projects.json"
+DEMO_ROTATION_SIZE_DEFAULT = 20
 
-DEMO_REPO_METADATA = {
-    "https://github.com/demo-day/pulseboard": {
-        "name_with_owner": "demo-day/pulseboard",
-        "description": "A live command center for project showcases and event operations.",
-        "language": "TypeScript",
-        "stars": 128,
-        "forks": 14,
-        "updated_at": "2026-07-21T18:00:00Z",
-        "pushed_at": "2026-07-21T18:00:00Z",
-        "topics": ["events", "realtime", "dashboard"],
-        "homepage": "https://demo.example/pulseboard",
-        "url": "https://github.com/demo-day/pulseboard",
-        "source": "bundled-demo",
-    },
-    "https://github.com/demo-day/fieldnote": {
-        "name_with_owner": "demo-day/fieldnote",
-        "description": "A multimodal field-note workflow with human-reviewed summaries.",
-        "language": "Python",
-        "stars": 94,
-        "forks": 9,
-        "updated_at": "2026-07-21T17:00:00Z",
-        "pushed_at": "2026-07-21T17:00:00Z",
-        "topics": ["multimodal", "field-work", "human-review"],
-        "homepage": "https://demo.example/fieldnote",
-        "url": "https://github.com/demo-day/fieldnote",
-        "source": "bundled-demo",
-    },
-    "https://github.com/demo-day/skillbridge": {
-        "name_with_owner": "demo-day/skillbridge",
-        "description": "A guided first-contribution matcher for open source communities.",
-        "language": "Go",
-        "stars": 76,
-        "forks": 11,
-        "updated_at": "2026-07-21T16:00:00Z",
-        "pushed_at": "2026-07-21T16:00:00Z",
-        "topics": ["open-source", "mentorship", "recommendations"],
-        "homepage": "https://demo.example/skillbridge",
-        "url": "https://github.com/demo-day/skillbridge",
-        "source": "bundled-demo",
-    },
-}
+
+def _read_demo_pool() -> Tuple[List[Dict[str, Any]], Dict[str, Dict[str, Any]], int]:
+    """Load the bundled demo pool, its repo metadata, and the slate size."""
+    try:
+        raw = json.loads(DEMO_PROJECTS_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return [], {}, DEMO_ROTATION_SIZE_DEFAULT
+
+    submissions: List[Dict[str, Any]] = []
+    metadata: Dict[str, Dict[str, Any]] = {}
+    for project in raw.get("projects", []):
+        url = project.get("url", "")
+        if not url:
+            continue
+        submissions.append(
+            {
+                "url": url,
+                "builder_name": project.get("builder_name", ""),
+                "copilot_evidence": project.get("copilot_evidence", ""),
+                "frontier_evidence": project.get("frontier_evidence", ""),
+                "demo_url": project.get("demo_url", ""),
+                "builder_notes": project.get("builder_notes", ""),
+            }
+        )
+        repo = dict(project.get("repo", {}))
+        repo["url"] = url
+        repo["source"] = "bundled-demo"
+        metadata[url] = repo
+    size = raw.get("rotation_size", DEMO_ROTATION_SIZE_DEFAULT)
+    try:
+        size = max(1, int(size))
+    except (TypeError, ValueError):
+        size = DEMO_ROTATION_SIZE_DEFAULT
+    return submissions, metadata, size
+
+
+DEMO_SUBMISSIONS, DEMO_REPO_METADATA, DEMO_ROTATION_SIZE = _read_demo_pool()
+
+
+def demo_slate(run_id: str = "", full: bool = False) -> List[Dict[str, Any]]:
+    """
+    Return the practice projects for one run.
+
+    The slate advances every demo so back-to-back practice runs are not the
+    same show. The cursor lives beside the run bundles; when it cannot be read
+    or written the run id decides the slate instead, so the choice is still
+    deterministic on a read-only disk.
+    """
+    pool = copy.deepcopy(DEMO_SUBMISSIONS)
+    if full or not pool or len(pool) <= DEMO_ROTATION_SIZE:
+        return pool
+    slates = math.ceil(len(pool) / DEMO_ROTATION_SIZE)
+    index = _next_demo_slate_index(slates)
+    if index is None:
+        digest = hashlib.sha256((run_id or "").encode("utf-8")).hexdigest()
+        index = int(digest[:8], 16) % slates
+    start = index * DEMO_ROTATION_SIZE
+    slate = pool[start : start + DEMO_ROTATION_SIZE]
+    if len(slate) < DEMO_ROTATION_SIZE:
+        slate += pool[: DEMO_ROTATION_SIZE - len(slate)]
+    return slate
+
+
+def _next_demo_slate_index(slates: int) -> Optional[int]:
+    """Advance and return the rotating slate cursor, or None if unavailable."""
+    try:
+        cursor = get_runs_dir() / ".demo-slate"
+        try:
+            current = int(cursor.read_text(encoding="utf-8").strip())
+        except (OSError, ValueError):
+            current = -1
+        index = (current + 1) % slates
+        cursor.parent.mkdir(parents=True, exist_ok=True)
+        cursor.write_text(str(index), encoding="utf-8")
+        return index
+    except OSError:
+        return None
 
 AUDIENCE_REVEAL_MOMENTS = (
     {
@@ -6471,7 +6461,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     if not url_text and not demo and not sys.stdin.isatty():
         url_text = sys.stdin.read()
     if demo and not url_text:
-        entries = copy.deepcopy(DEMO_SUBMISSIONS)
+        entries = demo_slate(run_id, full=getattr(args, "demo_all", False))
     else:
         if not url_text:
             url_text = _ask_project_block()
@@ -9183,6 +9173,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--demo",
         action="store_true",
         help="Run the same showcase as a deterministic practice demo; bundled projects are used when no links are supplied.",
+    )
+    p_workshop.add_argument(
+        "--demo-all",
+        action="store_true",
+        dest="demo_all",
+        help="Use every bundled demo project instead of one rotating slate.",
     )
     p_workshop.add_argument(
         "--official",
