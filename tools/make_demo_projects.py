@@ -20,6 +20,13 @@ file does not survive that copy.
 Usage:
     python3 tools/make_demo_projects.py            # refresh the current pool
     python3 tools/make_demo_projects.py repos.txt  # rebuild from owner/repo lines
+    python3 tools/make_demo_projects.py --verify   # re-check the committed pool
+
+``--verify`` re-checks that every committed project is still a public
+repository without rewriting anything, so the pool can be audited before an
+event without reshuffling which projects appear. A repository that was public
+at generation time can be made private later, and only a fresh check catches
+that.
 
 Requires the GitHub CLI (``gh``) to be installed and authenticated.
 """
@@ -185,7 +192,30 @@ def embed_in_page(projects: List[Dict[str, Any]]) -> None:
     PAGE.write_text(updated, encoding="utf-8")
 
 
+def verify_pool() -> int:
+    """Re-check that every committed project is still a public repository."""
+    sys.path.insert(0, str(ROOT))
+    import builder_showcase
+
+    pool = builder_showcase.DEMO_POOL
+    names = [p["url"].removeprefix("https://github.com/") for p in pool]
+    with ThreadPoolExecutor(max_workers=12) as workers:
+        fetched = list(workers.map(fetch, names))
+
+    gone = [name for name, data in zip(names, fetched) if data is None]
+    if gone:
+        print(f"{len(gone)} of {len(names)} are no longer public:")
+        for name in gone:
+            print(f"  - {name}")
+        print("Re-run without --verify to rebuild the pool from public data.")
+        return 1
+    print(f"all {len(names)} projects are still public")
+    return 0
+
+
 def main(argv: List[str]) -> int:
+    if "--verify" in argv[1:]:
+        return verify_pool()
     names = source_repos(argv)
     with ThreadPoolExecutor(max_workers=12) as pool:
         fetched = list(pool.map(fetch, names))
