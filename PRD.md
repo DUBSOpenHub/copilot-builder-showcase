@@ -15,7 +15,7 @@ hand.
 
 The product is event-neutral: it does not impose a named host personality,
 organization identity, or judge character. The default showcase gives every project
-a brief three-lens review, then awards Builder Bronze, Builder Silver, and the
+a brief three-lens review, then awards third place, second place, and the
 first-place GitHub Copilot Builder Award. EventSpecs may replace that podium.
 
 ## Primary users

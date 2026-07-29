@@ -645,7 +645,7 @@ class TestShowtimeDelight:
                 {
                     "placement": 2,
                     "award_id": "second-place",
-                    "award_name": "Second Place — Builder Silver",
+                    "award_name": "Second Place",
                     "emoji": "🥈",
                     "winner_submission_id": "sub-b",
                     "project_name": "Beacon",
@@ -1901,8 +1901,8 @@ class TestBulkUrlImport:
         assert rc == 0
         output = capsys.readouterr().out
         assert "Create the workshop run bundle?" not in output
-        assert "Third Place — Builder Bronze" in output
-        assert "Second Place — Builder Silver" in output
+        assert "Third Place" in output
+        assert "Second Place" in output
         assert "First Place — GitHub Copilot Builder Award" in output
         assert "GitHub Copilot Builder Showcase Recap" in output
         assert "ACT I — PROJECTS ENTER" in output

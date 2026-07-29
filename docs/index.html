@@ -843,9 +843,9 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           </div>
           <div class="mini-stage">
             <div class="mini-podium">
-              <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Builder Silver</div><div class="riser"><span>2</span></div></div>
+              <div class="mini-col c2"><div class="medal">🥈</div><div class="mp">Commit Coach</div><div class="mt">Second place</div><div class="riser"><span>2</span></div></div>
               <div class="mini-col c1"><div class="medal">🏆</div><div class="mp">Aurora Recall</div><div class="mt">GitHub Copilot Builder Award</div><div class="riser"><span>1</span></div></div>
-              <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Builder Bronze</div><div class="riser"><span>3</span></div></div>
+              <div class="mini-col c3"><div class="medal">🥉</div><div class="mp">Reef Guardian</div><div class="mt">Third place</div><div class="riser"><span>3</span></div></div>
             </div>
           </div>
           <div class="preview-foot"><span class="dot"></span> Sealed scores · revealed live on the big screen</div>
@@ -906,7 +906,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <ul>
             <li><span class="ck">✓</span> Median consensus of a GitHub Copilot CLI panel</li>
             <li><span class="ck">✓</span> Scores stay sealed until the reveal</li>
-            <li><span class="ck">✓</span> Builder Bronze · Silver · GitHub Copilot Builder Award</li>
+            <li><span class="ck">✓</span> Third place · second place · GitHub Copilot Builder Award</li>
           </ul>
         </article>
       </div>
@@ -1041,7 +1041,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
           <p>Chosen by median consensus of a GitHub Copilot CLI panel · practice showcase, illustrative results</p>
         </div>
         <div class="reveal-bar" id="revealBar">
-          <button class="btn btn-primary btn-cta-hot reveal-step-btn" id="revealStepBtn">🥉 Reveal Builder Bronze</button>
+          <button class="btn btn-primary btn-cta-hot reveal-step-btn" id="revealStepBtn">🥉 Reveal 3rd Place</button>
           <div class="reveal-progress" id="revealProgress">Third place first — press when the room is ready.</div>
         </div>
         <div class="podium" id="podium"></div>
@@ -2564,8 +2564,8 @@ var QRClean = (function () {
   /* ---- podium ---- */
   var AWARD_META = [
     { cls: "first", place: "First place", name: "GitHub Copilot Builder Award", rosette: "🏆" },
-    { cls: "second", place: "Second place", name: "Builder Silver", rosette: "🥈" },
-    { cls: "third", place: "Third place", name: "Builder Bronze", rosette: "🥉" }
+    { cls: "second", place: "Second place", name: "", rosette: "🥈" },
+    { cls: "third", place: "Third place", name: "", rosette: "🥉" }
   ];
   function whyText(rank, sc) {
     var name = dimName(sc.topDim), v = sc.per[sc.topDim].toFixed(1);
@@ -2658,9 +2658,9 @@ var QRClean = (function () {
   }
   function updateRevealBar() {
     var labels = [
-      { t: "🥉 Reveal Builder Bronze", p: "Third place first — press when the room is ready." },
-      { t: "🥈 Reveal Builder Silver", p: "Second place next — build the suspense." },
-      { t: "🏆 Reveal the GitHub Copilot Builder Award", p: "The winner — reveal when the room is ready." }
+      { t: "🥉 Reveal 3rd Place", p: "Third place first — press when the room is ready." },
+      { t: "🥈 Reveal 2nd Place", p: "Second place next — build the suspense." },
+      { t: "🏆 Reveal 1st Place — GitHub Copilot Builder Award", p: "The winner — reveal when the room is ready." }
     ];
     var l = labels[REVEAL.step] || labels[2];
     var btn = $("revealStepBtn"), prog = $("revealProgress");
@@ -2685,7 +2685,7 @@ var QRClean = (function () {
       winnerFlourish();
     } else {
       updateRevealBar();
-      pushFeed(rank === 2 ? "🥉 Builder Bronze takes third place." : "🥈 Builder Silver takes second place.");
+      pushFeed(rank === 2 ? "🥉 Third place is in." : "🥈 Second place is in.");
     }
   }
   function winnerFlourish() {
@@ -2743,7 +2743,7 @@ var QRClean = (function () {
     return '<div class="award ' + m.cls + '" data-rank="' + rank + '">' +
       '<div class="rosette">' + m.rosette + "</div>" +
       '<div class="place">' + m.place + "</div>" +
-      '<div class="aname">' + m.name + "</div>" +
+      (m.name ? '<div class="aname">' + m.name + "</div>" : "") +
       '<div class="aproj">' + esc(e.proj) + "</div>" +
       '<div class="ateam">👥 ' + esc(e.team || "Project team") + "</div>" +
       '<div class="lens-block">' + lensHTML + "</div>" +

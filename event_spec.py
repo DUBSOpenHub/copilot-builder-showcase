@@ -66,7 +66,7 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
     "awards": [
         {
             "id": "third-place",
-            "name": "Third Place — Builder Bronze",
+            "name": "Third Place",
             "emoji": "🥉",
             "tagline": "A podium finish for a build with a memorable spark.",
             "dimensions": [],
@@ -75,7 +75,7 @@ DEFAULT_EVENT_SPEC: Dict[str, Any] = {
         },
         {
             "id": "second-place",
-            "name": "Second Place — Builder Silver",
+            "name": "Second Place",
             "emoji": "🥈",
             "tagline": "One step from the crown with a standout builder story.",
             "dimensions": [],

@@ -213,7 +213,7 @@ the ceremony concise enough for a two-minute demo.
 
 ## Awards, ties, and feedback
 
-The default reveal is a ranked podium: Builder Bronze, Builder Silver, then the
+The default reveal is a ranked podium: third place, second place, then the
 first-place GitHub Copilot Builder Award. Every project receives three brief judge takes
 before the reveal, but only the top three receive awards. Exact ties follow the
 EventSpec policy: shared placement, a predeclared sealed tiebreaker, or a logged

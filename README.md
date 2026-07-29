@@ -13,9 +13,9 @@ Paste the links, activate the panel, reveal the winners — in under two minutes
 
 **[Live demo](https://dubsopenhub.github.io/copilot-builder-showcase/) · [What it does](#what-it-does) · [Install](#install) · [How it works](#how-it-works) · [From the CLI](#from-the-cli) · [FAQ](#faq) · [License](#license-and-credits)**
 
-<img src="docs/images/builder-showcase-demo.png" alt="GitHub Copilot Builder Showcase big-screen award reveal: the GitHub Copilot Builder Award, Builder Silver, and Builder Bronze podium, each card showing scores for all four rubric dimensions and a weighted panel total out of 10" width="100%">
+<img src="docs/images/builder-showcase-demo.png" alt="GitHub Copilot Builder Showcase big-screen award reveal: the first, second, and third place podium, each card showing scores for all four rubric dimensions and a weighted panel total out of 10" width="100%">
 
-*Every accepted project gets a spotlight and the same sealed GitHub Copilot review. Only the top three take the podium — Builder Bronze, Builder Silver, and the first-place GitHub Copilot Builder Award.*
+*Every accepted project gets a spotlight and the same sealed GitHub Copilot review. Only the top three take the podium — third, second, and the first-place GitHub Copilot Builder Award.*
 
 </div>
 
@@ -103,8 +103,8 @@ Every project receives a brief on-screen review. Only the top three receive awar
 
 | Award | Selection |
 |---|---|
-| 🥉 **Third — Builder Bronze** | Third-highest complete result |
-| 🥈 **Second — Builder Silver** | Second-highest complete result |
+| 🥉 **Third Place** | Third-highest complete result |
+| 🥈 **Second Place** | Second-highest complete result |
 | 🏆 **First — GitHub Copilot Builder Award** | Strongest complete result |
 
 Each award explains why the project placed, what the panel uniquely liked, and one specific level-up move. After the reveal, top-three growth cards add one improvement move, one optional GitHub Copilot-next move, and one GitHub Copilot-use summary sourced only from builder-provided evidence.

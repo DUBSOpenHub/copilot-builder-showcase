@@ -38,8 +38,8 @@
   `hackathon` and `hackathon-judge`, request no shell-profile changes, and treat
   Textual as optional. Keep `install.sh` and `install.ps1` behavior aligned.
 - Keep the default experience general-purpose: no named host personality or
-  organization branding. Default live showcase uses a ranked Builder Bronze,
-  Builder Silver, and first-place GitHub Copilot Builder Award podium; custom EventSpecs
+  organization branding. Default live showcase uses a ranked third place,
+  second place, and first-place GitHub Copilot Builder Award podium; custom EventSpecs
   may define an alternate award slate.
 - Keep one primary audience surface: the current live showcase terminal contains
   the run of show and commentary. Never auto-open a dashboard or second terminal.
