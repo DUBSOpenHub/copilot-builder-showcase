@@ -2694,13 +2694,29 @@ def _select_best_model(available: List[Dict]) -> str:
 # Layer 5 — Tone Safety Pipeline
 # ---------------------------------------------------------------------------
 
+def _banned_phrase_pattern(phrase: str) -> Optional[re.Pattern]:
+    """
+    Match a banned phrase as a whole word, not as a substring.
+
+    Plain substring matching fires on innocent names: "BadgeForge" trips "bad",
+    "Blacksmith" trips "lacks", "Weakly Supervised" trips "weak". Those are real
+    project names, and a match used to abort the whole event at the award. The
+    lookarounds are used instead of \\b so phrases that end in punctuation, like
+    "unfortunately,", still anchor correctly.
+    """
+    cleaned = str(phrase or "").strip()
+    if not cleaned:
+        return None
+    return re.compile(rf"(?<!\w){re.escape(cleaned.lower())}(?!\w)")
+
+
 def check_tone(text: str, rubric: Optional[Dict] = None,
                source_field: str = "unknown",
                clock: Optional[Callable] = None) -> Dict:
     """
     Run the tone safety pipeline on text. Returns ToneResult dict.
     """
-    lower = text.lower()
+    lower = str(text or "").lower()
     banned_found = []
 
     # Built-in banned categories
@@ -2713,7 +2729,8 @@ def check_tone(text: str, rubric: Optional[Dict] = None,
         all_banned += tone_policy.get("extra_banned_phrases", [])
 
     for phrase in all_banned:
-        if phrase.lower() in lower:
+        pattern = _banned_phrase_pattern(phrase)
+        if pattern and pattern.search(lower):
             banned_found.append(phrase)
 
     return {
@@ -2827,6 +2844,104 @@ def assert_tone(tone_result: Dict, context: str = "") -> None:
             f"Tone safety check failed{' in ' + context if context else ''}: "
             + "; ".join(detail)
         )
+
+
+# Replacements used when generated prose trips the tone gate. Each one is
+# written to satisfy the same checks the field it replaces has to pass:
+# bright_spot needs a BRIGHT_SPOT_KEYWORDS word, next_commit needs a
+# FORWARD_NUDGE_PATTERNS verb.
+SAFE_TONE_FALLBACKS = {
+    "perspective": "The panel reviewed this submission and noted its strengths.",
+    "bright_spot": "This project demonstrates thoughtful, focused execution.",
+    "next_commit": "Consider extending the core workflow to reach more users.",
+    "panel_notes": "The panel reviewed this submission.",
+    "highlight": "The panel highlighted the focus of this build.",
+    "copilot_next_moves": (
+        "Use GitHub Copilot to draft a focused regression test for the core flow."
+    ),
+    "frontier_experiments": (
+        "Prototype one bounded, human-reviewed automation for the main workflow."
+    ),
+}
+
+
+def _tone_repaired_text(
+    text: Any,
+    field: str,
+    rubric: Optional[Dict],
+    clock: Optional[Callable],
+    repairs: List[Dict],
+    source_field: Optional[str] = None,
+) -> str:
+    """
+    Return audience-safe text, swapping in a fallback if the gate trips.
+
+    The gate used to abort the entire event when a judge wrote one banned word,
+    with no retry and no repair anywhere in the pipeline — a 30-project room
+    generates 90 verdicts, so the odds of losing a finished showcase to a single
+    adjective were not small. Replacing the sentence keeps the guarantee that
+    matters (no builder is ever shown teardown language) without throwing away
+    everyone else's results. Every swap is recorded in the sealed bundle, so the
+    substitution is auditable rather than silent.
+    """
+    original = str(text or "")
+    result = check_tone(original, rubric, source_field or field, clock)
+    if result["passed"]:
+        return original
+    fallback = SAFE_TONE_FALLBACKS.get(
+        field, "The panel reviewed this submission and noted its strengths."
+    )
+    repairs.append(
+        {
+            "field": source_field or field,
+            "banned_phrases": sorted(set(result["banned_phrases"])),
+            "replaced_with": fallback,
+            # The original is fingerprinted, not stored: keeping the sentence
+            # would carry the teardown language into the bundle it was cut from.
+            "original_sha256": hashlib.sha256(original.encode("utf-8")).hexdigest(),
+            "repaired_at": _now(clock),
+        }
+    )
+    return fallback
+
+
+def repair_feedback_card_tone(
+    card: Dict,
+    rubric: Optional[Dict] = None,
+    clock: Optional[Callable] = None,
+) -> List[Dict]:
+    """Swap any builder-facing field that trips the gate. Returns the repairs."""
+    repairs: List[Dict] = []
+    for field in ("bright_spot", "next_commit", "panel_notes"):
+        if not str(card.get(field, "")).strip():
+            continue
+        card[field] = _tone_repaired_text(card[field], field, rubric, clock, repairs)
+
+    reactions = card.get("judges_liked")
+    if isinstance(reactions, list):
+        for index, reaction in enumerate(reactions):
+            if not isinstance(reaction, dict):
+                continue
+            highlight = reaction.get("highlight")
+            if not isinstance(highlight, str) or not highlight.strip():
+                continue
+            reaction["highlight"] = _tone_repaired_text(
+                highlight, "highlight", rubric, clock, repairs,
+                source_field=f"judges_liked[{index}].highlight",
+            )
+
+    for field in ("copilot_next_moves", "frontier_experiments"):
+        values = card.get(field)
+        if not isinstance(values, list):
+            continue
+        for index, value in enumerate(values):
+            if not isinstance(value, str) or not value.strip():
+                continue
+            values[index] = _tone_repaired_text(
+                value, field, rubric, clock, repairs,
+                source_field=f"{field}[{index}]",
+            )
+    return repairs
 
 
 # ---------------------------------------------------------------------------
@@ -4616,6 +4731,7 @@ def build_panel_verdicts(
         sid = scored["submission_id"]
         sub = sub_map.get(sid, {})
         archetype_verdicts: List[Dict] = []
+        tone_repairs: List[Dict] = []
         stored_judgments = _eval_model_judgments(bundle_path, sid)
 
         for arch in archetypes:
@@ -4668,15 +4784,17 @@ def build_panel_verdicts(
                 "reused_scoring_pass": reuse_scoring_pass,
                 "scored_at": _now(clock),
             }
-            # Tone check every builder-facing archetype verdict field.
+            # Every builder-facing verdict field is repaired rather than fatal:
+            # one adjective from one judge must not end a finished showcase.
             for field in ("perspective", "bright_spot"):
-                tone = check_tone(
+                arch_verdict[field] = _tone_repaired_text(
                     arch_verdict[field],
+                    field,
                     rubric,
-                    f"verdict/{sid}/{arch['id']}/{field}",
                     clock,
+                    tone_repairs,
+                    source_field=f"verdict/{sid}/{arch['id']}/{field}",
                 )
-                assert_tone(tone, f"verdict for {sid}")
             archetype_verdicts.append(arch_verdict)
 
         verdict = {
@@ -4688,6 +4806,8 @@ def build_panel_verdicts(
             "archetype_verdicts": archetype_verdicts,
             "verdict_at": _now(clock),
         }
+        if tone_repairs:
+            verdict["tone_repairs"] = tone_repairs
         verdicts.append(verdict)
 
         verdict_path = bundle_path / "verdicts" / f"{sid}.json"
@@ -4966,8 +5086,18 @@ def build_feedback_cards(
 
         # Tone check
         tone = check_feedback_card_tone(card, rubric, clock)
+        tone_repairs: List[Dict] = []
         if not tone["passed"]:
-            # Attempt safe fallback values
+            # Swap only the fields that actually tripped, so a single bad
+            # adjective does not discard the rest of a good card. This also
+            # reaches judges_liked highlights, which the blanket fallback below
+            # never touched — a banned phrase there used to be unrecoverable.
+            tone_repairs = repair_feedback_card_tone(card, rubric, clock)
+            tone = check_feedback_card_tone(card, rubric, clock)
+        if not tone["passed"]:
+            # Structural gaps remain: an empty field, or missing the positive
+            # framing and forward-looking verb those fields are required to
+            # carry. Fall back to known-good copy for the whole card.
             card["bright_spot"] = _hypothesis_if_ungrounded(
                 "This project demonstrates impressive creativity and strong technical execution.",
                 suggestion_grounding_status,
@@ -4997,6 +5127,8 @@ def build_feedback_cards(
             tone = check_feedback_card_tone(card, rubric, clock)
             assert_tone(tone, f"feedback card for {sid}")
 
+        if tone_repairs:
+            card["tone_repairs"] = tone_repairs
         card["tone_checked"] = True
         cards.append(card)
 
@@ -7528,13 +7660,14 @@ def cmd_award(args: argparse.Namespace, _gateway: Optional[Any] = None,
         "next_commit": winner_feedback.get("next_commit", ""),
     }
 
-    # Tone check winner card text
+    # Tone-gate the framing this tool generates, not the names people chose for
+    # themselves. The card is a fixed template plus a builder name, an award
+    # name, and a project name, so gating the whole string meant an entrant
+    # could abort their own ceremony by being called "Bad Idea Labs" — and
+    # there is no safe substitution for someone's project name.
     winner_verb = "shares" if len(grand_prize_recipients) > 1 else "wins"
-    card_text = (
-        f"{winner_sub.get('builder_name', '')} {winner_verb} the {grand_prize_name} "
-        f"for project {winner_sub.get('project_name', '')}."
-    )
-    tone = check_tone(card_text, load_rubric(bundle_path), "winner_card", clock)
+    card_framing = f"{winner_verb} the {grand_prize_name}"
+    tone = check_tone(card_framing, load_rubric(bundle_path), "winner_card", clock)
     assert_tone(tone, "winner card")
 
     write_once_json(winner_path, winner_card)
