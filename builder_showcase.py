@@ -1964,6 +1964,31 @@ def _copilot_cli_message_content(output: Any) -> str:
     return messages[-1].strip() if messages else text
 
 
+SCORECARD_BASE_TIMEOUT_SECONDS = 45
+SCORECARD_TIMEOUT_SECONDS_PER_PROJECT = 15
+
+
+def _scorecard_timeout_seconds(project_count: int) -> int:
+    """
+    How long one room scorecard call may run, given how many projects it carries.
+
+    A scorecard call writes roughly seven fields per project, so its cost grows
+    with the size of the batch. Batches also run concurrently, and concurrent
+    Copilot CLI processes slow each other down, so the ceiling has to clear the
+    worst case rather than the typical one. Measured across a full 15-call room
+    on the shipped panel, six-project batches took 18-48s with an 83s outlier;
+    a flat 45s ceiling sat underneath that and failed whole showcases on
+    ordinary variance.
+
+    This is a ceiling, not a pause. Batches run in parallel, so raising it costs
+    a healthy room nothing and only stops a slow call from failing the event.
+    """
+    projects = max(1, int(project_count or 1))
+    return SCORECARD_BASE_TIMEOUT_SECONDS + (
+        SCORECARD_TIMEOUT_SECONDS_PER_PROJECT * (projects - 1)
+    )
+
+
 class CopilotCLIGateway:
     """Tool-free, non-interactive GitHub Copilot CLI model gateway."""
 
@@ -2082,13 +2107,15 @@ class CopilotCLIGateway:
             )
         return self._invoke(prompt, model_id, self.timeout_seconds)
 
-    def call_showcase_scorecard(self, prompt: str, model_id: str) -> str:
+    def call_showcase_scorecard(
+        self, prompt: str, model_id: str, project_count: int = 1
+    ) -> str:
         if not self._ready:
             self.query_available_models()
         return self._invoke(
             prompt,
             model_id,
-            min(self.timeout_seconds, 45),
+            min(self.timeout_seconds, _scorecard_timeout_seconds(project_count)),
             "low",
         )
 
@@ -2888,6 +2915,22 @@ def _max_parallel_calls(rubric: Dict, request_count: int) -> int:
     return max(1, min(configured, request_count))
 
 
+def _model_call_attempts(rubric: Dict) -> int:
+    """
+    How many times one model call may be tried before the showcase fails.
+
+    Panel calls occasionally come back non-empty but unparseable — prose instead
+    of JSON, or a truncated object. With a single attempt, one flaky response
+    from one judge ends a live event that is otherwise healthy. Retries cover
+    transport and formatting flakes only; a judgement the panel actually made is
+    never re-rolled, so this cannot be used to shop for a better score.
+    """
+    configured = rubric.get("freshness_gate", {}).get("model_call_attempts", 3)
+    if not isinstance(configured, int) or isinstance(configured, bool):
+        configured = 3
+    return max(1, min(configured, 5))
+
+
 def _run_bounded_model_requests(
     requests: Sequence[Dict[str, Any]],
     rubric: Dict,
@@ -2897,35 +2940,48 @@ def _run_bounded_model_requests(
     """
     Run independent model calls with a deterministic output order.
 
-    No artifact writes happen in workers. A failure cancels outstanding work and
-    fails the whole panel rather than quietly dropping an evaluator.
+    No artifact writes happen in workers. A transient model failure is retried a
+    bounded number of times; once the attempts are spent the whole panel fails
+    rather than quietly dropping an evaluator.
     """
     if not requests:
         return []
     worker_count = _max_parallel_calls(rubric, len(requests))
+    attempts = _model_call_attempts(rubric)
+
+    def attempt_once(request: Dict[str, Any], model_id: str) -> Dict:
+        if request.get("showcase_scorecard") and hasattr(
+            _gateway, "call_showcase_scorecard"
+        ):
+            raw = _gateway.call_showcase_scorecard(
+                request["prompt"],
+                model_id,
+                len(request.get("batch") or []) or 1,
+            )
+        else:
+            raw = call_model(request["prompt"], model_id, _gateway)
+        return (
+            _parse_strict_model_response(raw)
+            if request.get("strict_json")
+            else _parse_model_response(raw)
+        )
 
     def invoke(request: Dict[str, Any]) -> Dict:
         model_id = request["model_id"]
-        try:
-            if request.get("showcase_scorecard") and hasattr(
-                _gateway, "call_showcase_scorecard"
-            ):
-                raw = _gateway.call_showcase_scorecard(request["prompt"], model_id)
-            else:
-                raw = call_model(request["prompt"], model_id, _gateway)
-            parsed = (
-                _parse_strict_model_response(raw)
-                if request.get("strict_json")
-                else _parse_model_response(raw)
-            )
-        except Exception as exc:
-            raise ModelAPIError(
-                f"{context} failed with {model_id}: {exc}"
-            ) from exc
-        return {
-            **request,
-            "parsed": parsed,
-        }
+        for attempt in range(1, attempts + 1):
+            try:
+                return {**request, "parsed": attempt_once(request, model_id)}
+            except ModelAPIError as exc:
+                if attempt >= attempts:
+                    raise ModelAPIError(
+                        f"{context} failed with {model_id} "
+                        f"after {attempt} attempts: {exc}"
+                    ) from exc
+            except Exception as exc:
+                raise ModelAPIError(
+                    f"{context} failed with {model_id}: {exc}"
+                ) from exc
+        raise ModelAPIError(f"{context} failed with {model_id}.")
 
     if worker_count == 1:
         return [invoke(request) for request in requests]
@@ -2959,9 +3015,15 @@ def _build_evaluation_plan(
     submission_count = len(submissions)
     lens_count = len(rubric.get("judge_archetypes", []))
     model_count = len(panel_models)
+    batch_count = len(_showcase_room_batches(submissions, rubric))
     parallel_limit = _max_parallel_calls(
         rubric,
-        max(1, model_count if showcase_scorecards else lens_count * model_count),
+        max(
+            1,
+            model_count * batch_count
+            if showcase_scorecards
+            else lens_count * model_count,
+        ),
     )
     original_scoring_calls = submission_count * lens_count * model_count
     original_shadow_calls = (
@@ -2970,7 +3032,7 @@ def _build_evaluation_plan(
         else 0
     )
     scoring_calls = (
-        model_count
+        model_count * batch_count
         if showcase_scorecards
         else original_scoring_calls
     )
@@ -2993,6 +3055,7 @@ def _build_evaluation_plan(
         "submission_count": submission_count,
         "review_lens_count": lens_count,
         "panel_model_count": model_count,
+        "room_batch_count": batch_count if showcase_scorecards else 0,
         "max_parallel_calls": parallel_limit,
         "live_time_budget_seconds": policy.get("live_time_budget_seconds", 120),
         "live_time_budget_policy": policy.get("live_time_budget_policy", "warn-only"),
@@ -3441,6 +3504,34 @@ def _validate_showcase_scorecard(
     }
 
 
+def _showcase_room_batch_size(rubric: Dict) -> int:
+    """
+    How many projects one room-wide scorecard call may carry.
+
+    The call generates roughly seven written fields per project, so one call for
+    a whole room produces a very long response: slow, and increasingly likely to
+    be truncated or to drop a project. Measured against the shipped panel model,
+    four projects took 17s, eight took 30s, and twelve ran past the old flat
+    ceiling and failed the whole showcase. Batching bounds the work per call, and
+    the batches run concurrently, so a bigger room costs more calls rather than
+    more waiting.
+    """
+    configured = rubric.get("freshness_gate", {}).get("showcase_room_batch_size", 6)
+    if not isinstance(configured, int) or isinstance(configured, bool):
+        configured = 6
+    return max(1, min(configured, 12))
+
+
+def _showcase_room_batches(
+    submissions: Sequence[Dict], rubric: Dict
+) -> List[List[Dict]]:
+    size = _showcase_room_batch_size(rubric)
+    return [
+        list(submissions[start:start + size])
+        for start in range(0, len(submissions), size)
+    ] or [[]]
+
+
 def _score_submissions_with_showcase_scorecards(
     submissions: List[Dict],
     rubric: Dict,
@@ -3457,11 +3548,13 @@ def _score_submissions_with_showcase_scorecards(
     requests = [
         {
             "model_id": model_id,
-            "prompt": _build_showcase_room_prompt(submissions, rubric),
+            "prompt": _build_showcase_room_prompt(batch, rubric),
             "strict_json": True,
             "showcase_scorecard": True,
+            "batch": batch,
         }
         for model_id in panel_models
+        for batch in _showcase_room_batches(submissions, rubric)
     ]
     responses = _run_bounded_model_requests(
         requests,
@@ -3471,9 +3564,10 @@ def _score_submissions_with_showcase_scorecards(
     )
     scorecards: Dict[tuple[str, str], Dict] = {}
     for response in responses:
+        batch = response["batch"]
         parsed_projects = response["parsed"].get("projects")
         if not isinstance(parsed_projects, list):
-            if len(submissions) == 1 and response["parsed"].get("submission_id"):
+            if len(batch) == 1 and response["parsed"].get("submission_id"):
                 parsed_projects = [response["parsed"]]
             else:
                 raise ModelAPIError("GitHub Copilot returned no project scorecards for the room.")
@@ -3482,7 +3576,7 @@ def _score_submissions_with_showcase_scorecards(
             for item in parsed_projects
             if isinstance(item, dict)
         }
-        for submission in submissions:
+        for submission in batch:
             parsed = by_submission.get(submission["submission_id"])
             if not isinstance(parsed, dict):
                 raise ModelAPIError(
@@ -6715,7 +6809,9 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     )
     calls = evaluation_plan["calls"]
     scoring_calls_per_submission = (
-        evaluation_plan["panel_model_count"]
+        # One room-wide call covers a whole batch, so the cost of a single
+        # submission is a fraction of a call rather than one call each.
+        calls["public_scoring"] / max(1, evaluation_plan["submission_count"])
         if showcase_scorecards
         else (
             evaluation_plan["review_lens_count"]
@@ -6735,8 +6831,14 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     )
     if showtime:
         if showcase_scorecards:
+            room_batches = evaluation_plan.get("room_batch_count") or 1
+            pass_summary = (
+                "one room-wide GitHub Copilot pass"
+                if room_batches == 1
+                else f"{room_batches} room-wide GitHub Copilot passes, run in parallel"
+            )
             _sideline(
-                f"RAPID PANEL: {len(submissions)} projects, one room-wide GitHub Copilot pass.",
+                f"RAPID PANEL: {len(submissions)} projects, {pass_summary}.",
                 "⚡",
                 "blue",
             )
