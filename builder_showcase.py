@@ -51,6 +51,7 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any, Callable, Dict, List, Optional, Sequence
+import urllib.request
 from urllib.parse import unquote, urlsplit, urlunsplit
 
 from event_spec import (
@@ -8722,6 +8723,89 @@ def cmd_feedback(args: argparse.Namespace, _gateway: Optional[Any] = None,
     return 0
 
 
+RELEASE_API_URL = (
+    "https://api.github.com/repos/DUBSOpenHub/copilot-builder-showcase/releases/latest"
+)
+
+
+def _version_tuple(text: Any) -> tuple:
+    """Turn '3.4.1' or 'v3.4.1' into something comparable. Junk sorts lowest."""
+    cleaned = str(text or "").strip().lstrip("vV")
+    parts = re.split(r"[.\-+]", cleaned)
+    numbers: List[int] = []
+    for part in parts:
+        if part.isdigit():
+            numbers.append(int(part))
+        else:
+            break
+    return tuple(numbers)
+
+
+def _release_api_token(env: Dict[str, str]) -> Optional[str]:
+    """Reuse a token the environment already has. Never prompt for one."""
+    for name in ("GITHUB_TOKEN", "GH_TOKEN"):
+        token = str(env.get(name, "") or "").strip()
+        if token:
+            return token
+    return None
+
+
+def _latest_released_version(
+    fetch: Optional[Callable[[str, float], str]] = None,
+    environ: Optional[Dict[str, str]] = None,
+) -> Optional[str]:
+    """
+    Look up the newest published release tag. Returns None if anything is off.
+
+    Deliberately fails open and silently: a setup check must never fail, hang,
+    or leak a stack trace because GitHub was briefly unreachable. Skipped
+    entirely under CI so the test suite never reaches the network.
+    """
+    env = os.environ if environ is None else environ
+    if str(env.get("SHOWCASE_SKIP_UPDATE_CHECK", "")).strip():
+        return None
+    if str(env.get("CI", "")).strip().lower() in ("1", "true", "yes"):
+        return None
+
+    def default_fetch(url: str, timeout: float) -> str:
+        headers = {
+            "Accept": "application/vnd.github+json",
+            "User-Agent": f"copilot-builder-showcase/{VERSION}",
+        }
+        # Unauthenticated api.github.com allows 60 requests per hour per IP.
+        # A workshop room behind one NAT burns that quickly, and the check then
+        # silently stops working. Reuse a token if the environment already has
+        # one; never prompt for, store, or log it.
+        token = _release_api_token(env)
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+        request = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            return response.read().decode("utf-8")
+
+    try:
+        payload = (fetch or default_fetch)(RELEASE_API_URL, 2.0)
+        tag = json.loads(payload).get("tag_name")
+    except Exception:
+        return None
+    tag = str(tag or "").strip()
+    return tag or None
+
+
+def _update_notice(current: str, latest: Optional[str]) -> Optional[str]:
+    """Say something only when a strictly newer release actually exists."""
+    if not latest:
+        return None
+    current_parts = _version_tuple(current)
+    latest_parts = _version_tuple(latest)
+    if not current_parts or not latest_parts or latest_parts <= current_parts:
+        return None
+    return (
+        f"Update available: {latest.lstrip('vV')} (installed {current}). "
+        "Re-run install.sh to upgrade."
+    )
+
+
 def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
                clock: Optional[Callable] = None) -> int:
     """doctor — check setup, judge-panel connection, and bundle health."""
@@ -8739,6 +8823,20 @@ def cmd_doctor(args: argparse.Namespace, _gateway: Optional[Any] = None,
         ok.append(f"Python {vi.major}.{vi.minor}.{vi.micro} (≥ 3.11 ✓)")
     else:
         issues.append(f"Python {vi.major}.{vi.minor} < 3.11 (upgrade required)")
+
+    # 1b. Installed version, and whether a newer release exists. The installed
+    # copy lives outside this checkout, so it can sit versions behind with
+    # nothing to say so. Never fatal: a stale copy still runs a showcase.
+    latest = _latest_released_version(getattr(args, "_fetch_release", None))
+    update_notice = _update_notice(VERSION, latest)
+    if update_notice:
+        ok.append(f"Version: {VERSION} — {update_notice}")
+    elif latest:
+        ok.append(f"Version: {VERSION} (current)")
+    else:
+        # Nothing was checked, or the registry was unreachable. Do not claim
+        # this copy is current when we never found out.
+        ok.append(f"Version: {VERSION}")
 
     # 2. Check optional monitor dependency
     textual_ready, textual_detail = _textual_status()
