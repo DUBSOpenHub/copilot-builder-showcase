@@ -53,14 +53,16 @@ if not DEFAULT_RUNS_DIR.exists() and LEGACY_RUNS_DIR.exists():
     DEFAULT_RUNS_DIR = LEGACY_RUNS_DIR
 
 # ── Palette ──
-ACCENT = "#b11f4b"
-ACCENT_SOFT = "#fd8ea1"
-SURFACE = "#292929"
-SUCCESS = "#4ade80"
-WARNING = "#fbbf24"
-DANGER = "#f87171"
-MUTED = "#919191"
-LINK = "#4da6ff"
+# GitHub Primer dark, matching builder_showcase.PRIMER_PALETTE and the
+# Terminal Frenzy surface so every GitHub Copilot terminal reads as one product.
+ACCENT = "#a371f7"       # Primer purple 3
+ACCENT_SOFT = "#d2a8ff"  # Primer purple 2
+SURFACE = "#161b22"      # Primer canvas subtle
+SUCCESS = "#3fb950"      # Primer green 3
+WARNING = "#d29922"      # Primer yellow 3
+DANGER = "#f85149"       # Primer red 3
+MUTED = "#8b949e"        # Primer fg muted
+LINK = "#58a6ff"         # Primer blue 3
 
 
 def _score_bar_rich(score: float, max_score: float = 10.0, width: int = 20) -> Text:

@@ -830,6 +830,40 @@ class TestShowtimeDelight:
                     assert cbp.cmd_workshop(args, MockGateway(), fixed_clock) == 0
 
         total_animation_seconds = sum(call.args[0] for call in sleep.call_args_list)
+        assert total_animation_seconds <= cbp.LIVE_PAUSE_BUDGET_SECONDS + 1e-9
+
+    def test_demo_keeps_the_tight_animation_budget(self, tmp_path):
+        """The bundled demo must stay inside the two-minute practice budget."""
+        env = {
+            "HJ_RUNS_DIR": str(tmp_path / "runs"),
+            "HJ_REGISTRY_PATH": str(tmp_path / "registry" / "log.ndjson"),
+            "HJ_COLOR": "always",
+        }
+        args = argparse.Namespace(
+            run_id="paced-demo",
+            urls=[],
+            file=None,
+            audience=None,
+            awards=None,
+            panel_style="fun",
+            config=None,
+            event=None,
+            showtime=True,
+            yes=True,
+            configure=False,
+            manual_confirm=False,
+            no_suspense=False,
+            projector=True,
+            require_live_terminal=False,
+            require_projector_window=False,
+            demo=True,
+        )
+
+        with patch.dict(os.environ, env):
+            with patch.object(cbp.time, "sleep") as sleep:
+                assert cbp.cmd_workshop(args, None, fixed_clock) == 0
+
+        total_animation_seconds = sum(call.args[0] for call in sleep.call_args_list)
         assert total_animation_seconds <= cbp.SHOWTIME_PAUSE_BUDGET_SECONDS + 1e-9
         assert total_animation_seconds > 0
 

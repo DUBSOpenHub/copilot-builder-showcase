@@ -93,7 +93,10 @@ MAX_REPLAY_ARCHIVE_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB uncompressed
 MAX_REPLAY_ARCHIVE_MEMBER_BYTES = 512 * 1024 * 1024  # 512 MiB per file
 # Reserve most of the two-minute showcase for reading and model work; animation
 # itself must never turn a short ceremony into a long wait.
-SHOWTIME_PAUSE_BUDGET_SECONDS = 18.0
+SHOWTIME_PAUSE_BUDGET_SECONDS = 45.0
+# A real event is not racing a demo clock. The live show gets room to land a
+# spotlight and hold the reveal, which is what makes a room lean in.
+LIVE_PAUSE_BUDGET_SECONDS = 95.0
 DEMO_TIME_BUDGET_SECONDS = 120.0
 
 # The bundled demo ships a pool of real, public GitHub projects and shows a
@@ -2679,18 +2682,51 @@ DEFAULT_RUBRIC = event_spec_to_rubric(DEFAULT_EVENT_SPEC)
 # Console Experience — colorful, deterministic, artifact-safe
 # ---------------------------------------------------------------------------
 
-ANSI = {
-    "reset": "\033[0m",
-    "bold": "\033[1m",
-    "dim": "\033[2m",
-    "cyan": "\033[36m",
-    "blue": "\033[34m",
-    "magenta": "\033[35m",
-    "green": "\033[32m",
-    "yellow": "\033[33m",
-    "red": "\033[31m",
-    "gold": "\033[38;5;220m",
+# GitHub Primer dark palette, shared with the Terminal Frenzy surface so every
+# GitHub Copilot terminal experience reads as one product. Each entry carries a
+# truecolor value and the closest xterm-256 index: macOS Terminal.app — the
+# window the live showcase opens — is 256-color only, so the fallback is the
+# one most rooms actually see.
+PRIMER_PALETTE = {
+    "cyan": ("#58a6ff", 75),      # Primer blue 3 — primary informational accent
+    "blue": ("#1f6feb", 33),      # Primer blue 5 — structure and rules
+    "magenta": ("#a371f7", 141),  # Primer purple 3 — GitHub Copilot brand accent
+    "purple": ("#6e40c9", 98),    # Primer purple 6 — deep brand shade
+    "green": ("#3fb950", 71),     # Primer green 3 — success and official status
+    "yellow": ("#d29922", 178),   # Primer yellow 3 — caution and practice status
+    "gold": ("#d29922", 178),     # awards share Primer yellow, never bright gold
+    "orange": ("#f0883e", 209),   # Primer orange 3 — emphasis
+    "red": ("#f85149", 203),      # Primer red 3 — errors
+    "muted": ("#8b949e", 246),    # Primer fg muted — secondary text
 }
+
+
+def _truecolor_enabled() -> bool:
+    """Detect 24-bit color so Primer hex values survive where they are supported."""
+    if os.environ.get("CBS_TRUECOLOR", "").lower() in {"0", "false", "no", "off"}:
+        return False
+    return os.environ.get("COLORTERM", "").lower() in {"truecolor", "24bit"}
+
+
+def _build_ansi_palette() -> Dict[str, str]:
+    truecolor = _truecolor_enabled()
+    palette = {
+        "reset": "\033[0m",
+        "bold": "\033[1m",
+        "dim": "\033[2m",
+    }
+    for name, (hex_value, xterm_index) in PRIMER_PALETTE.items():
+        if truecolor:
+            red = int(hex_value[1:3], 16)
+            green = int(hex_value[3:5], 16)
+            blue = int(hex_value[5:7], 16)
+            palette[name] = f"\033[38;2;{red};{green};{blue}m"
+        else:
+            palette[name] = f"\033[38;5;{xterm_index}m"
+    return palette
+
+
+ANSI = _build_ansi_palette()
 
 class _ShowtimePacer:
     """Caps intentional pauses without affecting evaluation runtime."""
@@ -2991,9 +3027,44 @@ def _flowed_lines(message: str, indent: int) -> List[str]:
 def _sideline(message: str, icon: str = "🎙️", color: str = "cyan") -> None:
     indent = _terminal_text_width(f"{icon} ")
     lines = _flowed_lines(message, indent)
-    print(_paint(f"{icon} {lines[0]}", color, bold=True))
-    for continued in lines[1:]:
-        print(_paint(f"{' ' * indent}{continued}", color, bold=True))
+    with _foreground_output():
+        print(_paint(f"{icon} {lines[0]}", color, bold=True))
+        for continued in lines[1:]:
+            print(_paint(f"{' ' * indent}{continued}", color, bold=True))
+
+
+_SWEEP_WIDTH = 26
+_SWEEP_BLOCK = 6
+# The animated status line and ordinary foreground output share one cursor.
+# Without a guard the marquee redraws in the middle of a spotlight line and the
+# bar looks like it vanished, so every writer clears the line under this lock.
+_STATUS_LINE_LOCK = threading.RLock()
+_STATUS_LINE_ACTIVE = threading.Event()
+
+
+def _sweep_bar_frame(tick: int, width: int = _SWEEP_WIDTH, block: int = _SWEEP_BLOCK) -> str:
+    """One frame of a marquee bar.
+
+    This shows aggregate activity only. It is deliberately not a completion
+    percentage, because a filling bar during scoring would leak how far the
+    panel has gotten through a field of projects.
+    """
+    span = max(1, width + block)
+    head = tick % span
+    return "".join("█" if 0 <= head - index < block else "░" for index in range(width))
+
+
+def _clear_status_line() -> None:
+    print("\r\033[2K", end="", flush=True)
+
+
+@contextlib.contextmanager
+def _foreground_output() -> Any:
+    """Print over the animated status line without shredding it."""
+    with _STATUS_LINE_LOCK:
+        if _STATUS_LINE_ACTIVE.is_set():
+            _clear_status_line()
+        yield
 
 
 @contextlib.contextmanager
@@ -3003,24 +3074,52 @@ def _live_wait_commentary(
     *,
     initial_delay: float = 4.0,
     interval: float = 7.0,
+    label: str = "PANEL AT WORK",
+    motion: bool = True,
+    min_seconds: float = 0.0,
 ) -> Any:
-    """Keep a live room active while opaque model calls are in flight."""
-    if not enabled or not messages or not sys.stdout.isatty():
+    """Keep a live room active while opaque scoring work is in flight.
+
+    A single thread owns the status line so the moving bar and the sideline
+    beats never fight over the cursor. Only aggregate motion is rendered here;
+    a project, score, rank, or award must never reach this surface.
+
+    ``min_seconds`` holds the bar up long enough to read when the underlying
+    work returns almost instantly, as practice scoring does. The hold is drawn
+    from the shared animation budget, so it can never push a run past its cap.
+    """
+    if not enabled or not sys.stdout.isatty():
         yield
         return
 
     stopped = threading.Event()
+    started_at = time.monotonic()
 
     def narrate() -> None:
-        if stopped.wait(initial_delay):
-            return
-        for message in messages:
-            if stopped.is_set():
-                return
-            _sideline(message, "🎙️", "magenta")
-            sys.stdout.flush()
-            if stopped.wait(interval):
-                return
+        tick = 0
+        pending = list(messages)
+        next_message_at = time.monotonic() + initial_delay
+        while not stopped.is_set():
+            now = time.monotonic()
+            if pending and now >= next_message_at:
+                _sideline(pending.pop(0), "🎙️", "magenta")
+                next_message_at = now + interval
+            if motion:
+                with _STATUS_LINE_LOCK:
+                    print(
+                        "\r"
+                        + _paint(f"  {label}  ", "cyan", bold=True)
+                        + _paint(_sweep_bar_frame(tick), "magenta", bold=True),
+                        end="",
+                        flush=True,
+                    )
+                    _STATUS_LINE_ACTIVE.set()
+                tick += 1
+            if stopped.wait(0.08 if motion else 0.4):
+                break
+        with _STATUS_LINE_LOCK:
+            _clear_status_line()
+            _STATUS_LINE_ACTIVE.clear()
 
     narrator = threading.Thread(
         target=narrate,
@@ -3031,8 +3130,15 @@ def _live_wait_commentary(
     try:
         yield
     finally:
+        remaining = min_seconds - (time.monotonic() - started_at)
+        if motion and remaining > 0:
+            pacer = _SHOWTIME_PACER.get()
+            delay = pacer.take(remaining) if pacer else remaining
+            if delay:
+                time.sleep(delay)
         stopped.set()
         narrator.join(timeout=1.0)
+        _clear_status_line()
 
 
 PRACTICE_STATUS = "PRACTICE SHOWCASE — ILLUSTRATIVE RESULTS"
@@ -3084,6 +3190,17 @@ def _showtime_enabled(args: Optional[argparse.Namespace] = None) -> bool:
     return bool(getattr(args, "showtime", False)) if args is not None else False
 
 
+def _pause_budget_for(args: Optional[argparse.Namespace] = None) -> float:
+    """Pick the animation budget for this run.
+
+    The bundled demo must still finish inside DEMO_TIME_BUDGET_SECONDS, so it
+    keeps the tight budget. A real showcase is paced for a room instead.
+    """
+    if args is not None and bool(getattr(args, "demo", False)):
+        return SHOWTIME_PAUSE_BUDGET_SECONDS
+    return LIVE_PAUSE_BUDGET_SECONDS
+
+
 def _showtime_pause(args: Optional[argparse.Namespace] = None, seconds: float = 0.7) -> None:
     if not _suspense_enabled(args):
         return
@@ -3120,7 +3237,7 @@ def _with_showtime_pacing(is_live: Optional[Callable[[argparse.Namespace], bool]
             enabled = is_live(args) if is_live else _showtime_enabled(args)
             if not enabled:
                 return func(args, *extra, **kwargs)
-            token = _SHOWTIME_PACER.set(_ShowtimePacer(SHOWTIME_PAUSE_BUDGET_SECONDS))
+            token = _SHOWTIME_PACER.set(_ShowtimePacer(_pause_budget_for(args)))
             try:
                 return func(args, *extra, **kwargs)
             finally:
@@ -3230,17 +3347,31 @@ def _live_panel_take(verdict: Dict, panel_style: str, audience_locked: bool) -> 
     return lens, _truncate(str(take), 116)
 
 
+def _sweep_rule(width: int, color: str, args: Optional[argparse.Namespace] = None) -> None:
+    """Draw a rule that sweeps in, so an act break lands instead of just appearing."""
+    if not _suspense_enabled(args):
+        print(_paint("━" * width, color, bold=True))
+        return
+    step = max(4, width // 14)
+    drawn = 0
+    while drawn < width:
+        drawn = min(width, drawn + step)
+        print("\r" + _paint("━" * drawn, color, bold=True), end="", flush=True)
+        _showtime_pause(args, 0.02)
+    print()
+
+
 def _act_break(label: str, args: Optional[argparse.Namespace] = None) -> None:
     if not _showtime_enabled(args):
         return
     width = min(76, _terminal_width(max_width=80))
     print()
-    print(_paint("━" * width, "blue", bold=True))
+    _sweep_rule(width, "blue", args)
     print(_paint(f"  ▸ {label}", "magenta", bold=True))
     result_status = getattr(args, "result_status", None)
     if result_status:
         print(_paint(f"  {result_status}", getattr(args, "status_color", "cyan"), bold=True))
-    print(_paint("━" * width, "blue", bold=True))
+    _sweep_rule(width, "blue", args)
     print()
     _showtime_pause(args, 0.35)
 
@@ -3284,11 +3415,33 @@ def _countdown_reveal(args: Optional[argparse.Namespace] = None) -> None:
     if not _suspense_enabled(args):
         print(_paint("AND THE AWARD GOES TO...", "gold", bold=True))
         return
+    _sideline("Drumroll. The room goes quiet.", "🥁", "magenta")
+    _showtime_pause(args, 0.5)
     for n in (3, 2, 1):
         print(_paint(f"    {n}...", "yellow", bold=True))
         _showtime_pause(args, 0.75)
     print(_paint("    AND THE AWARD GOES TO...", "gold", bold=True))
-    _showtime_pause(args, 0.55)
+    _showtime_pause(args, 0.9)
+
+
+def _showrunner_hold(prompt: str, args: Optional[argparse.Namespace] = None) -> None:
+    """Hold the ceremony until the operator is ready for the next act.
+
+    This stays interactive even under --yes because a live room needs the
+    showrunner to decide when the audience sees the next beat. It is a hold
+    rather than a yes/no: aborting mid-ceremony would strand the audience
+    between a spotlight and a reveal.
+    """
+    if not _showtime_enabled(args):
+        return
+    if getattr(args, "no_suspense", False):
+        return
+    if not (sys.stdin.isatty() and sys.stdout.isatty()):
+        return
+    try:
+        input(_paint(f"⏸  {prompt} ", "cyan", bold=True))
+    except EOFError:
+        pass
 
 
 def _audience_reveal_moment(args: Optional[argparse.Namespace] = None) -> None:
@@ -9002,6 +9155,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     _act_break("ACT III — SPOTLIGHTS", show_args)
     if assume_yes:
         _sideline("Spotlight round. Every builder gets a moment.", "🎬", "gold")
+        _showrunner_hold("Press Enter to open the spotlight round.", show_args)
     elif not _confirm("Open the spotlight round?"):
         return 0
     rc = cmd_present(
@@ -9036,6 +9190,7 @@ def cmd_workshop(args: argparse.Namespace, _gateway: Optional[Any] = None,
     _act_break("ACT IV — AWARD REVEAL", show_args)
     if assume_yes:
         _sideline("The envelopes are sealed. Opening the awards.", "✉️", "gold")
+        _showrunner_hold("Envelopes are in hand. Press Enter to reveal.", show_args)
     elif not _confirm("Reveal the award winners?"):
         return 0
     rc = cmd_award(argparse.Namespace(
@@ -9266,7 +9421,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
     stage_started_at = time.monotonic()
     try:
         with _live_wait_commentary(
-            showtime and _gateway is not None,
+            showtime,
             [
                 "⚡ The rapid panel just hit the arena.",
                 "🔒 Three review lenses locked. Zero spoilers.",
@@ -9274,6 +9429,9 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             ],
             initial_delay=1.0,
             interval=2.0,
+            label="PANEL WARMING UP",
+            motion=_suspense_enabled(args),
+            min_seconds=1.6,
         ):
             gate_result = run_freshness_gate(
                 bundle_path, rubric, _gateway, clock
@@ -9517,14 +9675,16 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
         if not showtime or index not in milestones:
             return
         name = _truncate(str(sub.get("project_name", sub.get("submission_id", "Project"))), 38)
-        print(_paint(f"   ⬢ {name}", "cyan", bold=True))
+        with _foreground_output():
+            print(_paint(f"   ⬢ {name}", "cyan", bold=True))
         _showtime_pause(args, 0.2)
         eta = (
             f" · about {remaining_seconds}s left"
             if total > index and not showcase_scorecards
             else ""
         )
-        print(_paint(f"     Review sealed  [{index}/{total}]{eta}", "green"))
+        with _foreground_output():
+            print(_paint(f"     Review sealed  [{index}/{total}]{eta}", "green"))
         _sideline(_panel_progress_message(index, total, panel_style), "🎙️", "magenta")
         _showtime_pause(args, 0.2)
 
@@ -9577,10 +9737,13 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             ]
         )
         with _live_wait_commentary(
-            showtime and showcase_scorecards,
+            showtime,
             wait_commentary,
             initial_delay=1.0,
             interval=2.0,
+            label="PANEL SCORING",
+            motion=_suspense_enabled(args),
+            min_seconds=2.4,
         ):
             new_scored = score_submissions(
                 remaining,
