@@ -219,3 +219,17 @@ class TestTokenReuse:
         captured = capsys.readouterr()
         assert "ghp_supersecretvalue" not in captured.out
         assert "ghp_supersecretvalue" not in captured.err
+
+
+class TestVersionParity:
+    def test_the_package_and_the_engine_agree(self):
+        """
+        The staleness check compares VERSION against the published tag, so a
+        drifted pyproject would have pip and doctor reporting different
+        versions and the comparison answering for the wrong one.
+        """
+        import tomllib
+
+        pyproject = Path(__file__).parent.parent / "pyproject.toml"
+        declared = tomllib.loads(pyproject.read_text(encoding="utf-8"))
+        assert declared["project"]["version"] == cbp.VERSION
