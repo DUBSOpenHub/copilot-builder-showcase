@@ -2,7 +2,7 @@
 
 # 🏆 GitHub Copilot Builder Showcase
 
-**Turn the awkward final ten minutes of any workshop into a live, GitHub Copilot-judged finale.**
+**Turn the awkward final ten minutes of any workshop into a GitHub Copilot-judged finale.**
 
 Paste the links, activate the panel, reveal the winners — in under two minutes.
 
