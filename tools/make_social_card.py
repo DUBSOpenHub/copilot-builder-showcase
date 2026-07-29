@@ -85,7 +85,7 @@ p {{
 <body>
   <div class="glow"></div>
   <div class="inner">
-    <h1>End every workshop<br />with a GitHub Copilot<br /><span class="accent">Builder Showcase</span></h1>
+    <h1>End every workshop<br />with a <span class="accent">GitHub Copilot</span><br />Builder Showcase</h1>
     <p>Drop the links, activate the judging panel, and spotlight the winners &mdash; in under two minutes.</p>
   </div>
 </body></html>"""

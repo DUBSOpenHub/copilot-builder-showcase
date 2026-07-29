@@ -265,14 +265,14 @@ button { font-family: inherit; cursor: pointer; }
   margin: 18px 0 0; max-width: 18ch;
 }
 .hero h1 .accent { color: var(--cp-accent); }
-/* Three-part lock-up: a smaller lead-in, the product maker in plain white,
-   then the accented product name. Colour carries the emphasis, so "GitHub
-   Copilot" stays white and only "Builder Showcase" takes the accent. Each
-   line breaks on an explicit phrase boundary, so the name never splits at
-   whatever width the viewport happens to be. */
+/* Three-part lock-up: a smaller lead-in, the accented product maker, then the
+   showcase name in plain white. Colour carries the emphasis, so "GitHub
+   Copilot" takes the accent and "Builder Showcase" stays white. Each line
+   breaks on an explicit phrase boundary, so the name never splits at whatever
+   width the viewport happens to be. */
 .hero h1 .lead-in { display: block; font-size: 0.63em; line-height: 1.12; margin-bottom: 0.12em; text-wrap: balance; }
 .hero h1 .product { display: block; }
-.hero h1 .product .accent { display: block; }
+.hero h1 .product > span { display: block; }
 .hero .lede { font-size: clamp(17px, 2.1vw, 21px); color: var(--cp-text-muted); margin-top: 20px; max-width: 46ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; align-items: center; }
 .command-chip {
@@ -810,7 +810,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1><span class="lead-in">End every workshop with a</span><span class="product">GitHub Copilot<span class="accent">Builder Showcase</span></span></h1>
+          <h1><span class="lead-in">End every workshop with a</span><span class="product"><span class="accent">GitHub Copilot</span><span>Builder Showcase</span></span></h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>
