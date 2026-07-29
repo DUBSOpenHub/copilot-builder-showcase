@@ -4,24 +4,24 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <meta name="color-scheme" content="light dark" />
-<title>Turn any workshop into a GitHub Copilot Builder Showcase</title>
-<meta name="description" content="Turn any workshop into a GitHub Copilot Builder Showcase. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
+<title>Turn any workshop into a Builder Showcase with GitHub Copilot</title>
+<meta name="description" content="Turn any workshop into a Builder Showcase with GitHub Copilot. Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <link rel="canonical" href="https://dubsopenhub.github.io/copilot-builder-showcase/" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="GitHub Copilot Builder Showcase" />
 <meta property="og:url" content="https://dubsopenhub.github.io/copilot-builder-showcase/" />
-<meta property="og:title" content="Turn any workshop into a GitHub Copilot Builder Showcase" />
+<meta property="og:title" content="Turn any workshop into a Builder Showcase with GitHub Copilot" />
 <meta property="og:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta property="og:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/social-card-v2.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a GitHub Copilot Builder Showcase.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
+<meta property="og:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a Builder Showcase with GitHub Copilot.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Turn any workshop into a GitHub Copilot Builder Showcase" />
+<meta name="twitter:title" content="Turn any workshop into a Builder Showcase with GitHub Copilot" />
 <meta name="twitter:description" content="Drop the links, activate the judging panel, and spotlight the winners — in under two minutes." />
 <meta name="twitter:image" content="https://dubsopenhub.github.io/copilot-builder-showcase/images/social-card-v2.png" />
-<meta name="twitter:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a GitHub Copilot Builder Showcase.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
+<meta name="twitter:image:alt" content="GitHub Copilot Builder Showcase title card. Large white and violet lettering reads &quot;Turn any workshop into a Builder Showcase with GitHub Copilot.&quot; above the line &quot;Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.&quot;" />
 <script>
   (function () {
     try {
@@ -265,13 +265,13 @@ button { font-family: inherit; cursor: pointer; }
   margin: 18px 0 0; max-width: 18ch;
 }
 .hero h1 .accent { color: var(--cp-accent); }
-/* Brand lock-up: "GitHub Copilot" in the theme foreground over "Builder Showcase."
-   in accent purple. Uses --cp-text, not a literal white, so the top line stays
-   readable when the page is in light theme. The lead-in sits a step down in size
-   so the three lines read as one block instead of leaving a short orphan line. */
+/* Three-line lock-up: a smaller lead-in, the accented payoff, then the
+   attribution. Every line breaks on a phrase boundary, so no line reads as a
+   finished thought that the next one has to undo. The lead-in steps down in
+   size so the three lines read as one block instead of leaving a short orphan. */
 .hero h1 .lead-in { display: block; font-size: 0.63em; line-height: 1.12; margin-bottom: 0.12em; text-wrap: balance; }
-.hero h1 .brand, .hero h1 .brand-row { display: block; }
-.hero h1 .cp-name { color: var(--cp-text); }
+.hero h1 .brand { display: block; }
+.hero h1 .trail { margin-bottom: 0; margin-top: 0.1em; }
 .hero .lede { font-size: clamp(17px, 2.1vw, 21px); color: var(--cp-text-muted); margin-top: 20px; max-width: 46ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 30px; align-items: center; }
 .command-chip {
@@ -809,7 +809,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
     <section class="hero">
       <div class="hero-grid">
         <div class="hero-copy">
-          <h1><span class="lead-in">Turn any workshop into a</span><span class="accent brand"><span class="brand-row cp-name">GitHub Copilot</span><span class="brand-row">Builder Showcase.</span></span></h1>
+          <h1><span class="lead-in">Turn any workshop into a</span><span class="accent brand">Builder Showcase</span><span class="lead-in trail">with GitHub Copilot.</span></h1>
           <p class="lede">
             Drop the links, activate the judging panel, and spotlight the winners — in under two minutes.
           </p>

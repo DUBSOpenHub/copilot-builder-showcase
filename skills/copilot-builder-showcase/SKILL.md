@@ -1,7 +1,7 @@
 ---
 name: copilot-builder-showcase
 description: >
-  Turn any workshop into a GitHub Copilot Builder Showcase. Drop the links,
+  Turn any workshop into a Builder Showcase with GitHub Copilot. Drop the links,
   activate the judging panel, and spotlight the winners in under two minutes.
   The same single-screen flow works for builder workshops, product demos,
   conference build sessions, and online challenges. Say "showcase" to start.
