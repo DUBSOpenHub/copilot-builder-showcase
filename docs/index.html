@@ -2459,7 +2459,11 @@ var QRClean = (function () {
   function delibStart() {
     var cv = $("deliberate"); if (!cv || !cv.getContext) return;
     var ctx = cv.getContext("2d"); if (!ctx) return;
-    var GREEN = accentColor(), AMBER = "#f2cc60", FX = [0.18, 0.5, 0.82], H = 84;
+    /* Two live colours only: the GitHub Copilot purple and an electric cyan.
+       Cyan sits opposite purple on a near-black canvas, so the marks read as
+       current moving down a wire. Award gold is deliberately not used here —
+       nothing on the judging screen should hint at a winner. */
+    var PURPLE = accentColor(), ELECTRIC = "#56d4dd", FX = [0.18, 0.5, 0.82], H = 84;
     var w = cv.clientWidth || 480, dpr = Math.min(2, window.devicePixelRatio || 1);
     cv.width = w * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     function pos(i) { return { x: FX[i] * w, y: H * 0.5 }; }
@@ -2492,7 +2496,7 @@ var QRClean = (function () {
       }
       for (var n = 0; n < 3; n++) {
         var p = pos(n), pulse = still ? 0.6 : 0.5 + 0.5 * Math.sin(t * 2.4 + n * 2.1), rad = 8 + pulse * 7;
-        var col = n === 1 ? AMBER : GREEN;
+        var col = n === 1 ? ELECTRIC : PURPLE;
         var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad + 16);
         g.addColorStop(0, n === 1 ? "rgba(242,204,96,0.55)" : "rgba(171,125,248,0.55)");
         g.addColorStop(0.55, n === 1 ? "rgba(242,204,96,0.16)" : "rgba(171,125,248,0.16)");
@@ -2512,7 +2516,7 @@ var QRClean = (function () {
          thins and slows rather than stopping — a dead canvas leaves a hole on
          the big screen for the whole operator-gated wait before the reveal. */
       var cap = delibSealed ? 12 : 30, rate = delibSealed ? 0.18 : 0.62;
-      if (delibParts.length < cap && Math.random() < rate) { var s = Math.floor(Math.random() * 3), d = (s + 1 + Math.floor(Math.random() * 2)) % 3; delibParts.push({ a: s, b: d, u: 0, sp: delibSealed ? 0.004 + Math.random() * 0.005 : 0.007 + Math.random() * 0.012, c: Math.random() < 0.5 ? GREEN : AMBER, sz: 9 + Math.random() * 5, spin: Math.random() * 4 - 2, arc: Math.random() * 16 - 8 }); }
+      if (delibParts.length < cap && Math.random() < rate) { var s = Math.floor(Math.random() * 3), d = (s + 1 + Math.floor(Math.random() * 2)) % 3; delibParts.push({ a: s, b: d, u: 0, sp: delibSealed ? 0.004 + Math.random() * 0.005 : 0.007 + Math.random() * 0.012, c: Math.random() < 0.5 ? PURPLE : ELECTRIC, sz: 9 + Math.random() * 5, spin: Math.random() * 4 - 2, arc: Math.random() * 16 - 8 }); }
       draw(t, false);
       delibRAF = requestAnimationFrame(loop);
     }
@@ -2642,7 +2646,10 @@ var QRClean = (function () {
   function cueBurst(step) {
     if (reduceMotion) return;
     var host = $("cueOverlay"); if (!host) return;
-    var colors = ["#f2cc60", accentColor(), "#e3b341", accentLight(), "#d1d7e0"];
+    /* The audience cue fires before any award is opened, so it uses the
+       electric pairing rather than gold. Gold stays reserved for the reveal
+       itself, where the confetti earns it. */
+    var colors = ["#56d4dd", accentColor(), "#79c0ff", accentLight(), "#d1d7e0"];
     var glyphs = ["✦", "●", "✦", "◆"];
     var storm = document.createElement("div");
     storm.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1;";
