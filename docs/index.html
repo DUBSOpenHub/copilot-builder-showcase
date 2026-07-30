@@ -76,6 +76,7 @@
   --cp-success: hsl(128 49% 49%);           /* Primer green 4  #3fb950 */
   --cp-danger: hsl(var(--destructive));
   --cp-warning: hsl(44 85% 66%);            /* Primer yellow 1 #f2cc60 */
+  --cp-accent-2: hsl(184 66% 60%);          /* Primer cyan     #56d4dd */
   --cp-link: hsl(var(--primary));
   --cp-shadow: 0 10px 30px -14px hsl(0 0% 0% / 0.6);
   --cp-overlay: hsl(var(--background) / 0.85);
@@ -112,6 +113,7 @@ html[data-theme="light"] {
   /* Primer's light ramps are darker so they hold up on white */
   --cp-success: hsl(137 57% 41%);    /* green 4    #2da44e */
   --cp-warning: hsl(42 100% 37.5%);  /* yellow 4   #bf8700 */
+  --cp-accent-2: hsl(186 60% 34%);   /* cyan 6     #227d8b */
   --cp-gold: hsl(44 66% 50%);        /* yellow 3   #d4a72c */
   --cp-silver: hsl(214 10% 55%);     /* neutral 8  #818b98 */
   --cp-bronze: hsl(25 79% 44%);      /* orange 5   #bc4c00 */
@@ -240,7 +242,7 @@ button { font-family: inherit; cursor: pointer; }
 
 /* ---------- accent bar ---------- */
 .accent-bar { position: fixed; left: 0; right: 0; top: 0; height: 4px; z-index: 60;
-  background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning), var(--cp-success), var(--cp-link)); }
+  background: linear-gradient(90deg, var(--cp-accent), var(--cp-accent-2), var(--cp-success), var(--cp-link)); }
 
 /* ---------- topbar ---------- */
 .topbar { position: sticky; top: 4px; z-index: 40; }
@@ -470,7 +472,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
   position: relative; border: 1px solid var(--cp-border); background: var(--cp-surface); border-radius: 1rem;
   padding: 18px; overflow: hidden; animation: spot-in .55s cubic-bezier(.2,.7,.2,1) both;
 }
-.spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning)); }
+.spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-accent-2)); }
 @keyframes spot-in { from { opacity: 0; transform: translateY(14px) scale(.98); } to { opacity: 1; transform: none; } }
 .spot .spot-tag { position: absolute; right: 12px; top: 12px; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cp-accent); background: var(--cp-accent-soft); padding: 4px 9px; border-radius: 999px; }
 .spot .proj { font-size: 18.5px; font-weight: 800; letter-spacing: -0.01em; padding-right: 74px; line-height: 1.2; }
@@ -544,7 +546,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .judge .jn .jn-panel { display: block; }
 .judge .js { font-size: 10.5px; color: var(--cp-text-soft); }
 .progress { height: 10px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; margin-top: 18px; }
-.progress > i { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning)); transition: width .4s ease; }
+.progress > i { display: block; height: 100%; width: 0%; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-accent-2)); transition: width .4s ease; }
 .deliberate { width: 100%; height: 84px; display: block; margin: 10px 0 2px; }
 .judge-now { margin-top: 14px; font-size: 13.5px; color: var(--cp-text); min-height: 20px; }
 .judge-now b { color: var(--cp-accent); }
@@ -658,7 +660,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .lens-row { display: grid; grid-template-columns: 124px 1fr 32px; align-items: center; gap: 8px; }
 .lens-name { font-size: 9.5px; font-weight: 700; color: var(--cp-text-soft); text-transform: uppercase; letter-spacing: .02em; line-height: 1.25; }
 .lens-bar { height: 7px; border-radius: 999px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); overflow: hidden; }
-.lens-bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-warning)); transition: width .85s cubic-bezier(.2,.8,.2,1); }
+.lens-bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--cp-accent), var(--cp-accent-2)); transition: width .85s cubic-bezier(.2,.8,.2,1); }
 .lens-val { font-size: 12px; font-weight: 800; color: var(--cp-text); text-align: right; font-variant-numeric: tabular-nums; }
 .award.first .lens-bar > i { background: linear-gradient(90deg, var(--cp-gold), var(--cp-warning)); }
 .award .uplift { font-size: 12.5px; color: var(--cp-text-muted); margin-top: 10px; text-align: left; }
@@ -704,7 +706,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 @keyframes pop { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
 .submit-success h2 { font-size: 23px; font-weight: 800; margin-top: 8px; }
 .submit-success .done-proj { margin-top: 14px; border: 1px solid var(--cp-border); border-radius: 0.9rem; background: var(--cp-bg-elevated); padding: 16px; text-align: left; position: relative; overflow: hidden; }
-.submit-success .done-proj::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning)); }
+.submit-success .done-proj::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-accent-2)); }
 .submit-success .done-proj .p { font-size: 17px; font-weight: 800; }
 .submit-success .done-proj .l { font-size: 12px; color: var(--cp-link); word-break: break-all; margin-top: 4px; }
 .submit-success .done-proj .t { font-size: 12px; color: var(--cp-text-soft); margin-top: 8px; }
@@ -731,7 +733,7 @@ footer { border-top: 1px solid var(--cp-border); margin-top: 40px; padding: 30px
 .hero-spot { position: relative; border: 1px solid var(--cp-border); border-radius: 1.2rem;
   background: linear-gradient(158deg, var(--cp-accent-soft), transparent 55%), var(--cp-surface);
   box-shadow: var(--cp-shadow); padding: clamp(18px,3vw,30px); margin-bottom: 18px; overflow: hidden; min-height: 188px; }
-.hero-spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-warning), var(--cp-success)); }
+.hero-spot::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: linear-gradient(180deg, var(--cp-accent), var(--cp-accent-2), var(--cp-success)); }
 .hero-spot::after { content: ""; position: absolute; right: -60px; top: -60px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, var(--cp-highlight), transparent 70%); pointer-events: none; }
 .hs-eyebrow { position: relative; display: flex; align-items: center; gap: 9px; font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-accent); }
 .hs-eyebrow .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-accent); animation: pulse-dot 1.6s ease-in-out infinite; }
@@ -1315,6 +1317,7 @@ var QRClean = (function () {
   /* ---- accent-derived confetti colors (reads the --primary token) ---- */
   function accentColor(a) { var v = (getComputedStyle(root).getPropertyValue("--primary") || "262 90% 73%").trim(); return "hsl(" + v + (a != null ? " / " + a : "") + ")"; }
   function accentLight() { var v = (getComputedStyle(root).getPropertyValue("--primary") || "262 90% 73%").trim().split(/\s+/); if (v.length >= 3) { var l = parseFloat(v[2]); return "hsl(" + v[0] + " " + v[1] + " " + Math.min(74, (isNaN(l) ? 50 : l) + 16) + "%)"; } return accentColor(); }
+  function accent2Color() { var v = (getComputedStyle(root).getPropertyValue("--cp-accent-2") || "").trim(); return v || "#56d4dd"; }
 
   /* ---- shared state ---- */
   var STORE_KEY = "cbs_showcase_v1";   /* the most recent run — what a fresh tab or #submit discovers */
@@ -2463,8 +2466,8 @@ var QRClean = (function () {
        Cyan sits opposite purple on a near-black canvas, so the marks read as
        current moving down a wire. Award gold is deliberately not used here —
        nothing on the judging screen should hint at a winner. */
-    var PURPLE = accentColor(), ELECTRIC = "#56d4dd", FX = [0.18, 0.5, 0.82], H = 84;
-    var w = cv.clientWidth || 480, dpr = Math.min(2, window.devicePixelRatio || 1);
+    var PURPLE = accentColor(), ELECTRIC = accent2Color(), FX = [0.18, 0.5, 0.82], H = 84;
+    var w = cv.clientWidth || 480, dpr = Math.min(3, window.devicePixelRatio || 1);
     cv.width = w * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     function pos(i) { return { x: FX[i] * w, y: H * 0.5 }; }
     function draw(t, still) {
@@ -2498,8 +2501,8 @@ var QRClean = (function () {
         var p = pos(n), pulse = still ? 0.6 : 0.5 + 0.5 * Math.sin(t * 2.4 + n * 2.1), rad = 8 + pulse * 7;
         var col = n === 1 ? ELECTRIC : PURPLE;
         var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad + 16);
-        g.addColorStop(0, n === 1 ? "rgba(242,204,96,0.55)" : "rgba(171,125,248,0.55)");
-        g.addColorStop(0.55, n === 1 ? "rgba(242,204,96,0.16)" : "rgba(171,125,248,0.16)");
+        g.addColorStop(0, n === 1 ? "rgba(86,212,221,0.55)" : "rgba(171,125,248,0.55)");
+        g.addColorStop(0.55, n === 1 ? "rgba(86,212,221,0.16)" : "rgba(171,125,248,0.16)");
         g.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rad + 16, 0, 6.283); ctx.fill();
         /* The panel node is the Copilot mark itself, brightening as it pulses. */
@@ -2649,7 +2652,7 @@ var QRClean = (function () {
     /* The audience cue fires before any award is opened, so it uses the
        electric pairing rather than gold. Gold stays reserved for the reveal
        itself, where the confetti earns it. */
-    var colors = ["#56d4dd", accentColor(), "#79c0ff", accentLight(), "#d1d7e0"];
+    var colors = [accent2Color(), accentColor(), "#79c0ff", accentLight(), "#d1d7e0"];
     var glyphs = ["✦", "●", "✦", "◆"];
     var storm = document.createElement("div");
     storm.style.cssText = "position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1;";
@@ -2881,8 +2884,14 @@ var QRClean = (function () {
   /* ---- confetti ---- */
   function confetti() {
     var cv = $("confetti"); if (!cv) return; var stage = $("stage");
-    cv.classList.add("on"); var W = cv.width = stage.clientWidth || 1200, H = cv.height = stage.clientHeight || 700;
+    cv.classList.add("on");
+    /* The canvas is stretched by `inset: 0`, so the backing store has to be
+       sized in device pixels or every ribbon renders soft on a retina screen. */
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    var W = stage.clientWidth || 1200, H = stage.clientHeight || 700;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     var ctx = cv.getContext && cv.getContext("2d"); if (!ctx) { cv.classList.remove("on"); return; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     var gold = ["#f2cc60", "#e3b341", "#d29922", "#f8e3a1"], mix = [accentColor(), accentLight(), accentColor(0.75), "#d1d7e0", "#b7bdc8"];
     var parts = [];
     function spawn(cx, cy, n, spread, up, goldBias) {

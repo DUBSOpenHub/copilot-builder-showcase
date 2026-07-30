@@ -67,6 +67,7 @@ It gives any session the energy and resolution of a judged finale, without recru
 - **Drop the projects.** Paste HTTP(S) links and GitHub `owner/repo` entries — or let the room scan a QR and submit from their phones.
 - **Run one sealed panel.** Three GitHub Copilot review lenses score every project on the same four weighted rubric dimensions. Scores stay sealed.
 - **Give everyone a moment.** Each project gets a spotlight with three brief judge reactions — no scores, no rank, no one left out.
+- **Set the pace.** The terminal holds twice and waits for you: once before the spotlight round opens, and once with the envelopes in hand. The show never runs ahead of the room.
 - **Bring the room in.** One operator-confirmed audience cue — a countdown, a champion pose, a suspense freeze — right before the reveal. Nothing is revealed until you confirm.
 - **Land the podium.** Third, second, then the first-place GitHub Copilot Builder Award, with the per-dimension panel scores revealed only now.
 - **Keep the work.** Recap, private per-project feedback, validation, export, and replay are saved together. Top-three growth cards follow the awards.
