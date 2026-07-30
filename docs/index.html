@@ -2442,9 +2442,10 @@ var QRClean = (function () {
   function pick3(e) { var out = [], seen = {}; for (var k = 0; k < 3; k++) { var r = REACTIONS[hash(e.proj + "|" + e.link + "|" + k) % REACTIONS.length]; if (seen[r]) r = REACTIONS[(hash(e.proj + k) + k * 7) % REACTIONS.length]; seen[r] = 1; out.push(r); } return out; }
   var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   /* ---- score-blind deliberation visualizer (judging overlay; reveals no scores) ---- */
-  var delibRAF = 0, delibParts = [], delibOn = false, delibSealed = false;
+  var delibRAF = 0, delibParts = [], delibOn = false, delibSealed = false, delibLastFrame = 0;
+  function nowMs() { return (window.performance && performance.now) ? performance.now() : Date.now(); }
   function delibStop() {
-    delibOn = false; if (delibRAF) { cancelAnimationFrame(delibRAF); delibRAF = 0; }
+    delibOn = false; delibSealed = false; if (delibRAF) { cancelAnimationFrame(delibRAF); delibRAF = 0; }
     var cv = $("deliberate"); if (cv && cv.getContext) { var c = cv.getContext("2d"); if (c) c.clearRect(0, 0, cv.width, cv.height); }
   }
   /* The GitHub Copilot mark, drawn straight onto the canvas so the marks moving
@@ -2462,13 +2463,23 @@ var QRClean = (function () {
   function delibStart() {
     var cv = $("deliberate"); if (!cv || !cv.getContext) return;
     var ctx = cv.getContext("2d"); if (!ctx) return;
+    /* A restart must never leave two loops painting the same canvas. */
+    if (delibRAF) { cancelAnimationFrame(delibRAF); delibRAF = 0; }
     /* Two live colours only: the GitHub Copilot purple and an electric cyan.
        Cyan sits opposite purple on a near-black canvas, so the marks read as
        current moving down a wire. Award gold is deliberately not used here —
        nothing on the judging screen should hint at a winner. */
-    var PURPLE = accentColor(), ELECTRIC = accent2Color(), FX = [0.18, 0.5, 0.82], H = 84;
-    var w = cv.clientWidth || 480, dpr = Math.min(3, window.devicePixelRatio || 1);
-    cv.width = w * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var PURPLE = accentColor(), ELECTRIC = accent2Color(), FX = [0.18, 0.5, 0.82], H = 84, w = 0;
+    /* Resizing the backing store also blanks it, so every resize has to be
+       followed by a paint. Projector hand-off and browser zoom both land here. */
+    function sizeCanvas() {
+      var host = cv.parentNode;
+      w = cv.clientWidth || (host && host.clientWidth) || 480;
+      var dpr = Math.min(3, window.devicePixelRatio || 1);
+      cv.width = Math.round(w * dpr); cv.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    sizeCanvas();
     function pos(i) { return { x: FX[i] * w, y: H * 0.5 }; }
     function draw(t, still) {
       ctx.clearRect(0, 0, w, H);
@@ -2509,11 +2520,20 @@ var QRClean = (function () {
         drawCopilotMark(ctx, p.x, p.y, 17 + pulse * 3, col, 0.85 + pulse * 0.15, 0);
       }
     }
-    if (reduceMotion) { draw(0, true); return; }
-    delibParts = []; delibOn = true; delibSealed = false;
-    var t0 = (window.performance && performance.now) ? performance.now() : Date.now();
+    /* Paint frame zero synchronously. requestAnimationFrame is throttled in a
+       hidden or occluded tab and its first callback can simply never land, and a
+       canvas whose backing store was just resized stays blank until something
+       draws on it. That combination is what leaves the judging strip an empty
+       band on the big screen, so never depend on rAF for the first frame. */
+    draw(0, true);
+    if (reduceMotion) { delibOn = false; return; }
+    delibParts = []; delibOn = true;
+    var t0 = nowMs();
+    delibLastFrame = t0;
     function loop(now) {
       if (!delibOn) return;
+      delibLastFrame = now;
+      if (cv.clientWidth && Math.abs(cv.clientWidth - w) > 1) sizeCanvas();
       var t = (now - t0) / 1000;
       /* Once scores are sealed the panel is done working, so the traffic
          thins and slows rather than stopping — a dead canvas leaves a hole on
@@ -2528,9 +2548,28 @@ var QRClean = (function () {
   /* Judging is over but the panel stays on screen until the operator reveals,
      so settle the animation instead of clearing it. */
   function delibSeal() { if (!delibOn) delibStart(); delibSealed = true; }
+  /* The strip has to stay alive for the whole judging pane, including the
+     operator-gated wait before the reveal. rAF is suspended while a tab is in
+     the background and does not reliably resume when it returns, so re-arm on a
+     timer instead of leaving the room staring at an empty band. */
+  function delibWatch() {
+    var pane = $("judging");
+    if (!pane || !pane.classList.contains("on") || reduceMotion) return;
+    if (!delibOn || (nowMs() - delibLastFrame) > 900) { var sealed = delibSealed; delibStart(); delibSealed = sealed; }
+  }
+  setInterval(delibWatch, 1000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) delibWatch(); });
+  var delibResizeT = 0;
+  window.addEventListener("resize", function () {
+    clearTimeout(delibResizeT);
+    delibResizeT = setTimeout(function () {
+      var pane = $("judging");
+      if (pane && pane.classList.contains("on")) { var sealed = delibSealed; delibStart(); delibSealed = sealed; }
+    }, 150);
+  });
   function showJudging(run) {
     $("podiumWrap").classList.remove("on"); stopConfetti();
-    $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); renderLensStrip(); clearJudgeTimers(); delibStart(); $("judgeReacts").innerHTML = "";
+    $("judging").classList.add("on"); $("revealCue").classList.remove("on"); renderJudges(); renderLensStrip(); clearJudgeTimers(); delibSealed = false; delibStart(); $("judgeReacts").innerHTML = "";
     if (!run) { $("judgeNow").innerHTML = "GitHub Copilot panel reviewing every project…"; $("judgeAgg").textContent = "Aggregate progress only — scores stay sealed."; $("judgeBar").style.width = "66%"; return; }
     runJudgeSequence();
   }

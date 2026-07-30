@@ -9431,7 +9431,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             interval=2.0,
             label="PANEL WARMING UP",
             motion=_suspense_enabled(args),
-            min_seconds=1.6,
+            min_seconds=3.2,
         ):
             gate_result = run_freshness_gate(
                 bundle_path, rubric, _gateway, clock
@@ -9743,7 +9743,7 @@ def cmd_judge(args: argparse.Namespace, _gateway: Optional[Any] = None,
             interval=2.0,
             label="PANEL SCORING",
             motion=_suspense_enabled(args),
-            min_seconds=2.4,
+            min_seconds=9.5,
         ):
             new_scored = score_submissions(
                 remaining,
