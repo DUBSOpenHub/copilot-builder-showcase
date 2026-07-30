@@ -2510,10 +2510,10 @@ var QRClean = (function () {
       }
       for (var n = 0; n < 3; n++) {
         var p = pos(n), pulse = still ? 0.6 : 0.5 + 0.5 * Math.sin(t * 2.4 + n * 2.1), rad = 8 + pulse * 7;
-        var col = n === 1 ? ELECTRIC : PURPLE;
+        var col = n === 1 ? PURPLE : ELECTRIC;
         var g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad + 16);
-        g.addColorStop(0, n === 1 ? "rgba(86,212,221,0.55)" : "rgba(171,125,248,0.55)");
-        g.addColorStop(0.55, n === 1 ? "rgba(86,212,221,0.16)" : "rgba(171,125,248,0.16)");
+        g.addColorStop(0, n === 1 ? "rgba(171,125,248,0.55)" : "rgba(86,212,221,0.55)");
+        g.addColorStop(0.55, n === 1 ? "rgba(171,125,248,0.16)" : "rgba(86,212,221,0.16)");
         g.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, rad + 16, 0, 6.283); ctx.fill();
         /* The panel node is the Copilot mark itself, brightening as it pulses. */
