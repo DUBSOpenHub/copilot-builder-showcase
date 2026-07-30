@@ -314,18 +314,22 @@ button { font-family: inherit; cursor: pointer; }
     radial-gradient(125% 85% at 50% -12%, color-mix(in srgb, var(--cp-gold) 12%, transparent), transparent 62%),
     var(--cp-surface);
   box-shadow: var(--cp-shadow); overflow: hidden; padding: 18px 18px 16px;
+  /* Fill the row instead of floating in the middle of it. Centring left a tall
+     empty band above and below the card while the copy column ran the full
+     height, which read as a lopsided hero. */
+  align-self: stretch; display: flex; flex-direction: column;
 }
 .preview::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 4px;
   background: linear-gradient(90deg, var(--cp-bronze), var(--cp-silver), var(--cp-gold)); }
 .preview-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
 .preview-head .t { font-size: 12px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-text-soft); }
 
-.mini-stage { position: relative; }
+.mini-stage { position: relative; flex: 1; display: flex; align-items: center; }
 .mini-stage::before { content: ""; position: absolute; left: 50%; top: -10px; width: 60%; height: 128%;
   transform: translateX(-50%);
   background: radial-gradient(58% 52% at 50% 0%, color-mix(in srgb, var(--cp-gold) 30%, transparent), transparent 72%);
   pointer-events: none; z-index: 0; }
-.mini-podium { position: relative; z-index: 1; display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 9px; align-items: end; }
+.mini-podium { position: relative; z-index: 1; width: 100%; display: grid; grid-template-columns: 1fr 1.18fr 1fr; gap: 9px; align-items: end; }
 
 .mini-col { position: relative; overflow: hidden; text-align: center;
   border: 1px solid var(--cp-border); border-radius: 0.85rem 0.85rem 0.5rem 0.5rem;
